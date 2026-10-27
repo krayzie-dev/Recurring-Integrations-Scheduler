@@ -35,6 +35,7 @@ public static class Program
         root.Subcommands.Add(ConvertCommand());
         root.Subcommands.Add(ListCommand());
         root.Subcommands.Add(RunCommand());
+        root.Subcommands.Add(DbCommands.Build());
         return root;
     }
 
@@ -103,19 +104,41 @@ public static class Program
 
     private static Command RunCommand()
     {
-        var config = ConfigArgument();
+        var config = new Argument<FileInfo?>("config") { Description = "RIS configuration file (jobs.json); omit with --db", Arity = ArgumentArity.ZeroOrOne };
         var job = new Option<string>("--job", "-j") { Description = "Job name or Group.Name", Required = true };
         var dryRun = new Option<bool>("--dry-run") { Description = "Only validate and show what would run" };
-        var logs = new Option<DirectoryInfo?>("--logs") { Description = "Log folder (default: logs next to configuration)" };
-        var command = new Command("run", "Run one job once through the RIS 5 scheduler and print its result") { config, job, dryRun, logs };
+        var logs = new Option<DirectoryInfo?>("--logs") { Description = "Log folder (default: logs next to configuration / in the data directory)" };
+        var db = new Option<bool>("--db") { Description = "Take the job from the server database (ris.db) instead of a file. The server's scheduler and history are not touched." };
+        var data = DbCommands.DataOption();
+        var command = new Command("run", "Run one job once through the RIS 5 scheduler and print its result") { config, job, dryRun, logs, db, data };
         command.SetAction(async (parse, cancellationToken) =>
         {
-            var file = parse.GetValue(config)!;
-            var configuration = RisJson.LoadConfiguration(file.FullName);
+            RisConfiguration configuration;
+            string source, logDirectory;
+            if (parse.GetValue(db))
+            {
+                await using var services = await DbCommands.OpenAsync(parse.GetValue(data), cancellationToken);
+                configuration = await services.GetRequiredService<RIS.Persistence.ConfigurationRepository>().LoadAsync(cancellationToken);
+                var persistence = services.GetRequiredService<RIS.Persistence.PersistenceOptions>();
+                source = persistence.RisDatabase;
+                logDirectory = Path.Combine(persistence.DataDirectory, "logs");
+            }
+            else if (parse.GetValue(config) is { } file)
+            {
+                configuration = RisJson.LoadConfiguration(file.FullName);
+                source = file.FullName;
+                logDirectory = Path.Combine(Path.GetDirectoryName(file.FullName)!, "logs");
+            }
+            else
+            {
+                Console.Error.WriteLine("Specify a configuration file or --db.");
+                return 2;
+            }
+
             var definition = configuration.FindJob(parse.GetValue(job)!);
             if (definition is null)
             {
-                Console.Error.WriteLine($"Job '{parse.GetValue(job)}' is not defined in {file.FullName}.");
+                Console.Error.WriteLine($"Job '{parse.GetValue(job)}' is not defined in {source}.");
                 return 2;
             }
 
@@ -129,20 +152,18 @@ public static class Program
                 return 0;
             }
 
-            return await RunJobAsync(file.FullName, definition, parse.GetValue(logs)?.FullName, cancellationToken);
+            return await RunJobAsync(configuration, definition, parse.GetValue(logs)?.FullName ?? logDirectory, cancellationToken);
         });
         return command;
     }
 
-    private static async Task<int> RunJobAsync(string configFile, JobDefinition definition, string? logDirectory, CancellationToken cancellationToken)
+    private static async Task<int> RunJobAsync(RisConfiguration configuration, JobDefinition definition, string logDirectory, CancellationToken cancellationToken)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders(); // Serilog writes to console; must run before AddRis (Quartz log capture provider)
-        builder.Services.AddRis(builder.Configuration, options =>
-        {
-            options.ConfigurationFile = configFile;
-            options.LogDirectory = logDirectory ?? Path.Combine(Path.GetDirectoryName(configFile)!, "logs");
-        });
+        builder.Services.AddRis(builder.Configuration, options => options.LogDirectory = logDirectory);
+        // In-memory scheduler of AddRis with the already loaded configuration (file or database).
+        builder.Services.AddSingleton<IRisConfigurationStore>(new StaticConfigurationStore(configuration));
         using var host = builder.Build();
 
         var scheduler = await host.Services.GetRequiredService<ISchedulerFactory>().GetScheduler(cancellationToken);

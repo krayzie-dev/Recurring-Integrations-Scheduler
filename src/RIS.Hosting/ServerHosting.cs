@@ -93,6 +93,7 @@ public static class ServerHosting
         services.AddSingleton<ScheduleSynchronizer>();
         services.AddHostedService(sp => sp.GetRequiredService<ScheduleSynchronizer>());
         services.AddHostedService<RunningJobsInterrupter>();
+        services.AddHostedService<ConfigurationChangeWatcher>();
         return services;
     }
 }

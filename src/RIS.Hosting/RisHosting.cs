@@ -35,6 +35,9 @@ public sealed class RisHostOptions
     public bool Console { get; set; } = true;
 
     public D365HttpOptions Http { get; set; } = new();
+
+    /// <summary>Server: how often to check the database for configuration changed by another process (ris db import, set-secret).</summary>
+    public TimeSpan ConfigurationPollInterval { get; set; } = TimeSpan.FromSeconds(30);
 }
 
 /// <summary>

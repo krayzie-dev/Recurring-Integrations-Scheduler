@@ -16,6 +16,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Services.AddWindowsService(service => service.ServiceName = "RIS5");
+// Serilog (console, files, Event Log) replaces the default providers; must run before AddRisServer (Quartz log capture provider).
+builder.Logging.ClearProviders();
 builder.Services.AddRisServer(builder.Configuration, configureHost: host =>
 {
     if (WindowsServiceHelpers.IsWindowsService())

@@ -25,6 +25,21 @@ public sealed class MsalTokenProvider(ILogger<MsalTokenProvider> logger) : ID365
     public async Task<string> GetAuthorizationHeaderAsync(D365ConnectionOptions connection, CancellationToken cancellationToken)
     {
         var scopes = new[] { new Uri(connection.AosUri!, ".default").ToString() };
+#pragma warning disable CS0618
+        var secret = connection.AuthMode switch
+        {
+            D365AuthMode.ClientSecret => connection.ClientSecret,
+            D365AuthMode.UsernamePassword => connection.UserPassword,
+            _ => "not needed"
+        };
+#pragma warning restore CS0618
+        if (Core.Configuration.SecretPlaceholder.IsPlaceholderOrEmpty(secret))
+        {
+            throw new RisException(ErrorCodes.AuthenticationFailed,
+                $"Secret of connection '{connection.Name}' is not set. Set it with 'ris db set-secret connection \"{connection.Name}\"' or PUT /api/v1/connections/{connection.Name}/secret.",
+                new Dictionary<string, object?> { ["Connection"] = connection.Name });
+        }
+
         try
         {
             var application = _applications.GetOrAdd(CacheKey(connection), _ => new Lazy<object>(() => CreateApplication(connection))).Value;

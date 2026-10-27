@@ -245,4 +245,38 @@ public sealed partial class ConverterTests
         Assert.AreEqual(0, dryRun);
         Assert.AreEqual(2, missing);
     }
+
+    [TestMethod]
+    public async Task Cli_DbImportExportAndRunFromDatabase()
+    {
+        var folder = Directory.CreateTempSubdirectory("ris-cli-db-").FullName;
+        var data = Path.Combine(folder, "data");
+        var schedule = Path.Combine(folder, "Schedule.xml");
+        var jobs = Path.Combine(folder, "jobs.json");
+        var exported = Path.Combine(folder, "exported.json");
+        await File.WriteAllTextAsync(schedule, WithTriggers());
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["convert-schedule", schedule, "-o", jobs]).InvokeAsync());
+
+        var import = await Cli.Program.BuildCommand().Parse(["db", "import", jobs, "--data", data]).InvokeAsync();
+        var export = await Cli.Program.BuildCommand().Parse(["db", "export", "-o", exported, "--data", data]).InvokeAsync();
+        var dryRun = await Cli.Program.BuildCommand().Parse(["run", "--db", "--data", data, "--job", "CustInvoicejour interface D365_AX2012", "--dry-run"]).InvokeAsync();
+        var noSource = await Cli.Program.BuildCommand().Parse(["run", "--job", "x", "--dry-run"]).InvokeAsync();
+
+        Assert.AreEqual(0, import);
+        Assert.IsTrue(File.Exists(Path.Combine(data, "ris.db")));
+        Assert.AreEqual(0, export);
+        var configuration = RisJson.LoadConfiguration(exported);
+        Assert.AreEqual(3, configuration.Jobs.Count);
+        Assert.AreEqual(1, configuration.Connections.Count);
+        Assert.AreEqual(0, dryRun);
+        Assert.AreEqual(2, noSource);
+
+        // Invalid file: nothing is imported, exit code 1.
+        configuration.Jobs[0].Options!.Connection = "MISSING";
+        RisJson.SaveConfiguration(configuration, jobs);
+        Assert.AreEqual(1, await Cli.Program.BuildCommand().Parse(["db", "import", jobs, "--data", data]).InvokeAsync());
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+    }
 }

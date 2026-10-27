@@ -71,6 +71,13 @@ public sealed class SshNetSftpTransfer(IFileStore files, ILogger<SshNetSftpTrans
 
     private async Task RunAsync(SftpServerOptions options, string remoteFolder, string operation, Func<Renci.SshNet.SftpClient, Task> action, CancellationToken cancellationToken)
     {
+        if (!options.UseKey && Core.Configuration.SecretPlaceholder.IsPlaceholderOrEmpty(options.Password))
+        {
+            throw new RisException(ErrorCodes.SftpFailed,
+                $"Password of SFTP server '{options.Name}' is not set. Set it with 'ris db set-secret sftp \"{options.Name}\"' or PUT /api/v1/sftp-servers/{options.Name}/secret.",
+                new Dictionary<string, object?> { ["SftpServer"] = options.Name });
+        }
+
         try
         {
             using var client = CreateClient(options);

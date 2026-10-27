@@ -21,9 +21,10 @@ public sealed record SyncResult(int Added, int Updated, int Removed, int Unchang
 public sealed class ScheduleSynchronizer(
     ISchedulerFactory schedulerFactory,
     DbConfigurationStore store,
-    ILogger<ScheduleSynchronizer> logger) : IHostedService
+    ILogger<ScheduleSynchronizer> logger) : IHostedLifecycleService
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly CancellationTokenSource _stopping = new();
 
     public SyncResult? LastResult { get; private set; }
 
@@ -33,17 +34,29 @@ public sealed class ScheduleSynchronizer(
         await SynchronizeAsync(cancellationToken);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    /// <summary>Before the scheduler shuts down: no new synchronizations, and one in progress is finished first.</summary>
+    public async Task StoppingAsync(CancellationToken cancellationToken)
     {
         store.Reloaded -= OnReloaded;
-        return Task.CompletedTask;
+        await _stopping.CancelAsync();
+        await _lock.WaitAsync(cancellationToken);
+        _lock.Release();
     }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private void OnReloaded() => _ = Task.Run(async () =>
     {
         try
         {
-            await SynchronizeAsync(CancellationToken.None);
+            await SynchronizeAsync(_stopping.Token);
+        }
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+        {
+            // Service is stopping; the next start synchronizes again.
         }
         catch (Exception ex)
         {
@@ -122,20 +135,56 @@ public sealed class ScheduleSynchronizer(
 
 /// <summary>
 /// On service stop interrupts running jobs (they may wait for D365 for hours), so the service stops within seconds.
-/// Registered after the Quartz hosted service, therefore stopped before it.
+/// Runs in the "stopping" phase, which precedes every StopAsync - the host may stop services concurrently
+/// (e.g. StopAsync while RunAsync is pending), so StopAsync order alone does not guarantee the scheduler is still running.
 /// </summary>
-public sealed class RunningJobsInterrupter(ISchedulerFactory schedulerFactory, RunningJobs runningJobs, ILogger<RunningJobsInterrupter> logger) : IHostedService
+public sealed class RunningJobsInterrupter(ISchedulerFactory schedulerFactory, RunningJobs runningJobs, ILogger<RunningJobsInterrupter> logger) : IHostedLifecycleService
 {
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public async Task StoppingAsync(CancellationToken cancellationToken)
     {
+        if (runningJobs.Current.Count == 0) return;
         var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
         foreach (var (runId, key, started) in runningJobs.Current)
         {
             logger.LogWarning("Interrupting job {JobKey} (run {RunId}, running since {StartedUtc:u}) because the service is stopping",
                 $"{key.Group}.{key.Name}", runId, started);
             await scheduler.InterruptFireInstance(runId, cancellationToken);
+        }
+    }
+}
+
+/// <summary>
+/// Reloads configuration when another process (ris db import / set-secret) changed the database.
+/// Changes made through this server are applied immediately by <see cref="DbConfigurationStore"/>; this is the fallback.
+/// </summary>
+public sealed class ConfigurationChangeWatcher(ConfigurationRepository repository, DbConfigurationStore store, RisHostOptions options,
+    ILogger<ConfigurationChangeWatcher> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var version = await repository.GetVersionAsync(stoppingToken);
+        using var timer = new PeriodicTimer(options.ConfigurationPollInterval);
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                var current = await repository.GetVersionAsync(stoppingToken);
+                if (current == version) continue;
+
+                logger.LogInformation("Configuration changed in the database (version {Previous} -> {Current}); reloading", version, current);
+                version = current;
+                store.Refresh();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Checking the database for configuration changes failed: {Error}", ex.Message);
+            }
         }
     }
 }

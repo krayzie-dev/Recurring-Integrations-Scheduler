@@ -52,7 +52,11 @@ public sealed class RisTestHost : IAsyncDisposable
     public RisTestHost(string dataDirectory, FakeD365 d365)
     {
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Ris:Console"] = "false" });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Ris:Console"] = "false",
+            ["Ris:ConfigurationPollInterval"] = "00:00:01"
+        });
         builder.Services.AddRisServer(builder.Configuration, configurePersistence: p => p.DataDirectory = dataDirectory);
         builder.Services.AddSingleton<ID365ClientFactory>(d365);
         Host = builder.Build();

@@ -214,6 +214,13 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         return await db.Audit.AsNoTracking().OrderByDescending(a => a.Id).Take(take).ToListAsync(cancellationToken);
     }
 
+    /// <summary>Changes counter: id of the last audit entry (every change is audited). Lets a running service notice changes made by another process (ris db import).</summary>
+    public async Task<long> GetVersionAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        return await db.Audit.MaxAsync(a => (long?)a.Id, cancellationToken) ?? 0;
+    }
+
     public static string ComputeHash(JobDefinition job) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(job.Schedule, RisJson.Options) + "\n" + JsonSerializer.Serialize(job.Options, RisJson.Options))));
@@ -313,8 +320,14 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         AuthMode = entity.AuthMode,
         CertificateThumbprint = entity.CertificateThumbprint,
         UserName = entity.UserName,
-        ClientSecret = secrets.Unprotect(entity.ProtectedClientSecret, $"connection {entity.Name} client secret"),
+        // A required secret that was not set yet (e.g. after importing a converted 4.x schedule) is a placeholder:
+        // the configuration is valid, the job fails with "secret not set" until ris db set-secret / the API sets it.
+#pragma warning disable CS0618
+        ClientSecret = secrets.Unprotect(entity.ProtectedClientSecret, $"connection {entity.Name} client secret")
+                       ?? (entity.AuthMode == D365AuthMode.ClientSecret ? SecretPlaceholder.Value : null),
         UserPassword = secrets.Unprotect(entity.ProtectedUserPassword, $"connection {entity.Name} user password")
+                       ?? (entity.AuthMode == D365AuthMode.UsernamePassword ? SecretPlaceholder.Value : null)
+#pragma warning restore CS0618
     };
 
     private SftpServerOptions ToOptions(SftpServerEntity entity) => new()
@@ -327,7 +340,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         KeyPath = entity.KeyPath,
         ConnectTimeout = TimeSpan.FromSeconds(entity.ConnectTimeoutSeconds),
         OperationTimeout = TimeSpan.FromSeconds(entity.OperationTimeoutSeconds),
-        Password = secrets.Unprotect(entity.ProtectedPassword, $"SFTP server {entity.Name} password"),
+        Password = secrets.Unprotect(entity.ProtectedPassword, $"SFTP server {entity.Name} password") ?? (entity.UseKey ? null : SecretPlaceholder.Value),
         KeyPassphrase = secrets.Unprotect(entity.ProtectedKeyPassphrase, $"SFTP server {entity.Name} key passphrase")
     };
 

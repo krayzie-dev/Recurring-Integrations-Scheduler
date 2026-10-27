@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Quartz;
 using RIS.Core.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using RIS.Jobs.Quartz;
+using RIS.Persistence;
 
 namespace RIS.Hosting.Tests;
 
@@ -93,6 +95,28 @@ public sealed class SchedulerPersistenceTests
         await second.Repository.SaveJobAsync(RisTestHost.Export("Daily", _downloadDirectory, new ScheduleOptions { Cron = "0 0 4 * * ?" }), "test");
         await second.Synchronizer.SynchronizeAsync(default);
         Assert.AreEqual(TriggerState.Paused, await scheduler.GetTriggerState(DailyTrigger));
+    }
+
+    [TestMethod]
+    public async Task ChangeMadeByAnotherProcess_IsPickedUp()
+    {
+        await using var host = await StartAsync();
+
+        // Same data directory, separate service provider = another process (ris db import).
+        await using (var other = new ServiceCollection()
+                         .AddLogging()
+                         .AddRisPersistence(new PersistenceOptions { DataDirectory = _dataDirectory })
+                         .BuildServiceProvider())
+        {
+            var repository = other.GetRequiredService<ConfigurationRepository>();
+            await repository.ImportAsync(new RisConfiguration
+            {
+                Connections = [RisTestHost.Connection],
+                Jobs = [RisTestHost.Export("External", _downloadDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" })]
+            }, "other process");
+        }
+
+        await WaitForAsync(async () => await (await host.SchedulerAsync()).GetJobDetail(new JobKey("External", "Tests")) is not null);
     }
 
     [TestMethod]
