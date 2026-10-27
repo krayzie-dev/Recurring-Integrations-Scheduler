@@ -59,8 +59,10 @@ builder.Services.AddExceptionHandler<RisExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<RIS.Server.Services.JobQueryService>();
 builder.Services.AddScoped<RIS.Server.Services.JobOperationsService>();
+builder.Services.AddScoped<RIS.Server.Services.DashboardService>();
 
 var health = builder.Configuration.GetSection("Ris:Health").Get<HealthOptions>() ?? new HealthOptions();
+builder.Services.AddSingleton(health);
 builder.Services.AddHealthChecks()
     .AddQuartz(quartz =>
     {

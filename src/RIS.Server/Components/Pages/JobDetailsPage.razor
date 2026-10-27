@@ -1,0 +1,131 @@
+@page "/jobs/{Group}/{Name}"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+
+<PageTitle>RIS 5 – @Name</PageTitle>
+
+@if (_details is null)
+{
+    @if (Loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning">@T["Job_NotFound", $"{Group}.{Name}"]</MudAlert>
+    }
+}
+else
+{
+    var job = _details.Summary;
+    <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 pt-0" />
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-2">
+        <MudText Typo="Typo.h5">@job.Name</MudText>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@T["JobType_" + job.Type]</MudChip>
+        <StateChip Job="job" />
+        <MudSpacer />
+        @if (CanOperate)
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Primary" Variant="Variant.Filled" OnClick="() => RunJobsAsync([Ref])">@T["Action_Run"]</MudButton>
+            @if (job.IsPaused)
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.PlayCircleOutline" Color="Color.Success" Variant="Variant.Outlined" OnClick="() => ResumeJobsAsync([Ref])">@T["Action_Resume"]</MudButton>
+            }
+            else
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Pause" Color="Color.Warning" Variant="Variant.Outlined" OnClick="() => PauseJobsAsync([Ref])">@T["Action_Pause"]</MudButton>
+            }
+        }
+        @if (CanAdminister)
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Outlined" Href="@($"/jobs/{Uri.EscapeDataString(Group)}/{Uri.EscapeDataString(Name)}/edit")">@T["Action_Edit"]</MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="DeleteAsync" title="@T["Common_Delete"]" />
+        }
+    </MudStack>
+
+    @if (job.IsPaused && job.PauseReason is not null)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">@T["Job_PausedBecause", job.PauseReason, job.PausedBy ?? "?"]</MudAlert>
+    }
+    @if (!string.IsNullOrEmpty(job.Description))
+    {
+        <MudText Typo="Typo.body2" Class="mb-3">@job.Description</MudText>
+    }
+
+    <MudTabs Elevation="0" Outlined="true" TabPanelsClass="pa-4" @bind-ActivePanelIndex="_tab">
+        <MudTabPanel Text="@T["Job_TabOverview"]" Icon="@Icons.Material.Filled.Info">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudSimpleTable Dense="true" Elevation="0">
+                        <tbody>
+                            <tr><td style="width: 40%">@T["Job_Group"]</td><td>@job.Group</td></tr>
+                            <tr><td>@T["Job_Connection"]</td><td>@job.Connection</td></tr>
+                            <tr><td>@T["Job_Schedule"]</td><td class="ris-mono">@job.Schedule</td></tr>
+                            <tr><td>@T["Job_MissedRuns"]</td><td>@T["MissedRuns_" + _details.Definition.Schedule.MissedRuns]</td></tr>
+                            <tr><td>@T["Job_PairedJob"]</td><td>@(_details.Definition.PairedJob ?? "–")</td></tr>
+                            <tr><td>@T["Job_LastRun"]</td><td><ResultChip Result="@job.LastResult" /> @Prefs.Format(job.LastRunUtc)</td></tr>
+                            <tr><td>@T["Job_LastSuccess"]</td><td>@Prefs.Format(job.LastSucceededUtc)</td></tr>
+                            <tr><td>@T["Job_Failures"]</td><td>@job.ConsecutiveFailures</td></tr>
+                        </tbody>
+                    </MudSimpleTable>
+                    @if (!string.IsNullOrEmpty(job.LastSummary))
+                    {
+                        <MudAlert Severity="@(job.LastResult == "Failed" ? Severity.Error : Severity.Normal)" Dense="true" Class="ris-mono mt-2">@job.LastSummary</MudAlert>
+                    }
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
+                    @if (_details.UpcomingRunsUtc.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">–</MudText>
+                    }
+                    <MudList T="string" Dense="true">
+                        @foreach (var run in _details.UpcomingRunsUtc)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">@Prefs.Format(run, "dddd, g")</MudListItem>
+                        }
+                    </MudList>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+
+        <MudTabPanel Text="@T["Job_TabHistory"]" Icon="@Icons.Material.Filled.History">
+            <HistoryTable Runs="_history" OnOpen="id => _drawer!.OpenAsync(id)" ShowJob="false" />
+        </MudTabPanel>
+
+        <MudTabPanel Text="@T["Job_TabDefinition"]" Icon="@Icons.Material.Filled.Code">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@T["Job_DefinitionHint"]</MudText>
+            <pre class="ris-log ris-mono">@_definitionJson</pre>
+        </MudTabPanel>
+    </MudTabs>
+}
+
+<RunDrawer @ref="_drawer" CanOperate="CanOperate" UserName="@UserName" />
+
+@code {
+    [Parameter] public string Group { get; set; } = "";
+    [Parameter] public string Name { get; set; } = "";
+
+    private JobDetails? _details;
+    private IReadOnlyList<RunDetails> _history = [];
+    private string _definitionJson = "";
+    private int _tab;
+    private RunDrawer? _drawer;
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    private JobRef Ref => new(Group, Name);
+
+    protected override async Task LoadAsync()
+    {
+        _details = await Queries.GetAsync(Group, Name);
+        if (_details is null) return;
+        _history = await Queries.HistoryAsync(new HistoryFilter(_details.Definition.Group, _details.Definition.Name, Take: 200));
+        _definitionJson = System.Text.Json.JsonSerializer.Serialize(_details.Definition, RisJson.Options);
+        _breadcrumbs = [new(T["Nav_Jobs"], "/jobs"), new(_details.Summary.Group, $"/jobs?group={Uri.EscapeDataString(_details.Summary.Group)}"), new(_details.Summary.Name, null, disabled: true)];
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (await DeleteJobsAsync([Ref])) Navigation.NavigateTo("/jobs");
+    }
+}

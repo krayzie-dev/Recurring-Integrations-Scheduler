@@ -39,7 +39,7 @@
   <data name="Common_Preview" xml:space="preserve"><value>Podgląd</value></data>
   <data name="MudDataGridPager_AllItems" xml:space="preserve"><value>Wszystkie</value></data>
   <data name="MudDataGridPager_FirstPage" xml:space="preserve"><value>Pierwsza strona</value></data>
-  <data name="MudDataGridPager_InfoFormat" xml:space="preserve"><value>{first_item}-{last_item} z {all_items}</value></data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve"><value>{0}-{1} z {2}</value></data>
   <data name="MudDataGridPager_LastPage" xml:space="preserve"><value>Ostatnia strona</value></data>
   <data name="MudDataGridPager_NextPage" xml:space="preserve"><value>Następna strona</value></data>
   <data name="MudDataGridPager_PreviousPage" xml:space="preserve"><value>Poprzednia strona</value></data>
@@ -111,4 +111,128 @@
   <data name="MudTabs_ScrollLeft" xml:space="preserve"><value>Przewiń w lewo</value></data>
   <data name="MudTabs_ScrollRight" xml:space="preserve"><value>Przewiń w prawo</value></data>
   <data name="MudNavGroup_ToggleExpand" xml:space="preserve"><value>Zwiń/rozwiń</value></data>
+  <data name="Action_Run" xml:space="preserve"><value>Uruchom teraz</value></data>
+  <data name="Action_RunAgain" xml:space="preserve"><value>Uruchom ponownie</value></data>
+  <data name="Action_Pause" xml:space="preserve"><value>Wstrzymaj</value></data>
+  <data name="Action_Resume" xml:space="preserve"><value>Wznów</value></data>
+  <data name="Action_Edit" xml:space="preserve"><value>Edytuj</value></data>
+  <data name="Action_BulkEdit" xml:space="preserve"><value>Edytuj razem</value></data>
+  <data name="Action_Started" xml:space="preserve"><value>Uruchomiono zadania: {0}.</value></data>
+  <data name="Action_Paused" xml:space="preserve"><value>Wstrzymano zadania: {0}.</value></data>
+  <data name="Action_Resumed" xml:space="preserve"><value>Wznowiono zadania: {0}.</value></data>
+  <data name="Action_Deleted" xml:space="preserve"><value>Usunięto zadania: {0}.</value></data>
+  <data name="Attention_Failing" xml:space="preserve"><value>Błąd {0}× z rzędu</value></data>
+  <data name="Attention_NoRecentSuccess" xml:space="preserve"><value>Brak sukcesu od ponad {0}</value></data>
+  <data name="Attention_NotScheduled" xml:space="preserve"><value>Brak w harmonogramie</value></data>
+  <data name="Attention_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
+  <data name="Bulk_ClearSelection" xml:space="preserve"><value>Wyczyść zaznaczenie</value></data>
+  <data name="Bulk_EditSoon" xml:space="preserve"><value>Edycja zbiorcza będzie dostępna w kolejnym kroku.</value></data>
+  <data name="Bulk_PartlyFailed" xml:space="preserve"><value>Powodzenie: {0}, błędy: {1}:</value></data>
+  <data name="Bulk_Selected" xml:space="preserve"><value>Zaznaczono: {0}</value></data>
+  <data name="Chart_Tooltip" xml:space="preserve"><value>sukces: {0}, błąd: {1}, inne: {2}</value></data>
+  <data name="Dashboard_AllGood" xml:space="preserve"><value>Wszystkie zadania działają poprawnie.</value></data>
+  <data name="Dashboard_Attention" xml:space="preserve"><value>Wymaga uwagi</value></data>
+  <data name="Dashboard_Failing" xml:space="preserve"><value>Z błędami</value></data>
+  <data name="Dashboard_Healthy" xml:space="preserve"><value>OK</value></data>
+  <data name="Dashboard_NothingRunning" xml:space="preserve"><value>Nic nie jest teraz uruchomione.</value></data>
+  <data name="Dashboard_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
+  <data name="Dashboard_RecentFailures" xml:space="preserve"><value>Błędy z ostatnich 24 h</value></data>
+  <data name="Dashboard_Running" xml:space="preserve"><value>W trakcie</value></data>
+  <data name="Dashboard_RunningNow" xml:space="preserve"><value>Teraz działa</value></data>
+  <data name="Dashboard_Total" xml:space="preserve"><value>Zadania</value></data>
+  <data name="Dashboard_Updated" xml:space="preserve"><value>Zaktualizowano {0}</value></data>
+  <data name="Dashboard_Last24h" xml:space="preserve"><value>Uruchomienia w ostatnich 24 h</value></data>
+  <data name="Delete_ConfirmTitle" xml:space="preserve"><value>Usunąć zadania ({0})?</value></data>
+  <data name="Delete_ConfirmText" xml:space="preserve"><value>Definicje zostaną usunięte z konfiguracji i harmonogramu. Historia uruchomień zostaje. Zmiana trafi do audytu.</value></data>
+  <data name="Filter_Failing" xml:space="preserve"><value>Z błędami</value></data>
+  <data name="Filter_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
+  <data name="Filter_Running" xml:space="preserve"><value>W trakcie</value></data>
+  <data name="History_None" xml:space="preserve"><value>Brak uruchomień.</value></data>
+  <data name="Job_Name" xml:space="preserve"><value>Zadanie</value></data>
+  <data name="Job_Group" xml:space="preserve"><value>Grupa</value></data>
+  <data name="Job_Type" xml:space="preserve"><value>Typ</value></data>
+  <data name="Job_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Job_Schedule" xml:space="preserve"><value>Harmonogram</value></data>
+  <data name="Job_State" xml:space="preserve"><value>Stan</value></data>
+  <data name="Job_NextRun" xml:space="preserve"><value>Następne uruchomienie</value></data>
+  <data name="Job_LastRun" xml:space="preserve"><value>Ostatnie uruchomienie</value></data>
+  <data name="Job_LastSuccess" xml:space="preserve"><value>Ostatni sukces</value></data>
+  <data name="Job_Failures" xml:space="preserve"><value>Błędy z rzędu</value></data>
+  <data name="Job_MissedRuns" xml:space="preserve"><value>Przegapione terminy</value></data>
+  <data name="Job_PairedJob" xml:space="preserve"><value>Zadanie powiązane</value></data>
+  <data name="Job_NotFound" xml:space="preserve"><value>Zadanie {0} nie jest skonfigurowane.</value></data>
+  <data name="Job_PausedBecause" xml:space="preserve"><value>Wstrzymane: {0} (przez {1})</value></data>
+  <data name="Job_TabOverview" xml:space="preserve"><value>Przegląd</value></data>
+  <data name="Job_TabHistory" xml:space="preserve"><value>Historia</value></data>
+  <data name="Job_TabDefinition" xml:space="preserve"><value>Definicja</value></data>
+  <data name="Job_DefinitionHint" xml:space="preserve"><value>Definicja zapisana w konfiguracji (JSON, bez sekretów).</value></data>
+  <data name="Job_UpcomingRuns" xml:space="preserve"><value>Najbliższe uruchomienia</value></data>
+  <data name="Jobs_None" xml:space="preserve"><value>Brak zadań spełniających kryteria.</value></data>
+  <data name="JobType_Export" xml:space="preserve"><value>Eksport</value></data>
+  <data name="JobType_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="JobType_Upload" xml:space="preserve"><value>Wysyłka (Upload)</value></data>
+  <data name="JobType_Download" xml:space="preserve"><value>Pobieranie (Download)</value></data>
+  <data name="JobType_ExecutionMonitor" xml:space="preserve"><value>Monitor wykonania</value></data>
+  <data name="JobType_ProcessingMonitor" xml:space="preserve"><value>Monitor przetwarzania</value></data>
+  <data name="MissedRuns_RunOnce" xml:space="preserve"><value>Uruchom raz po starcie</value></data>
+  <data name="MissedRuns_Skip" xml:space="preserve"><value>Pomiń</value></data>
+  <data name="Pause_Title" xml:space="preserve"><value>Wstrzymaj zadania ({0})</value></data>
+  <data name="Pause_Reason" xml:space="preserve"><value>Powód</value></data>
+  <data name="Pause_ReasonHint" xml:space="preserve"><value>np. prace serwisowe D365 do 18:00</value></data>
+  <data name="Result_Succeeded" xml:space="preserve"><value>Sukces</value></data>
+  <data name="Result_Failed" xml:space="preserve"><value>Błąd</value></data>
+  <data name="Result_Cancelled" xml:space="preserve"><value>Przerwane</value></data>
+  <data name="Result_Skipped" xml:space="preserve"><value>Pominięte</value></data>
+  <data name="Result_Vetoed" xml:space="preserve"><value>Zablokowane</value></data>
+  <data name="Result_Running" xml:space="preserve"><value>W trakcie</value></data>
+  <data name="State_Normal" xml:space="preserve"><value>Zaplanowane</value></data>
+  <data name="State_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
+  <data name="State_Running" xml:space="preserve"><value>W trakcie</value></data>
+  <data name="State_Error" xml:space="preserve"><value>Błąd</value></data>
+  <data name="State_Blocked" xml:space="preserve"><value>Zablokowane</value></data>
+  <data name="State_Complete" xml:space="preserve"><value>Zakończone</value></data>
+  <data name="State_None" xml:space="preserve"><value>Brak</value></data>
+  <data name="State_NotScheduled" xml:space="preserve"><value>Niezaplanowane</value></data>
+  <data name="State_Executing" xml:space="preserve"><value>W trakcie</value></data>
+  <data name="State_Awaiting" xml:space="preserve"><value>Oczekuje</value></data>
+  <data name="Run_Title" xml:space="preserve"><value>Szczegóły uruchomienia</value></data>
+  <data name="Run_OpenPage" xml:space="preserve"><value>Otwórz jako stronę</value></data>
+  <data name="Run_NotFound" xml:space="preserve"><value>Nie znaleziono uruchomienia w historii.</value></data>
+  <data name="Run_ConfirmTitle" xml:space="preserve"><value>Uruchomić teraz zadania ({0})?</value></data>
+  <data name="Run_ConfirmText" xml:space="preserve"><value>Każde zadanie zostanie uruchomione raz, niezależnie od harmonogramu.</value></data>
+  <data name="Run_Started" xml:space="preserve"><value>Start</value></data>
+  <data name="Run_Duration" xml:space="preserve"><value>Czas trwania</value></data>
+  <data name="Run_Id" xml:space="preserve"><value>Id uruchomienia</value></data>
+  <data name="Run_ExecutionId" xml:space="preserve"><value>Id wykonania / komunikatu D365</value></data>
+  <data name="Run_ErrorCode" xml:space="preserve"><value>Kod błędu</value></data>
+  <data name="Run_Result" xml:space="preserve"><value>Wynik</value></data>
+  <data name="Run_Summary" xml:space="preserve"><value>Podsumowanie</value></data>
+  <data name="Run_Manual" xml:space="preserve"><value>Ręcznie</value></data>
+  <data name="Run_Metrics" xml:space="preserve"><value>Metryki</value></data>
+  <data name="Run_Log" xml:space="preserve"><value>Log zadania</value></data>
+  <data name="Run_NoLog" xml:space="preserve"><value>Brak przechwyconego logu dla tego uruchomienia.</value></data>
+  <data name="Error_RIS_CFG_001" xml:space="preserve"><value>Nieprawidłowa konfiguracja zadania; komunikat wskazuje błędne ustawienia.</value></data>
+  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>Połączenie wskazane w zadaniu nie istnieje.</value></data>
+  <data name="Error_RIS_CFG_003" xml:space="preserve"><value>Folder nie istnieje albo konto usługi nie ma dostępu (udziały UNC wymagają konta domenowego).</value></data>
+  <data name="Error_RIS_CFG_004" xml:space="preserve"><value>Nieprawidłowy szablon pakietu (brak Manifest.xml); wyeksportuj nowy szablon z D365.</value></data>
+  <data name="Error_RIS_AUTH_001" xml:space="preserve"><value>Błąd logowania do Entra ID: sprawdź tenant, client id, ważność sekretu lub certyfikatu; komunikat zawiera kod AADSTS.</value></data>
+  <data name="Error_RIS_HTTP_001" xml:space="preserve"><value>D365 odrzucił żądanie: błędny projekt danych, uprawnienia lub firma; odpowiedź jest w logu.</value></data>
+  <data name="Error_RIS_HTTP_002" xml:space="preserve"><value>Chwilowy problem (timeout, ograniczenie, 5xx, DNS); zwykle mija samoczynnie.</value></data>
+  <data name="Error_RIS_HTTP_003" xml:space="preserve"><value>Nieoczekiwana odpowiedź D365; zgłoś, jeśli się powtarza.</value></data>
+  <data name="Error_RIS_EXP_001" xml:space="preserve"><value>Eksport nie zakończył się w limicie czasu: sprawdź wykonanie w D365 i obciążenie batch.</value></data>
+  <data name="Error_RIS_EXP_002" xml:space="preserve"><value>Eksport zakończył się błędem lub anulowaniem: otwórz wykonanie w D365 i sprawdź jego log.</value></data>
+  <data name="Error_RIS_EXP_003" xml:space="preserve"><value>Adres pakietu niedostępny w limicie czasu.</value></data>
+  <data name="Error_RIS_EXP_004" xml:space="preserve"><value>Nie udało się pobrać pakietu: sprawdź dostęp do Azure Blob Storage.</value></data>
+  <data name="Error_RIS_IMP_001" xml:space="preserve"><value>ImportFromPackage nie powiódł się; raport błędu leży obok pliku w folderze błędów.</value></data>
+  <data name="Error_RIS_IMP_002" xml:space="preserve"><value>Nie można ustalić firmy z nazwy pliku lub folderu.</value></data>
+  <data name="Error_RIS_UPL_001" xml:space="preserve"><value>Enqueue nie powiódł się; raport błędu leży obok pliku.</value></data>
+  <data name="Error_RIS_DWN_001" xml:space="preserve"><value>Dequeue nie powiódł się: sprawdź recurring data job w D365.</value></data>
+  <data name="Error_RIS_DWN_002" xml:space="preserve"><value>Potwierdzenie (ack) nie powiodło się; D365 może ponownie udostępnić komunikat.</value></data>
+  <data name="Error_RIS_MON_001" xml:space="preserve"><value>Import/przetwarzanie nie zakończyło się w limicie czasu.</value></data>
+  <data name="Error_RIS_MON_002" xml:space="preserve"><value>Import/przetwarzanie zakończone błędami w D365; zobacz pliki błędów i link obok pliku.</value></data>
+  <data name="Error_RIS_FS_001" xml:space="preserve"><value>Plik jest zablokowany przez inny proces; zostanie przetworzony w kolejnym uruchomieniu.</value></data>
+  <data name="Error_RIS_FS_002" xml:space="preserve"><value>Operacja na pliku nie powiodła się (uprawnienia, miejsce na dysku).</value></data>
+  <data name="Error_RIS_SFTP_001" xml:space="preserve"><value>Transfer SFTP nie powiódł się: sprawdź serwer, dane logowania i folder zdalny.</value></data>
+  <data name="Error_RIS_GEN_001" xml:space="preserve"><value>Nieoczekiwany błąd; stos wywołań jest w logu.</value></data>
+  <data name="Error_RIS_GEN_002" xml:space="preserve"><value>D365 zwrócił status nieznany dla RIS.</value></data>
 </root>

@@ -1,0 +1,33 @@
+@* Result of a run (Succeeded, Failed, ...) with colour and localized text. *@
+@if (!string.IsNullOrEmpty(Result))
+{
+    <MudTooltip Text="@Tooltip" Disabled="string.IsNullOrEmpty(Tooltip)">
+        <MudChip T="string" Size="Size.Small" Color="Colour" Variant="Variant.Text" Icon="@Icon" Class="ma-0">@T["Result_" + Result]</MudChip>
+    </MudTooltip>
+}
+else
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">–</MudText>
+}
+
+@code {
+    [Parameter] public string? Result { get; set; }
+    [Parameter] public string? Tooltip { get; set; }
+
+    private Color Colour => Result switch
+    {
+        "Succeeded" => Color.Success,
+        "Failed" => Color.Error,
+        "Running" => Color.Info,
+        _ => Color.Default
+    };
+
+    private string Icon => Result switch
+    {
+        "Succeeded" => Icons.Material.Filled.CheckCircle,
+        "Failed" => Icons.Material.Filled.Error,
+        "Running" => Icons.Material.Filled.PlayCircle,
+        "Cancelled" => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.RemoveCircleOutline
+    };
+}

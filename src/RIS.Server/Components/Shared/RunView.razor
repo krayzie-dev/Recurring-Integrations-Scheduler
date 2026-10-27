@@ -1,0 +1,75 @@
+@using RIS.Server.Services
+@* Details of one run: result, times, error code with description, metrics, captured log. *@
+
+<MudStack Spacing="2">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+        <ResultChip Result="@Run.Result" />
+        <MudLink Href="@($"/jobs/{Uri.EscapeDataString(Run.Group)}/{Uri.EscapeDataString(Run.Name)}")" Typo="Typo.subtitle1">@Run.Job</MudLink>
+        @if (Run.Manual)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.TouchApp">@T["Run_Manual"]</MudChip>
+        }
+    </MudStack>
+
+    <MudSimpleTable Dense="true" Elevation="0">
+        <tbody>
+            <tr><td style="width: 30%">@T["Run_Started"]</td><td>@Prefs.Format(Run.FiredAtUtc, "G") (@Prefs.ZoneLabel)</td></tr>
+            <tr><td>@T["Run_Duration"]</td><td>@UiFormat.Duration(Run.Duration)</td></tr>
+            <tr><td>@T["Run_Id"]</td><td class="ris-mono">@Run.RunId</td></tr>
+            @if (Run.ExecutionId is not null)
+            {
+                <tr><td>@T["Run_ExecutionId"]</td><td class="ris-mono">@Run.ExecutionId</td></tr>
+            }
+            @if (Run.ErrorCode is not null)
+            {
+                <tr>
+                    <td>@T["Run_ErrorCode"]</td>
+                    <td><MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">@Run.ErrorCode</MudChip> @ErrorHelp(Run.ErrorCode)</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+
+    @if (!string.IsNullOrEmpty(Run.Summary))
+    {
+        <MudAlert Severity="@(Run.Result == "Failed" ? Severity.Error : Severity.Normal)" Dense="true" Class="ris-mono">@Run.Summary</MudAlert>
+    }
+    @if (!string.IsNullOrEmpty(Run.Error) && Run.Error != Run.Summary)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="ris-mono">@Run.Error</MudAlert>
+    }
+
+    @if (Run.Metrics is { ValueKind: System.Text.Json.JsonValueKind.Object } metrics)
+    {
+        <MudText Typo="Typo.subtitle2">@T["Run_Metrics"]</MudText>
+        <MudSimpleTable Dense="true" Elevation="0">
+            <tbody>
+                @foreach (var property in metrics.EnumerateObject())
+                {
+                    <tr><td style="width: 30%">@property.Name</td><td class="ris-mono">@property.Value.ToString()</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    <MudText Typo="Typo.subtitle2">@T["Run_Log"]</MudText>
+    @if (string.IsNullOrEmpty(Run.Log))
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@T["Run_NoLog"]</MudText>
+    }
+    else
+    {
+        <div class="ris-log ris-mono">@Run.Log</div>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public RunDetails Run { get; set; } = null!;
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+
+    private string ErrorHelp(string code)
+    {
+        var text = T["Error_" + code.Replace('-', '_')];
+        return text.ResourceNotFound ? string.Empty : text.Value;
+    }
+}

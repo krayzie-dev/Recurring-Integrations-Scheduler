@@ -1,0 +1,41 @@
+@using RIS.Server.Services
+@* Stacked bars of runs per hour (succeeded / failed / other). SVG coloured by the theme. *@
+
+<svg class="gantt" viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="none" role="img" aria-label="@T["Dashboard_Last24h"]">
+    @{
+        var max = Math.Max(1, Buckets.Max(b => b.Succeeded + b.Failed + b.Other));
+        var barWidth = (Width - 30.0) / Math.Max(1, Buckets.Count);
+        var plot = Height - 18.0;
+    }
+    <line class="grid" x1="30" x2="@Width" y1="@plot" y2="@plot" />
+    <text class="axis" x="26" y="10" text-anchor="end">@max</text>
+    @for (var i = 0; i < Buckets.Count; i++)
+    {
+        var bucket = Buckets[i];
+        var x = 30 + i * barWidth + 1;
+        var y = plot;
+        foreach (var (count, css) in new[] { (bucket.Succeeded, "succeeded"), (bucket.Other, "skipped"), (bucket.Failed, "failed") })
+        {
+            if (count == 0) continue;
+            var h = count / (double)max * (plot - 4);
+            y -= h;
+            <rect class="bar @css" x="@F(x)" y="@F(y)" width="@F(barWidth - 2)" height="@F(h)">
+                <title>@Prefs.Format(bucket.StartUtc, "t"): @T["Chart_Tooltip", bucket.Succeeded, bucket.Failed, bucket.Other]</title>
+            </rect>
+        }
+        @if (i % 3 == 0)
+        {
+            <g><text class="axis" x="@F(x + barWidth / 2)" y="@(Height - 4)" text-anchor="middle">@Prefs.ToDisplay(bucket.StartUtc).ToString("HH")</text></g>
+        }
+    }
+</svg>
+
+@code {
+    private const int Width = 480;
+    private const int Height = 140;
+
+    [Parameter] public IReadOnlyList<StatisticsBucket> Buckets { get; set; } = [];
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+
+    private static string F(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}

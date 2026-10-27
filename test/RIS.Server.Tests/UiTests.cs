@@ -1,5 +1,9 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Xml.Linq;
+using RIS.Core.Configuration;
+using RIS.Hosting.Tests;
 
 namespace RIS.Server.Tests;
 
@@ -20,7 +24,7 @@ public sealed class UiTests
         if (language is not null) client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
         if (cultureCookie is not null) client.DefaultRequestHeaders.Add("Cookie", $".AspNetCore.Culture=c={cultureCookie}|uic={cultureCookie}");
         var response = await client.GetAsync(url);
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, url);
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, url + ": " + await response.Content.ReadAsStringAsync());
         return WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
     }
 
@@ -66,6 +70,42 @@ public sealed class UiTests
     }
 
     [TestMethod]
+    public async Task Pages_RenderJobsDashboardDetailsAndRun()
+    {
+        var admin = _factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Daily",
+            RisTestHost.Export("Daily", Path.Combine(_factory.DataDirectory, "export"), new ScheduleOptions { Cron = "0 0 2 * * ?" }))).EnsureSuccessStatusCode();
+        Assert.AreEqual(HttpStatusCode.Accepted, (await admin.PostAsync("/api/v1/jobs/Tests/Daily/run", null)).StatusCode);
+        string? runId = null;
+        for (var i = 0; i < 100 && runId is null; i++)
+        {
+            var history = await admin.GetFromJsonAsync<JsonElement>("/api/v1/jobs/Tests/Daily/history");
+            runId = history.GetArrayLength() > 0 ? history[0].GetProperty("runId").GetString() : null;
+            await Task.Delay(100);
+        }
+
+        var jobs = await GetPageAsync("/jobs", "Viewer", "pl-PL");
+        StringAssert.Contains(jobs, "Daily");
+        StringAssert.Contains(jobs, "Eksport");
+        Assert.IsFalse(jobs.Contains("Uruchom teraz"), "Viewer has no operator actions.");
+        StringAssert.Contains(await GetPageAsync("/jobs", "Operator", "pl-PL"), "Uruchom teraz");
+
+        var dashboard = await GetPageAsync("/", "Viewer", "en-US");
+        StringAssert.Contains(dashboard, "Needs attention");
+        StringAssert.Contains(dashboard, "Runs in the last 24 h");
+
+        var details = await GetPageAsync("/jobs/Tests/Daily", "Admin", "en-US");
+        StringAssert.Contains(details, "Next runs");
+        StringAssert.Contains(details, "0 0 2 * * ?");
+
+        var run = await GetPageAsync($"/runs/{runId}", "Viewer", "en-US");
+        StringAssert.Contains(run, "Job log");
+        StringAssert.Contains(run, "Succeeded");
+    }
+
+
+    [TestMethod]
     public void Translations_AreComplete()
     {
         var folder = Path.Combine(RepoRoot(), "src", "RIS.Server", "Resources");
@@ -81,6 +121,28 @@ public sealed class UiTests
         Assert.AreEqual(0, missingInPolish.Count, "Missing in UiText.pl.resx: " + string.Join(", ", missingInPolish));
         Assert.AreEqual(0, missingInEnglish.Count, "Missing in UiText.resx: " + string.Join(", ", missingInEnglish));
     }
+
+    [TestMethod]
+    public void Translations_HaveMatchingPositionalPlaceholders()
+    {
+        var folder = Path.Combine(RepoRoot(), "src", "RIS.Server", "Resources");
+        static Dictionary<string, string> Values(string file) =>
+            XDocument.Load(file).Root!.Elements("data").ToDictionary(d => (string)d.Attribute("name")!, d => (string)d.Element("value")!);
+        static string Placeholders(string text) =>
+            string.Join(",", System.Text.RegularExpressions.Regex.Matches(text, @"\{[^}]*\}").Select(m => m.Value).Distinct().Order());
+
+        var english = Values(Path.Combine(folder, "UiText.resx"));
+        var polish = Values(Path.Combine(folder, "UiText.pl.resx"));
+        var problems = new List<string>();
+        foreach (var (key, value) in polish)
+        {
+            // string.Format is used for every text (also by MudBlazor): only {0}, {1}, ... are allowed.
+            if (System.Text.RegularExpressions.Regex.IsMatch(value, @"\{(?!\d+(:[^}]*)?\})")) problems.Add($"{key}: non-positional placeholder in '{value}'");
+            if (english.TryGetValue(key, out var en) && Placeholders(en) != Placeholders(value)) problems.Add($"{key}: '{en}' vs '{value}'");
+        }
+        Assert.AreEqual(0, problems.Count, string.Join(Environment.NewLine, problems));
+    }
+
 
     private static string RepoRoot()
     {

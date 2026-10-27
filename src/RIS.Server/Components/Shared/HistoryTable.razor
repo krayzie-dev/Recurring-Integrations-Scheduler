@@ -1,0 +1,37 @@
+@using RIS.Server.Services
+@* Table of runs; a click opens the run details. *@
+
+<MudDataGrid T="RunDetails" Items="Runs" Dense="true" Hover="true" Striped="true" RowsPerPage="25" Elevation="0" Outlined="true"
+             RowClick="args => OnOpen.InvokeAsync(args.Item.RunId)" RowClass="ris-clickable" SortMode="SortMode.Single">
+    <Columns>
+        <PropertyColumn Property="r => r.FiredAtUtc" Title="@T["Run_Started"]">
+            <CellTemplate>@Prefs.Format(context.Item.FiredAtUtc, "G")</CellTemplate>
+        </PropertyColumn>
+        @if (ShowJob)
+        {
+            <PropertyColumn Property="r => r.Job" Title="@T["Job_Name"]" />
+        }
+        <PropertyColumn Property="r => r.Result" Title="@T["Run_Result"]">
+            <CellTemplate><ResultChip Result="@context.Item.Result" /></CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="r => r.Duration" Title="@T["Run_Duration"]">
+            <CellTemplate>@UiFormat.Duration(context.Item.Duration)</CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="r => r.ErrorCode" Title="@T["Run_ErrorCode"]" />
+        <PropertyColumn Property="r => r.Summary" Title="@T["Run_Summary"]" Sortable="false">
+            <CellTemplate><MudText Typo="Typo.body2" Style="max-width: 640px" Class="text-truncate" title="@context.Item.Summary">@context.Item.Summary</MudText></CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="r => r.Manual" Title="@T["Run_Manual"]">
+            <CellTemplate>@if (context.Item.Manual) { <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" /> }</CellTemplate>
+        </PropertyColumn>
+    </Columns>
+    <NoRecordsContent><MudText Class="pa-4">@T["History_None"]</MudText></NoRecordsContent>
+    <PagerContent><MudDataGridPager T="RunDetails" PageSizeOptions="[25, 50, 100, 500]" /></PagerContent>
+</MudDataGrid>
+
+@code {
+    [Parameter] public IReadOnlyList<RunDetails> Runs { get; set; } = [];
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public bool ShowJob { get; set; } = true;
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+}

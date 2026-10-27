@@ -1,5 +1,130 @@
 @page "/"
 @attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+@inject DashboardService Dashboard
 
 <PageTitle>RIS 5 – @T["Nav_Dashboard"]</PageTitle>
-<MudText Typo="Typo.h5" GutterBottom="true">@T["Nav_Dashboard"]</MudText>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudText Typo="Typo.h5">@T["Nav_Dashboard"]</MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@T["Dashboard_Updated", Prefs.Format(_loadedUtc, "T")]</MudText>
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ReloadAsync" title="@T["Common_Refresh"]" />
+</MudStack>
+
+@if (_data is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-2">
+        <Tile Title="@T["Dashboard_Total"]" Value="_data.Total" Icon="@Icons.Material.Filled.ListAlt" Href="/jobs" />
+        <Tile Title="@T["Dashboard_Healthy"]" Value="_data.Healthy" Icon="@Icons.Material.Filled.CheckCircle" Colour="Color.Success" Href="/jobs" />
+        <Tile Title="@T["Dashboard_Failing"]" Value="_data.Failing" Icon="@Icons.Material.Filled.Error" Colour="@(_data.Failing > 0 ? Color.Error : Color.Default)" Href="/jobs?filter=failing" />
+        <Tile Title="@T["Dashboard_Paused"]" Value="_data.Paused" Icon="@Icons.Material.Filled.PauseCircle" Colour="@(_data.Paused > 0 ? Color.Warning : Color.Default)" Href="/jobs?filter=paused" />
+        <Tile Title="@T["Dashboard_Running"]" Value="_data.Running" Icon="@Icons.Material.Filled.Sync" Colour="@(_data.Running > 0 ? Color.Info : Color.Default)" Href="/jobs?filter=running" />
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pa-4" Outlined="true" Elevation="0" Style="height: 100%">
+                <MudText Typo="Typo.h6" Class="mb-2">@T["Dashboard_Attention"]</MudText>
+                @if (_data.Attention.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">@T["Dashboard_AllGood"]</MudAlert>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                        <tbody>
+                            @foreach (var item in _data.Attention)
+                            {
+                                <tr>
+                                    <td style="width: 1%"><MudIcon Icon="@AttentionIcon(item.Kind)" Color="@AttentionColour(item.Kind)" Size="Size.Small" /></td>
+                                    <td>
+                                        <MudLink Href="@($"/jobs/{Uri.EscapeDataString(item.Job.Group)}/{Uri.EscapeDataString(item.Job.Name)}")">@item.Job.Key</MudLink>
+                                        <MudText Typo="Typo.caption" Class="d-block">@AttentionText(item)</MudText>
+                                    </td>
+                                    <td style="width: 1%; white-space: nowrap"><MudText Typo="Typo.caption">@(item.SinceUtc is null ? "" : Prefs.Format(item.SinceUtc))</MudText></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="pa-4 mb-3" Outlined="true" Elevation="0">
+                <MudText Typo="Typo.h6" Class="mb-2">@T["Dashboard_RunningNow"]</MudText>
+                @if (_data.RunningNow.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@T["Dashboard_NothingRunning"]</MudText>
+                }
+                @foreach (var run in _data.RunningNow)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="py-1">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Info" />
+                        <MudText Typo="Typo.body2">@run.Job</MudText>
+                        <MudSpacer />
+                        <MudText Typo="Typo.caption">@UiFormat.Duration(DateTimeOffset.UtcNow - run.StartedUtc)</MudText>
+                    </MudStack>
+                }
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Outlined="true" Elevation="0">
+                <MudText Typo="Typo.h6" Class="mb-2">@T["Dashboard_Last24h"]</MudText>
+                <HourlyChart Buckets="_data.Last24Hours" />
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Outlined="true" Elevation="0">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h6">@T["Dashboard_RecentFailures"]</MudText>
+                    <MudSpacer />
+                    <MudButton Href="/history" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowForward">@T["Nav_History"]</MudButton>
+                </MudStack>
+                <HistoryTable Runs="_data.RecentFailures" OnOpen="id => _drawer!.OpenAsync(id)" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+<RunDrawer @ref="_drawer" CanOperate="CanOperate" UserName="@UserName" />
+
+@code {
+    private DashboardData? _data;
+    private DateTimeOffset _loadedUtc;
+    private RunDrawer? _drawer;
+
+    protected override async Task LoadAsync()
+    {
+        _data = await Dashboard.LoadAsync(Disposed);
+        _loadedUtc = DateTimeOffset.UtcNow;
+    }
+
+    private string AttentionText(AttentionItem item) => item.Kind switch
+    {
+        AttentionKind.Failing => T["Attention_Failing", item.Job.ConsecutiveFailures] + (item.Detail is null ? "" : ": " + item.Detail),
+        AttentionKind.NoRecentSuccess => T["Attention_NoRecentSuccess", item.Detail ?? ""],
+        AttentionKind.Paused => T["Attention_Paused"] + (item.Detail is null ? "" : ": " + item.Detail),
+        _ => T["Attention_NotScheduled"]
+    };
+
+    private static string AttentionIcon(AttentionKind kind) => kind switch
+    {
+        AttentionKind.Failing => Icons.Material.Filled.Error,
+        AttentionKind.NoRecentSuccess => Icons.Material.Filled.HourglassBottom,
+        AttentionKind.Paused => Icons.Material.Filled.PauseCircle,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    private static Color AttentionColour(AttentionKind kind) => kind switch
+    {
+        AttentionKind.Failing => Color.Error,
+        AttentionKind.NoRecentSuccess or AttentionKind.Paused => Color.Warning,
+        _ => Color.Default
+    };
+}

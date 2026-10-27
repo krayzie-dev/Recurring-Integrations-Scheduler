@@ -1,0 +1,25 @@
+@page "/runs/{RunId}"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+
+<PageTitle>RIS 5 – @T["Run_Title"]</PageTitle>
+<MudText Typo="Typo.h5" Class="mb-3">@T["Run_Title"]</MudText>
+
+@if (_run is not null)
+{
+    <MudPaper Class="pa-4" Outlined="true" Elevation="0"><RunView Run="_run" /></MudPaper>
+}
+else if (!Loading)
+{
+    <MudAlert Severity="Severity.Warning">@T["Run_NotFound"]</MudAlert>
+}
+
+@code {
+    [Parameter] public string RunId { get; set; } = "";
+
+    private RunDetails? _run;
+
+    protected override TimeSpan? RefreshInterval => null;
+
+    protected override async Task LoadAsync() => _run = await Queries.GetRunAsync(RunId);
+}

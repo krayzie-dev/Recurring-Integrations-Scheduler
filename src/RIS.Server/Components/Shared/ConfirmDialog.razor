@@ -1,0 +1,29 @@
+@* Confirmation with the list of affected items. *@
+<MudDialog>
+    <TitleContent>@Title</TitleContent>
+    <DialogContent>
+        <MudText Class="mb-2">@Message</MudText>
+        @if (Items.Count > 0)
+        {
+            <MudList T="string" Dense="true" Style="max-height: 40vh; overflow: auto">
+                @foreach (var item in Items)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.ChevronRight">@item</MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Color="ConfirmColor" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(true))">@ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string ConfirmText { get; set; } = "OK";
+    [Parameter] public Color ConfirmColor { get; set; } = Color.Primary;
+    [Parameter] public IReadOnlyList<string> Items { get; set; } = [];
+}

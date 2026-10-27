@@ -1,0 +1,32 @@
+@* Scheduler state of a job; running jobs and pause reasons are shown too. *@
+<MudTooltip Text="@Tooltip" Disabled="string.IsNullOrEmpty(Tooltip)">
+    <MudChip T="string" Size="Size.Small" Color="Colour" Variant="Variant.Outlined" Icon="@Icon" Class="ma-0">@T["State_" + Key]</MudChip>
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired] public RIS.Server.Services.JobSummary Job { get; set; } = null!;
+
+    private string Key => Job.Running ? "Running" : Job.State;
+
+    private string? Tooltip => Job.IsPaused && Job.PauseReason is not null
+        ? $"{Job.PauseReason} ({Job.PausedBy})"
+        : null;
+
+    private Color Colour => Key switch
+    {
+        "Running" => Color.Info,
+        "Normal" => Color.Success,
+        "Paused" => Color.Warning,
+        "Error" or "Blocked" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string Icon => Key switch
+    {
+        "Running" => Icons.Material.Filled.Sync,
+        "Normal" => Icons.Material.Filled.Schedule,
+        "Paused" => Icons.Material.Filled.PauseCircle,
+        "Error" => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+}

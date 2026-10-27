@@ -1,0 +1,66 @@
+@using RIS.Server.Services
+@inject JobQueryService Queries
+@inject JobOperationsService Operations
+@inject ISnackbar Snackbar
+@* Side panel with details of a run, opened from history tables and charts. *@
+
+<MudDrawer @bind-Open="_open" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Width="min(720px, 100vw)" Elevation="4">
+    <MudDrawerHeader>
+        <MudText Typo="Typo.h6">@T["Run_Title"]</MudText>
+        <MudSpacer />
+        @if (_run is not null)
+        {
+            <MudTooltip Text="@T["Run_OpenPage"]">
+                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Href="@($"/runs/{Uri.EscapeDataString(_run.RunId)}")" Size="Size.Small" />
+            </MudTooltip>
+            @if (CanOperate)
+            {
+                <MudTooltip Text="@T["Action_RunAgain"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Replay" Size="Size.Small" OnClick="RunAgainAsync" />
+                </MudTooltip>
+            }
+        }
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="() => _open = false" />
+    </MudDrawerHeader>
+    <div class="pa-4">
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_run is null)
+        {
+            <MudAlert Severity="Severity.Warning">@T["Run_NotFound"]</MudAlert>
+        }
+        else
+        {
+            <RunView Run="_run" />
+        }
+    </div>
+</MudDrawer>
+
+@code {
+    [Parameter] public bool CanOperate { get; set; }
+    [Parameter] public string? UserName { get; set; }
+
+    private bool _open;
+    private bool _loading;
+    private RunDetails? _run;
+
+    public async Task OpenAsync(string runId)
+    {
+        _open = true;
+        _loading = true;
+        _run = null;
+        StateHasChanged();
+        _run = await Queries.GetRunAsync(runId);
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task RunAgainAsync()
+    {
+        if (_run is null) return;
+        var result = await Operations.RunAsync([new JobRef(_run.Group, _run.Name)], UserName);
+        Snackbar.Add(result[0].Succeeded ? T["Action_Started", 1] : result[0].Error!, result[0].Succeeded ? Severity.Success : Severity.Error);
+    }
+}

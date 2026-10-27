@@ -1,0 +1,19 @@
+@* Asks for the reason of a pause; the reason is stored with the pause and shown to everybody. *@
+<MudDialog>
+    <TitleContent>@T["Pause_Title", Jobs.Count]</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-2">@string.Join(", ", Jobs.Take(10))@(Jobs.Count > 10 ? " …" : "")</MudText>
+        <MudTextField @bind-Value="_reason" Label="@T["Pause_Reason"]" Placeholder="@T["Pause_ReasonHint"]" AutoFocus="true" Immediate="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(_reason))">@T["Action_Pause"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<string> Jobs { get; set; } = [];
+
+    private string? _reason;
+}

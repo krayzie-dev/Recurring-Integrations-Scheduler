@@ -1,0 +1,210 @@
+@page "/jobs"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+
+<PageTitle>RIS 5 – @T["Nav_Jobs"]</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudText Typo="Typo.h5">@T["Nav_Jobs"]</MudText>
+    <MudChip T="string" Size="Size.Small">@UiFormat.Number(_filtered.Count) / @UiFormat.Number(_all.Count)</MudChip>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ReloadAsync" title="@T["Common_Refresh"]" />
+</MudStack>
+
+@* Filters *@
+<MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="3">
+            <MudTextField @bind-Value="_search" Placeholder="@T["Common_Search"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" DebounceInterval="250" OnDebounceIntervalElapsed="ApplyFilter" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" md="2">
+            <MudSelect T="string" @bind-SelectedValues="_groups" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Group"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+ Clearable="true">
+                @foreach (var group in _all.Select(j => j.Group).Distinct().Order())
+                {
+                    <MudSelectItem Value="group">@group</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="2">
+            <MudSelect T="string" @bind-SelectedValues="_types" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Type"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+ Clearable="true">
+                @foreach (var type in Enum.GetNames<JobType>())
+                {
+                    <MudSelectItem Value="type">@T["JobType_" + type]</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="2">
+            <MudSelect T="string" @bind-SelectedValues="_connections" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Connection"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+ Clearable="true">
+                @foreach (var connection in _all.Select(j => j.Connection ?? "").Distinct().Order())
+                {
+                    <MudSelectItem Value="connection">@connection</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudChipSet T="string" @bind-SelectedValues="_quick" @bind-SelectedValues:after="ApplyFilter" SelectionMode="SelectionMode.MultiSelection" Size="Size.Small"
+ CheckMark="true">
+                <MudChip Value="@("failing")" Color="Color.Error">@T["Filter_Failing"]</MudChip>
+                <MudChip Value="@("paused")" Color="Color.Warning">@T["Filter_Paused"]</MudChip>
+                <MudChip Value="@("running")" Color="Color.Info">@T["Filter_Running"]</MudChip>
+            </MudChipSet>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* Bulk actions for the selection *@
+@if (_selected.Count > 0)
+{
+    <MudPaper Class="pa-2 mb-2 d-flex align-center flex-wrap gap-2" Elevation="2">
+        <MudText Typo="Typo.subtitle2" Class="mx-2">@T["Bulk_Selected", _selected.Count]</MudText>
+        @if (CanOperate)
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.PlayArrow" Variant="Variant.Text" Color="Color.Primary" OnClick="() => RunJobsAsync(SelectedRefs)">@T["Action_Run"]</MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.Pause" Variant="Variant.Text" Color="Color.Warning" OnClick="() => PauseJobsAsync(SelectedRefs)">@T["Action_Pause"]</MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.PlayCircleOutline" Variant="Variant.Text" Color="Color.Success" OnClick="() => ResumeJobsAsync(SelectedRefs)">@T["Action_Resume"]</MudButton>
+        }
+        @if (CanAdminister)
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.EditNote" Variant="Variant.Text" Color="Color.Secondary" OnClick="BulkEditAsync">@T["Action_BulkEdit"]</MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.Delete" Variant="Variant.Text" Color="Color.Error" OnClick="DeleteSelectedAsync">@T["Common_Delete"]</MudButton>
+        }
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" OnClick="() => _selected = []">@T["Bulk_ClearSelection"]</MudButton>
+    </MudPaper>
+}
+
+<MudDataGrid T="JobSummary" Items="_filtered" @bind-SelectedItems="_selected" MultiSelection="true" Dense="true" Hover="true" Striped="true"
+             SortMode="SortMode.Multiple" Loading="Loading" RowsPerPage="50" Elevation="0" Outlined="true" Comparer="_comparer">
+    <Columns>
+        <SelectColumn T="JobSummary" />
+        <PropertyColumn Property="j => j.Key" Title="@T["Job_Name"]">
+            <CellTemplate>
+                <MudLink Href="@JobLink(context.Item)">@context.Item.Name</MudLink>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">@context.Item.Group</MudText>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="j => j.Type" Title="@T["Job_Type"]">
+            <CellTemplate>@T["JobType_" + context.Item.Type]</CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="j => j.Connection" Title="@T["Job_Connection"]" />
+        <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]" CellClass="ris-mono" />
+        <PropertyColumn Property="j => j.State" Title="@T["Job_State"]">
+            <CellTemplate><StateChip Job="context.Item" /></CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="j => j.NextRunUtc" Title="@T["Job_NextRun"]">
+            <CellTemplate>@Prefs.Format(context.Item.NextRunUtc)</CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="j => j.LastRunUtc" Title="@T["Job_LastRun"]">
+            <CellTemplate>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <ResultChip Result="@context.Item.LastResult" Tooltip="@context.Item.LastSummary" />
+                    <MudText Typo="Typo.caption">@Prefs.Format(context.Item.LastRunUtc)</MudText>
+                </MudStack>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="j => j.ConsecutiveFailures" Title="@T["Job_Failures"]">
+            <CellTemplate>
+                @if (context.Item.ConsecutiveFailures > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error">@context.Item.ConsecutiveFailures</MudChip>
+                }
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn T="JobSummary" Sortable="false" CellClass="d-flex justify-end">
+            <CellTemplate>
+                @if (CanOperate)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" title="@T["Action_Run"]" OnClick="() => RunJobsAsync([Ref(context.Item)])" />
+                    @if (context.Item.IsPaused)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.PlayCircleOutline" Size="Size.Small" Color="Color.Success" title="@T["Action_Resume"]" OnClick="() => ResumeJobsAsync([Ref(context.Item)])" />
+                    }
+                    else
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Pause" Size="Size.Small" Color="Color.Warning" title="@T["Action_Pause"]" OnClick="() => PauseJobsAsync([Ref(context.Item)])" />
+                    }
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent><MudText Class="pa-4">@T["Jobs_None"]</MudText></NoRecordsContent>
+    <PagerContent><MudDataGridPager T="JobSummary" PageSizeOptions="[25, 50, 100, 500]" /></PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<JobSummary> _all = [];
+    private List<JobSummary> _filtered = [];
+    private HashSet<JobSummary> _selected = [];
+    private string? _search;
+    private IReadOnlyCollection<string> _groups = [];
+    private IReadOnlyCollection<string> _types = [];
+    private IReadOnlyCollection<string> _connections = [];
+    private IReadOnlyCollection<string> _quick = [];
+
+    // Rows are compared by key, so the selection survives a refresh (new record instances).
+    private readonly IEqualityComparer<JobSummary> _comparer = new KeyComparer();
+
+    private IReadOnlyList<JobRef> SelectedRefs => _selected.Select(Ref).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
+        if (query["filter"] is { } filter) _quick = filter.Split(',');
+        if (query["group"] is { } group) _groups = [group];
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadAsync()
+    {
+        _all = (await Queries.ListAsync()).ToList();
+        // Keep selected jobs that still exist (refresh replaces the instances).
+        var keys = _selected.Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _selected = _all.Where(j => keys.Contains(j.Key)).ToHashSet(_comparer);
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        IEnumerable<JobSummary> jobs = _all;
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            jobs = jobs.Where(j => Contains(j.Key) || Contains(j.Description) || Contains(j.Connection) || Contains(j.LastSummary) || Contains(j.Schedule));
+        }
+        if (_groups.Any()) jobs = jobs.Where(j => _groups.Contains(j.Group));
+        if (_types.Any()) jobs = jobs.Where(j => _types.Contains(j.Type));
+        if (_connections.Any()) jobs = jobs.Where(j => _connections.Contains(j.Connection ?? ""));
+        if (_quick.Contains("failing")) jobs = jobs.Where(j => j.ConsecutiveFailures > 0);
+        if (_quick.Contains("paused")) jobs = jobs.Where(j => j.IsPaused);
+        if (_quick.Contains("running")) jobs = jobs.Where(j => j.Running);
+        _filtered = jobs.ToList();
+        // Selection follows the filter: hidden rows are not acted upon.
+        _selected = _selected.Where(s => _filtered.Contains(s, _comparer)).ToHashSet(_comparer);
+    }
+
+    private bool Contains(string? value) => value?.Contains(_search!, StringComparison.OrdinalIgnoreCase) == true;
+
+    private static JobRef Ref(JobSummary job) => new(job.Group, job.Name);
+
+    private static string JobLink(JobSummary job) => $"/jobs/{Uri.EscapeDataString(job.Group)}/{Uri.EscapeDataString(job.Name)}";
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (await DeleteJobsAsync(SelectedRefs)) _selected = [];
+    }
+
+    private Task BulkEditAsync()
+    {
+        Snackbar.Add(T["Bulk_EditSoon"], Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    private sealed class KeyComparer : IEqualityComparer<JobSummary>
+    {
+        public bool Equals(JobSummary? x, JobSummary? y) => string.Equals(x?.Key, y?.Key, StringComparison.OrdinalIgnoreCase);
+        public int GetHashCode(JobSummary obj) => StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Key);
+    }
+}

@@ -1,0 +1,20 @@
+@* Dashboard tile with a number. *@
+<MudItem xs="6" sm="4" lg="2">
+    <MudPaper Class="pa-4 ris-tile ris-clickable" Outlined="true" Elevation="0" @onclick="() => Navigation.NavigateTo(Href)">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@Title</MudText>
+            <MudSpacer />
+            <MudIcon Icon="@Icon" Color="Colour" />
+        </MudStack>
+        <MudText Typo="Typo.h3" Color="Colour">@UiFormat.Number(Value)</MudText>
+    </MudPaper>
+</MudItem>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public int Value { get; set; }
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public Color Colour { get; set; } = Color.Default;
+    [Parameter] public string Href { get; set; } = "/";
+}

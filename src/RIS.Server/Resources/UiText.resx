@@ -37,4 +37,128 @@
   <data name="Common_No" xml:space="preserve"><value>No</value></data>
   <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Common_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Action_Run" xml:space="preserve"><value>Run now</value></data>
+  <data name="Action_RunAgain" xml:space="preserve"><value>Run again</value></data>
+  <data name="Action_Pause" xml:space="preserve"><value>Pause</value></data>
+  <data name="Action_Resume" xml:space="preserve"><value>Resume</value></data>
+  <data name="Action_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Action_BulkEdit" xml:space="preserve"><value>Edit together</value></data>
+  <data name="Action_Started" xml:space="preserve"><value>Started {0} job(s).</value></data>
+  <data name="Action_Paused" xml:space="preserve"><value>Paused {0} job(s).</value></data>
+  <data name="Action_Resumed" xml:space="preserve"><value>Resumed {0} job(s).</value></data>
+  <data name="Action_Deleted" xml:space="preserve"><value>Deleted {0} job(s).</value></data>
+  <data name="Attention_Failing" xml:space="preserve"><value>Failed {0}× in a row</value></data>
+  <data name="Attention_NoRecentSuccess" xml:space="preserve"><value>No success within {0}</value></data>
+  <data name="Attention_NotScheduled" xml:space="preserve"><value>Not in the scheduler</value></data>
+  <data name="Attention_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Bulk_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="Bulk_EditSoon" xml:space="preserve"><value>Bulk edit is coming in the next step.</value></data>
+  <data name="Bulk_PartlyFailed" xml:space="preserve"><value>{0} succeeded, {1} failed:</value></data>
+  <data name="Bulk_Selected" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="Chart_Tooltip" xml:space="preserve"><value>{0} succeeded, {1} failed, {2} other</value></data>
+  <data name="Dashboard_AllGood" xml:space="preserve"><value>All jobs are fine.</value></data>
+  <data name="Dashboard_Attention" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="Dashboard_Failing" xml:space="preserve"><value>Failing</value></data>
+  <data name="Dashboard_Healthy" xml:space="preserve"><value>OK</value></data>
+  <data name="Dashboard_NothingRunning" xml:space="preserve"><value>Nothing is running.</value></data>
+  <data name="Dashboard_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Dashboard_RecentFailures" xml:space="preserve"><value>Failures in the last 24 h</value></data>
+  <data name="Dashboard_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="Dashboard_RunningNow" xml:space="preserve"><value>Running now</value></data>
+  <data name="Dashboard_Total" xml:space="preserve"><value>Jobs</value></data>
+  <data name="Dashboard_Updated" xml:space="preserve"><value>Updated {0}</value></data>
+  <data name="Dashboard_Last24h" xml:space="preserve"><value>Runs in the last 24 h</value></data>
+  <data name="Delete_ConfirmTitle" xml:space="preserve"><value>Delete {0} job(s)?</value></data>
+  <data name="Delete_ConfirmText" xml:space="preserve"><value>Job definitions are removed from the configuration and the scheduler. Execution history stays. This is recorded in the audit log.</value></data>
+  <data name="Filter_Failing" xml:space="preserve"><value>Failing</value></data>
+  <data name="Filter_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="Filter_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="History_None" xml:space="preserve"><value>No runs.</value></data>
+  <data name="Job_Name" xml:space="preserve"><value>Job</value></data>
+  <data name="Job_Group" xml:space="preserve"><value>Group</value></data>
+  <data name="Job_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Job_Connection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Job_Schedule" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Job_State" xml:space="preserve"><value>State</value></data>
+  <data name="Job_NextRun" xml:space="preserve"><value>Next run</value></data>
+  <data name="Job_LastRun" xml:space="preserve"><value>Last run</value></data>
+  <data name="Job_LastSuccess" xml:space="preserve"><value>Last success</value></data>
+  <data name="Job_Failures" xml:space="preserve"><value>Failures in a row</value></data>
+  <data name="Job_MissedRuns" xml:space="preserve"><value>Missed runs</value></data>
+  <data name="Job_PairedJob" xml:space="preserve"><value>Paired job</value></data>
+  <data name="Job_NotFound" xml:space="preserve"><value>Job {0} is not configured.</value></data>
+  <data name="Job_PausedBecause" xml:space="preserve"><value>Paused: {0} (by {1})</value></data>
+  <data name="Job_TabOverview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Job_TabHistory" xml:space="preserve"><value>History</value></data>
+  <data name="Job_TabDefinition" xml:space="preserve"><value>Definition</value></data>
+  <data name="Job_DefinitionHint" xml:space="preserve"><value>Definition as stored in the configuration (JSON, without secrets).</value></data>
+  <data name="Job_UpcomingRuns" xml:space="preserve"><value>Next runs</value></data>
+  <data name="Jobs_None" xml:space="preserve"><value>No jobs match the filter.</value></data>
+  <data name="JobType_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="JobType_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="JobType_Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="JobType_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="JobType_ExecutionMonitor" xml:space="preserve"><value>Execution monitor</value></data>
+  <data name="JobType_ProcessingMonitor" xml:space="preserve"><value>Processing monitor</value></data>
+  <data name="MissedRuns_RunOnce" xml:space="preserve"><value>Run once after start</value></data>
+  <data name="MissedRuns_Skip" xml:space="preserve"><value>Skip</value></data>
+  <data name="Pause_Title" xml:space="preserve"><value>Pause {0} job(s)</value></data>
+  <data name="Pause_Reason" xml:space="preserve"><value>Reason</value></data>
+  <data name="Pause_ReasonHint" xml:space="preserve"><value>e.g. D365 maintenance until 18:00</value></data>
+  <data name="Result_Succeeded" xml:space="preserve"><value>Succeeded</value></data>
+  <data name="Result_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Result_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Result_Skipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="Result_Vetoed" xml:space="preserve"><value>Vetoed</value></data>
+  <data name="Result_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="State_Normal" xml:space="preserve"><value>Scheduled</value></data>
+  <data name="State_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="State_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="State_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="State_Blocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="State_Complete" xml:space="preserve"><value>Complete</value></data>
+  <data name="State_None" xml:space="preserve"><value>None</value></data>
+  <data name="State_NotScheduled" xml:space="preserve"><value>Not scheduled</value></data>
+  <data name="State_Executing" xml:space="preserve"><value>Running</value></data>
+  <data name="State_Awaiting" xml:space="preserve"><value>Waiting</value></data>
+  <data name="Run_Title" xml:space="preserve"><value>Run details</value></data>
+  <data name="Run_OpenPage" xml:space="preserve"><value>Open as page</value></data>
+  <data name="Run_NotFound" xml:space="preserve"><value>Run not found in the execution history.</value></data>
+  <data name="Run_ConfirmTitle" xml:space="preserve"><value>Run {0} job(s) now?</value></data>
+  <data name="Run_ConfirmText" xml:space="preserve"><value>Each job runs once, in addition to its schedule.</value></data>
+  <data name="Run_Started" xml:space="preserve"><value>Started</value></data>
+  <data name="Run_Duration" xml:space="preserve"><value>Duration</value></data>
+  <data name="Run_Id" xml:space="preserve"><value>Run id</value></data>
+  <data name="Run_ExecutionId" xml:space="preserve"><value>D365 execution / message id</value></data>
+  <data name="Run_ErrorCode" xml:space="preserve"><value>Error code</value></data>
+  <data name="Run_Result" xml:space="preserve"><value>Result</value></data>
+  <data name="Run_Summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="Run_Manual" xml:space="preserve"><value>Manual</value></data>
+  <data name="Run_Metrics" xml:space="preserve"><value>Metrics</value></data>
+  <data name="Run_Log" xml:space="preserve"><value>Job log</value></data>
+  <data name="Run_NoLog" xml:space="preserve"><value>No log captured for this run.</value></data>
+  <data name="Error_RIS_CFG_001" xml:space="preserve"><value>Job configuration is invalid; the message lists the invalid settings.</value></data>
+  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>Connection referenced by the job is not defined.</value></data>
+  <data name="Error_RIS_CFG_003" xml:space="preserve"><value>Folder does not exist or the service account has no access (UNC shares need a domain account).</value></data>
+  <data name="Error_RIS_CFG_004" xml:space="preserve"><value>Package template is invalid (no Manifest.xml); export a fresh template from D365.</value></data>
+  <data name="Error_RIS_AUTH_001" xml:space="preserve"><value>Authentication to Entra ID failed: check tenant, client id, secret or certificate expiry; the message contains the AADSTS code.</value></data>
+  <data name="Error_RIS_HTTP_001" xml:space="preserve"><value>D365 rejected the request: wrong data project, permissions or legal entity; response in the log.</value></data>
+  <data name="Error_RIS_HTTP_002" xml:space="preserve"><value>Temporary problem (timeout, throttling, 5xx, DNS); usually resolves itself.</value></data>
+  <data name="Error_RIS_HTTP_003" xml:space="preserve"><value>Unexpected response from D365; report if repeated.</value></data>
+  <data name="Error_RIS_EXP_001" xml:space="preserve"><value>Export did not finish within the timeout: check the execution in D365 and batch load.</value></data>
+  <data name="Error_RIS_EXP_002" xml:space="preserve"><value>Export ended with Failed/Canceled: open the execution in D365 and check its log.</value></data>
+  <data name="Error_RIS_EXP_003" xml:space="preserve"><value>Package URL not available within the timeout.</value></data>
+  <data name="Error_RIS_EXP_004" xml:space="preserve"><value>Download of the exported package failed: check access to Azure blob storage.</value></data>
+  <data name="Error_RIS_IMP_001" xml:space="preserve"><value>ImportFromPackage failed; the error report is next to the file in the errors folder.</value></data>
+  <data name="Error_RIS_IMP_002" xml:space="preserve"><value>Legal entity cannot be determined from the file name or folder.</value></data>
+  <data name="Error_RIS_UPL_001" xml:space="preserve"><value>Enqueue failed; the error report is next to the file.</value></data>
+  <data name="Error_RIS_DWN_001" xml:space="preserve"><value>Dequeue failed: check the recurring data job in D365.</value></data>
+  <data name="Error_RIS_DWN_002" xml:space="preserve"><value>Acknowledgement failed; D365 may offer the message again.</value></data>
+  <data name="Error_RIS_MON_001" xml:space="preserve"><value>Import/processing did not finish within the timeout.</value></data>
+  <data name="Error_RIS_MON_002" xml:space="preserve"><value>Import/processing ended with errors in D365; see error files and the link next to the file.</value></data>
+  <data name="Error_RIS_FS_001" xml:space="preserve"><value>File is locked by another process; it is left for the next run.</value></data>
+  <data name="Error_RIS_FS_002" xml:space="preserve"><value>File operation failed (permissions, disk space).</value></data>
+  <data name="Error_RIS_SFTP_001" xml:space="preserve"><value>SFTP transfer failed: check server, credentials and remote folder.</value></data>
+  <data name="Error_RIS_GEN_001" xml:space="preserve"><value>Unexpected error; the stack trace is in the log.</value></data>
+  <data name="Error_RIS_GEN_002" xml:space="preserve"><value>D365 returned a status RIS does not recognise.</value></data>
 </root>
