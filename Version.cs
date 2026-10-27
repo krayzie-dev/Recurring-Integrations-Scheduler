@@ -2,4 +2,4 @@
    Licensed under the MIT License. */
 
 using System.Reflection;
-[assembly: AssemblyVersion("4.2.4.0")]
+[assembly: AssemblyVersion("4.2.5.0")]

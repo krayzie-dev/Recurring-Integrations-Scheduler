@@ -358,6 +358,9 @@ namespace RecurringIntegrationsScheduler
                 , new XElement(ns + "description", trigger.Description)
                 , new XElement(ns + "job-name", trigger.JobName)
                 , new XElement(ns + "job-group", trigger.JobGroup)
+                // Without start-time Quartz starts the trigger "now" when the file is loaded: interval jobs ran right after
+                // every service restart and their rhythm moved to the restart time.
+                , new XElement(ns + "start-time", trigger.StartTimeUtc.ToString("o", System.Globalization.CultureInfo.InvariantCulture))
                 , new XElement(ns + "misfire-instruction", GetMisfireInstructionText(trigger))
             );
         }
