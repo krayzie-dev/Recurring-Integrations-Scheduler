@@ -119,7 +119,7 @@ public sealed class ExportJobOptions : JobOptionsBase
     public PollingOptions Polling { get; set; } = new();
 
     /// <summary>Upload exported package to SFTP. 4.x: UseSftpOutbound + SftpOutbound*.</summary>
-    public SftpOptions? SftpOutbound { get; set; }
+    public SftpTransferOptions? SftpOutbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
         RequireFolder(DownloadSuccessDir, nameof(DownloadSuccessDir));
@@ -160,7 +160,7 @@ public sealed class ImportJobOptions : JobOptionsBase
     public string StatusFileExtension { get; set; } = ".Status";
 
     /// <summary>Download input files from SFTP first. 4.x: UseSftpInbound + SftpInbound*.</summary>
-    public SftpOptions? SftpInbound { get; set; }
+    public SftpTransferOptions? SftpInbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -235,7 +235,7 @@ public sealed class UploadJobOptions : JobOptionsBase
 
     public string StatusFileExtension { get; set; } = ".Status";
 
-    public SftpOptions? SftpInbound { get; set; }
+    public SftpTransferOptions? SftpInbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -265,7 +265,7 @@ public sealed class DownloadJobOptions : JobOptionsBase
     public bool AddTimestamp { get; set; }
     public bool DeletePackage { get; set; }
 
-    public SftpOptions? SftpOutbound { get; set; }
+    public SftpTransferOptions? SftpOutbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

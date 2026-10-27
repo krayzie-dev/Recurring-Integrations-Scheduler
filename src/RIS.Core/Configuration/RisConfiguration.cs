@@ -97,5 +97,17 @@ public sealed class RisConfiguration
 {
     public List<D365ConnectionOptions> Connections { get; set; } = [];
 
+    public List<SftpServerOptions> SftpServers { get; set; } = [];
+
     public List<JobDefinition> Jobs { get; set; } = [];
+
+    public D365ConnectionOptions? FindConnection(string name) =>
+        Connections.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    public SftpServerOptions? FindSftpServer(string name) =>
+        SftpServers.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    public JobDefinition? FindJob(string nameOrKey) =>
+        Jobs.FirstOrDefault(j => string.Equals(j.Key, nameOrKey, StringComparison.OrdinalIgnoreCase))
+        ?? Jobs.FirstOrDefault(j => string.Equals(j.Name, nameOrKey, StringComparison.OrdinalIgnoreCase));
 }

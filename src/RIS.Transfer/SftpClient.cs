@@ -12,25 +12,25 @@ namespace RIS.Transfer;
 public interface ISftpTransfer
 {
     /// <summary>Downloads files matching the mask to a local folder and deletes them on the server.</summary>
-    Task<IReadOnlyList<string>> DownloadFilesAsync(SftpOptions options, string localFolder, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> DownloadFilesAsync(SftpServerOptions server, SftpTransferOptions transfer, string localFolder, CancellationToken cancellationToken);
 
     /// <summary>Uploads a file (overwrites remote file), creating remote folders.</summary>
-    Task UploadFileAsync(SftpOptions options, string localFilePath, CancellationToken cancellationToken);
+    Task UploadFileAsync(SftpServerOptions server, SftpTransferOptions transfer, string localFilePath, CancellationToken cancellationToken);
 
     /// <summary>Connects and lists remote folder (connection test).</summary>
-    Task TestConnectionAsync(SftpOptions options, CancellationToken cancellationToken);
+    Task TestConnectionAsync(SftpServerOptions server, string remoteFolder, CancellationToken cancellationToken);
 }
 
 public sealed class SshNetSftpTransfer(IFileStore files, ILogger<SshNetSftpTransfer> logger) : ISftpTransfer
 {
-    public async Task<IReadOnlyList<string>> DownloadFilesAsync(SftpOptions options, string localFolder, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> DownloadFilesAsync(SftpServerOptions options, SftpTransferOptions transfer, string localFolder, CancellationToken cancellationToken)
     {
         var downloaded = new List<string>();
-        await RunAsync(options, "download", async client =>
+        await RunAsync(options, transfer.RemoteFolder, "download", async client =>
         {
-            await foreach (var entry in client.ListDirectoryAsync(options.RemoteFolder, cancellationToken))
+            await foreach (var entry in client.ListDirectoryAsync(transfer.RemoteFolder, cancellationToken))
             {
-                if (entry.IsDirectory || entry.IsSymbolicLink || !MatchesMask(entry.Name, options.FileMask))
+                if (entry.IsDirectory || entry.IsSymbolicLink || !MatchesMask(entry.Name, transfer.FileMask))
                 {
                     continue;
                 }
@@ -50,26 +50,26 @@ public sealed class SshNetSftpTransfer(IFileStore files, ILogger<SshNetSftpTrans
         return downloaded;
     }
 
-    public Task UploadFileAsync(SftpOptions options, string localFilePath, CancellationToken cancellationToken) =>
-        RunAsync(options, "upload", async client =>
+    public Task UploadFileAsync(SftpServerOptions options, SftpTransferOptions transfer, string localFilePath, CancellationToken cancellationToken) =>
+        RunAsync(options, transfer.RemoteFolder, "upload", async client =>
         {
-            await EnsureRemoteFolderAsync(client, options.RemoteFolder, cancellationToken);
-            var remotePath = CombineRemotePath(options.RemoteFolder, Path.GetFileName(localFilePath));
+            await EnsureRemoteFolderAsync(client, transfer.RemoteFolder, cancellationToken);
+            var remotePath = CombineRemotePath(transfer.RemoteFolder, Path.GetFileName(localFilePath));
             await using var source = files.FileSystem.File.OpenRead(localFilePath);
             await client.UploadFileAsync(source, remotePath, cancellationToken);
             logger.LogInformation("SFTP uploaded {File} to {SftpServer}:{RemoteFile}", localFilePath, options.Host, remotePath);
         }, cancellationToken);
 
-    public Task TestConnectionAsync(SftpOptions options, CancellationToken cancellationToken) =>
-        RunAsync(options, "connection test", async client =>
+    public Task TestConnectionAsync(SftpServerOptions options, string remoteFolder, CancellationToken cancellationToken) =>
+        RunAsync(options, remoteFolder, "connection test", async client =>
         {
-            await foreach (var _ in client.ListDirectoryAsync(options.RemoteFolder, cancellationToken))
+            await foreach (var _ in client.ListDirectoryAsync(remoteFolder, cancellationToken))
             {
                 break;
             }
         }, cancellationToken);
 
-    private async Task RunAsync(SftpOptions options, string operation, Func<Renci.SshNet.SftpClient, Task> action, CancellationToken cancellationToken)
+    private async Task RunAsync(SftpServerOptions options, string remoteFolder, string operation, Func<Renci.SshNet.SftpClient, Task> action, CancellationToken cancellationToken)
     {
         try
         {
@@ -80,12 +80,12 @@ public sealed class SshNetSftpTransfer(IFileStore files, ILogger<SshNetSftpTrans
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not RisException)
         {
-            throw new RisException(ErrorCodes.SftpFailed, $"SFTP {operation} failed for {options}: {ex.Message}",
-                new Dictionary<string, object?> { ["SftpServer"] = options.Host, ["RemoteFolder"] = options.RemoteFolder }, ex);
+            throw new RisException(ErrorCodes.SftpFailed, $"SFTP {operation} failed for {options}{remoteFolder}: {ex.Message}",
+                new Dictionary<string, object?> { ["SftpServer"] = options.Name, ["Host"] = options.Host, ["RemoteFolder"] = remoteFolder }, ex);
         }
     }
 
-    private static Renci.SshNet.SftpClient CreateClient(SftpOptions options)
+    private static Renci.SshNet.SftpClient CreateClient(SftpServerOptions options)
     {
         AuthenticationMethod auth = options.UseKey
             ? new PrivateKeyAuthenticationMethod(options.UserName, string.IsNullOrEmpty(options.KeyPassphrase)

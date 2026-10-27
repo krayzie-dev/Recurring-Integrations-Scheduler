@@ -3,10 +3,14 @@ using System.ComponentModel.DataAnnotations;
 namespace RIS.Core.Options;
 
 /// <summary>
-/// SFTP endpoint used to download input files (inbound) or upload results (outbound).
+/// SFTP server with credentials. Defined once in configuration and referenced by name from jobs,
+/// so secrets never become part of job data (which Quartz stores and records in execution history).
 /// </summary>
-public sealed class SftpOptions : IValidatableObject
+public sealed class SftpServerOptions : IValidatableObject
 {
+    [Required]
+    public string Name { get; set; } = string.Empty;
+
     [Required]
     public string Host { get; set; } = string.Empty;
 
@@ -26,11 +30,6 @@ public sealed class SftpOptions : IValidatableObject
     /// <summary>Private key passphrase. Never logged.</summary>
     public string? KeyPassphrase { get; set; }
 
-    [Required]
-    public string RemoteFolder { get; set; } = "/";
-
-    public string FileMask { get; set; } = "*.*";
-
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public TimeSpan OperationTimeout { get; set; } = TimeSpan.FromMinutes(10);
@@ -48,5 +47,21 @@ public sealed class SftpOptions : IValidatableObject
         }
     }
 
-    public override string ToString() => $"sftp://{UserName}@{Host}:{Port}{RemoteFolder}";
+    public override string ToString() => $"sftp://{UserName}@{Host}:{Port}";
+}
+
+/// <summary>
+/// SFTP transfer of a job: which server (by name), remote folder and file mask.
+/// 4.x: UseSftpInbound/UseSftpOutbound + Sftp*RemoteFolder, Sftp*FileMask, Sftp*ServerName.
+/// </summary>
+public sealed class SftpTransferOptions
+{
+    /// <summary>Name of <see cref="SftpServerOptions"/>.</summary>
+    [Required]
+    public string Server { get; set; } = string.Empty;
+
+    [Required]
+    public string RemoteFolder { get; set; } = "/";
+
+    public string FileMask { get; set; } = "*.*";
 }

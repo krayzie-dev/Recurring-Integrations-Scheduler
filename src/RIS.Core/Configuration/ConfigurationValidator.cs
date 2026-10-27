@@ -24,6 +24,16 @@ public static class ConfigurationValidator
             }
         }
 
+        var sftpNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var server in configuration.SftpServers)
+        {
+            ValidateObject(server, $"SftpServers[{server.Name}]", errors);
+            if (!sftpNames.Add(server.Name))
+            {
+                errors.Add($"SftpServers[{server.Name}]: duplicate SFTP server name.");
+            }
+        }
+
         var jobKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var job in configuration.Jobs)
         {
@@ -38,6 +48,14 @@ public static class ConfigurationValidator
             {
                 errors.Add($"{path}.Options.Connection: connection '{options.Connection}' is not defined.");
             }
+
+            foreach (var (member, transfer) in SftpTransfers(job.Options))
+            {
+                if (transfer is not null && !sftpNames.Contains(transfer.Server))
+                {
+                    errors.Add($"{path}.Options.{member}.Server: SFTP server '{transfer.Server}' is not defined.");
+                }
+            }
         }
 
         foreach (var job in configuration.Jobs.Where(j => j.PairedJob is not null))
@@ -50,6 +68,15 @@ public static class ConfigurationValidator
 
         return errors;
     }
+
+    private static IEnumerable<(string Member, SftpTransferOptions? Transfer)> SftpTransfers(JobOptionsBase? options) => options switch
+    {
+        ExportJobOptions e => [(nameof(e.SftpOutbound), e.SftpOutbound)],
+        DownloadJobOptions d => [(nameof(d.SftpOutbound), d.SftpOutbound)],
+        ImportJobOptions i => [(nameof(i.SftpInbound), i.SftpInbound)],
+        UploadJobOptions u => [(nameof(u.SftpInbound), u.SftpInbound)],
+        _ => []
+    };
 
     /// <summary>Validates one object graph (used also for a single job before it runs).</summary>
     public static IReadOnlyList<string> ValidateObject(object instance, string path)
