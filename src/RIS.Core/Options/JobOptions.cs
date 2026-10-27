@@ -85,6 +85,23 @@ public abstract class JobOptionsBase : IValidatableObject
         }
     }
 
+    protected static IEnumerable<ValidationResult> ValidatePattern(string? pattern, IReadOnlyCollection<string> allowed)
+    {
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            yield return new ValidationResult("FileNamePattern is required.", ["FileNamePattern"]);
+            yield break;
+        }
+
+        var unknown = Options.FileNamePattern.UnknownTokens(pattern, allowed);
+        if (unknown.Count > 0)
+        {
+            yield return new ValidationResult(
+                $"FileNamePattern contains unknown token(s) {string.Join(", ", unknown.Select(t => "{" + t + "}"))}. Allowed: {string.Join(" ", allowed.Select(t => "{" + t + "}"))}.",
+                ["FileNamePattern"]);
+        }
+    }
+
     protected static IEnumerable<ValidationResult> RequireStatusExtension(string? extension, string memberName)
     {
         if (string.IsNullOrWhiteSpace(extension) || !extension.StartsWith('.'))
@@ -115,6 +132,9 @@ public sealed class ExportJobOptions : JobOptionsBase
     public bool AddTimestamp { get; set; }
     public bool DeletePackage { get; set; }
 
+    /// <summary>Package file name, tokens: {timestamp} {date} {executionId} {dataProject} {company}. Default as in 4.x.</summary>
+    public string FileNamePattern { get; set; } = Options.FileNamePattern.ExportDefault;
+
     /// <summary>Waiting for export to finish and for package URL.</summary>
     public PollingOptions Polling { get; set; } = new();
 
@@ -122,7 +142,8 @@ public sealed class ExportJobOptions : JobOptionsBase
     public SftpTransferOptions? SftpOutbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
-        RequireFolder(DownloadSuccessDir, nameof(DownloadSuccessDir));
+        RequireFolder(DownloadSuccessDir, nameof(DownloadSuccessDir))
+            .Concat(ValidatePattern(FileNamePattern, Options.FileNamePattern.ExportTokens));
 }
 
 /// <summary>
@@ -265,6 +286,9 @@ public sealed class DownloadJobOptions : JobOptionsBase
     public bool AddTimestamp { get; set; }
     public bool DeletePackage { get; set; }
 
+    /// <summary>Package file name, tokens: {timestamp} {date} {number} {correlationId} {activityId}. Default as in 4.x.</summary>
+    public string FileNamePattern { get; set; } = Options.FileNamePattern.DownloadDefault;
+
     public SftpTransferOptions? SftpOutbound { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -272,6 +296,7 @@ public sealed class DownloadJobOptions : JobOptionsBase
         if (ActivityId == Guid.Empty) yield return new ValidationResult("ActivityId is required.", [nameof(ActivityId)]);
         foreach (var r in RequireFolder(DownloadSuccessDir, nameof(DownloadSuccessDir))) yield return r;
         foreach (var r in RequireFolder(DownloadErrorsDir, nameof(DownloadErrorsDir))) yield return r;
+        foreach (var r in ValidatePattern(FileNamePattern, Options.FileNamePattern.DownloadTokens)) yield return r;
     }
 }
 

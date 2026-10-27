@@ -11,7 +11,7 @@ namespace RIS.Jobs.Handlers;
 
 /// <summary>
 /// Checks processing status of messages uploaded by <see cref="UploadHandler"/> (status files). 4.x: Job.ProcessingMonitor.
-/// Like 4.x, files are moved to processing folders without subfolders.
+/// 5.0: subfolders are kept in processing folders (4.x flattened them).
 /// </summary>
 public sealed class ProcessingMonitorHandler(ID365ClientFactory clients, JobFiles jobFiles, IPollingClock clock) : IJobHandler<ProcessingMonitorJobOptions>
 {
@@ -78,7 +78,7 @@ public sealed class ProcessingMonitorHandler(ID365ClientFactory clients, JobFile
 
         if (state.IsSuccess())
         {
-            var target = fs.Path.Combine(options.ProcessingSuccessDir, message.Name ?? fs.Path.GetFileName(message.FullPath!));
+            var target = jobFiles.Rebase(message.FullPath!, options.UploadSuccessDir, options.ProcessingSuccessDir);
             await jobFiles.StatusFiles.MoveWithStatusAsync(message.FullPath!, target, options.StatusFileExtension, deleteStatusFile: true, options.Retry, cancellationToken);
             counters.Succeeded++;
             logger.LogInformation("Message {MessageId} ({File}) processed", messageId, message.Name);
@@ -93,13 +93,13 @@ public sealed class ProcessingMonitorHandler(ID365ClientFactory clients, JobFile
                 return;
             }
 
-            var timeoutTarget = await MoveToErrorsAsync(options, message.FullPath!, message.Name, detail, cancellationToken);
+            var timeoutTarget = await MoveToErrorsAsync(options, message.FullPath!, detail, cancellationToken);
             throw new RisException(ErrorCodes.MonitorTimeout,
                 $"Processing did not finish within {options.Polling.Timeout} (submitted {message.SubmittedUtc:u}, state {state}). File moved to {timeoutTarget}.",
                 new Dictionary<string, object?> { ["MessageId"] = messageId, ["State"] = state.ToString() });
         }
 
-        var errorTarget = await MoveToErrorsAsync(options, message.FullPath!, message.Name, detail, cancellationToken);
+        var errorTarget = await MoveToErrorsAsync(options, message.FullPath!, detail, cancellationToken);
         if (options.GetExecutionErrors)
         {
             try
@@ -120,10 +120,9 @@ public sealed class ProcessingMonitorHandler(ID365ClientFactory clients, JobFile
             new Dictionary<string, object?> { ["MessageId"] = messageId, ["State"] = state.ToString() });
     }
 
-    private async Task<string> MoveToErrorsAsync(ProcessingMonitorJobOptions options, string file, string? name, DataJobStatusDetail detail, CancellationToken cancellationToken)
+    private async Task<string> MoveToErrorsAsync(ProcessingMonitorJobOptions options, string file, DataJobStatusDetail detail, CancellationToken cancellationToken)
     {
-        var fs = jobFiles.Files.FileSystem;
-        var target = fs.Path.Combine(options.ProcessingErrorsDir, name ?? fs.Path.GetFileName(file));
+        var target = jobFiles.Rebase(file, options.UploadSuccessDir, options.ProcessingErrorsDir);
         await jobFiles.StatusFiles.MoveWithStatusAsync(file, target, options.StatusFileExtension, deleteStatusFile: false, options.Retry, cancellationToken);
         // 4.x wrote job status detail (with execution log) under the status file name in the errors folder.
         await jobFiles.Files.WriteTextAsync(jobFiles.StatusFiles.GetStatusFilePath(target, options.StatusFileExtension),

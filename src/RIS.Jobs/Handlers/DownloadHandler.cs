@@ -55,9 +55,14 @@ public sealed class DownloadHandler(ID365ClientFactory clients, JobFiles jobFile
         int number, ItemCounters counters, CancellationToken cancellationToken)
     {
         var logger = run.Logger;
-        // Same file name as 4.x: timestamp and number in this run (downloaded package has no name).
-        var fileName = $"{JobFiles.Timestamp(DateTime.Now)}-{number.ToString("D6", CultureInfo.InvariantCulture)}.zip";
-        var path = jobFiles.Files.FileSystem.Path.Combine(options.DownloadSuccessDir, fileName);
+        // Downloaded package has no name; default pattern gives the 4.x name: timestamp and number in this run.
+        var fileName = FileNamePattern.Format(options.FileNamePattern, DateTime.Now, new Dictionary<string, string?>
+        {
+            ["number"] = number.ToString("D6", CultureInfo.InvariantCulture),
+            ["correlationId"] = message.CorrelationId,
+            ["activityId"] = options.ActivityId.ToString("D")
+        });
+        var path = jobFiles.Files.ResolveUniquePath(options.DownloadSuccessDir, fileName);
 
         try
         {

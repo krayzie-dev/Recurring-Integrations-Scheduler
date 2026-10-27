@@ -94,7 +94,7 @@ public sealed class ProcessingMonitorTests
         using var host = new JobsTestHost();
         var statusFiles = host.Services.GetRequiredService<StatusFileStore>();
         var now = host.Clock.UtcNow;
-        foreach (var (name, id, submitted) in new[] { ("ok.csv", "M-OK", now), ("bad.csv", "M-BAD", now), ("slow.csv", "M-SLOW", now.AddHours(-13)) })
+        foreach (var (name, id, submitted) in new[] { (@"sub\ok.csv", "M-OK", now), ("bad.csv", "M-BAD", now), ("slow.csv", "M-SLOW", now.AddHours(-13)) })
         {
             host.FileSystem.AddFile(@"C:\ris\success\" + name, new MockFileData("x"));
             await statusFiles.WriteAsync(new DataMessage { Name = name, FullPath = @"C:\ris\success\" + name, MessageId = id, SubmittedUtc = submitted }, ".Status", default);
@@ -111,8 +111,8 @@ public sealed class ProcessingMonitorTests
 
         Assert.AreEqual(1, outcome.Metrics["Succeeded"]);
         Assert.AreEqual(2, outcome.Metrics["Failed"]);
-        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\done\ok.csv"));
-        Assert.IsFalse(host.FileSystem.FileExists(@"C:\ris\done\ok.Status"));
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\done\sub\ok.csv"), "Subfolder is kept.");
+        Assert.IsFalse(host.FileSystem.FileExists(@"C:\ris\done\sub\ok.Status"));
         StringAssert.Contains(host.FileSystem.File.ReadAllText(@"C:\ris\failed\bad.Status"), "log of M-BAD");
         Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\failed\slow.csv"));
     }

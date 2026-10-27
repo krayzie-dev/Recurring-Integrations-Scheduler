@@ -118,6 +118,19 @@ public sealed class ExportTests
     }
 
     [TestMethod]
+    public async Task FileNamePattern_WithExecutionId_IsUsed()
+    {
+        using var host = new JobsTestHost();
+        var options = Options();
+        options.FileNamePattern = "{date}_{executionId}";
+
+        var outcome = await host.RunAsync(options);
+
+        var file = host.FileSystem.Path.GetFileName(host.FileSystem.Directory.GetFiles(@"C:\ris\export", "*.zip").Single());
+        StringAssert.Contains(file, (string)outcome.Metrics["ExecutionId"]);
+    }
+
+    [TestMethod]
     public async Task Interrupted_PropagatesCancellation_AndLogsExecutionId()
     {
         using var host = new JobsTestHost();

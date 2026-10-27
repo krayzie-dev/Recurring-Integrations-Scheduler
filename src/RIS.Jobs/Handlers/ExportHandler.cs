@@ -71,8 +71,13 @@ public sealed class ExportHandler(ID365ClientFactory clients, ExecutionPoller po
             started, deadline, ErrorCodes.ExportPackageUrlTimeout, context, logger, cancellationToken);
 
         run.ReportProgress(70, "Downloading package");
-        var fileName = JobFiles.Timestamp(DateTime.Now) + ".zip";
-        var packagePath = jobFiles.Files.FileSystem.Path.Combine(options.DownloadSuccessDir, fileName);
+        var fileName = FileNamePattern.Format(options.FileNamePattern, DateTime.Now, new Dictionary<string, string?>
+        {
+            ["executionId"] = executionId,
+            ["dataProject"] = options.DataProject,
+            ["company"] = options.Company
+        });
+        var packagePath = jobFiles.Files.ResolveUniquePath(options.DownloadSuccessDir, fileName);
         try
         {
             await using var download = await client.OpenDownloadAsync(new Uri(url.Value!), cancellationToken);

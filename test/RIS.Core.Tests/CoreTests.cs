@@ -157,3 +157,35 @@ public class ConfigurationTests
         Assert.AreEqual(TimeSpan.FromHours(12), ((ExportJobOptions)loaded.Jobs[0].Options!).Polling.Timeout);
     }
 }
+
+[TestClass]
+public class FileNamePatternTests
+{
+    private static readonly DateTime Now = new(2026, 10, 27, 2, 15, 30, 123);
+
+    [TestMethod]
+    public void DefaultPatterns_GiveSameNamesAs4x()
+    {
+        Assert.AreEqual("2026-10-27_02-15-30-1230.zip", FileNamePattern.Format(FileNamePattern.ExportDefault, Now, new Dictionary<string, string?>()));
+        Assert.AreEqual("2026-10-27_02-15-30-1230-000007.zip", FileNamePattern.Format(FileNamePattern.DownloadDefault, Now, new Dictionary<string, string?> { ["number"] = "000007" }));
+    }
+
+    [TestMethod]
+    public void TokensAreReplaced_AndInvalidCharactersSanitized()
+    {
+        var name = FileNamePattern.Format("{date}_{dataProject}_{executionId}", Now,
+            new Dictionary<string, string?> { ["dataProject"] = "Cust/Invoice:Jour", ["executionId"] = "E-1" });
+
+        Assert.AreEqual("2026-10-27_Cust_Invoice_Jour_E-1.zip", name);
+    }
+
+    [TestMethod]
+    public void UnknownToken_IsValidationError()
+    {
+        var options = new ExportJobOptions { Connection = "PROD", DataProject = "P", Company = "C", DownloadSuccessDir = @"C:\x", FileNamePattern = "{timestamp}_{correlationId}" };
+
+        var errors = string.Join("|", ConfigurationValidator.ValidateObject(options, "job"));
+
+        StringAssert.Contains(errors, "unknown token(s) {correlationId}");
+    }
+}

@@ -10,7 +10,7 @@ namespace RIS.Jobs.Handlers;
 
 /// <summary>
 /// Uploads files to Recurring Integrations enqueue endpoint. 4.x: Job.Upload.
-/// Like 4.x, files are moved to success/errors folder without subfolders.
+/// 5.0: subfolders of the input folder are kept in success/errors folders (4.x flattened them, so files with the same name overwrote each other).
 /// </summary>
 public sealed class UploadHandler(ID365ClientFactory clients, JobFiles jobFiles, IPollingClock clock) : IJobHandler<UploadJobOptions>
 {
@@ -62,7 +62,7 @@ public sealed class UploadHandler(ID365ClientFactory clients, JobFiles jobFiles,
             catch (D365ApiException ex)
             {
                 content.Dispose();
-                var errorPath = fs.Path.Combine(options.UploadErrorsDir, fileName);
+                var errorPath = jobFiles.Rebase(file, options.InputDir, options.UploadErrorsDir);
                 await jobFiles.Files.MoveAsync(file, errorPath, options.Retry, cancellationToken);
                 await jobFiles.StatusFiles.WriteErrorReportAsync(errorPath, options.StatusFileExtension,
                     new ErrorReport(ErrorCodes.UploadFailed, ex.Message, null, (int?)ex.StatusCode, ex.ResponseBody, new { options.ActivityId, options.EntityName }),
@@ -71,7 +71,7 @@ public sealed class UploadHandler(ID365ClientFactory clients, JobFiles jobFiles,
             }
         }
 
-        var target = fs.Path.Combine(options.UploadSuccessDir, fileName);
+        var target = jobFiles.Rebase(file, options.InputDir, options.UploadSuccessDir);
         await jobFiles.Files.MoveAsync(file, target, options.Retry, cancellationToken);
         if (options.WriteStatusFiles)
         {

@@ -175,10 +175,10 @@ public sealed class UploadTests
 
         Assert.AreEqual(1, outcome.Metrics["Succeeded"]);
         Assert.AreEqual(1, outcome.Metrics["Failed"]);
-        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\success\ok.csv"), "4.x moves uploaded files without subfolders.");
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\success\sub\ok.csv"), "5.0 keeps subfolders (4.x flattened them).");
         Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\errors\bad.csv"));
         StringAssert.Contains(host.FileSystem.File.ReadAllText(@"C:\ris\errors\bad.Status"), "entity not found");
-        Assert.AreEqual("MSG-1", JsonSerializer.Deserialize<DataMessage>(host.FileSystem.File.ReadAllText(@"C:\ris\success\ok.Status"))!.MessageId);
+        Assert.AreEqual("MSG-1", JsonSerializer.Deserialize<DataMessage>(host.FileSystem.File.ReadAllText(@"C:\ris\success\sub\ok.Status"))!.MessageId);
         Assert.AreEqual(("ok.csv", (string?)"Customers V3", (string?)"USMF"), host.D365.Enqueued.First(e => e.Name == "ok.csv"));
     }
 

@@ -299,3 +299,6 @@ __pycache__/
 
 # Markdown files
 *.md
+
+# RIS 5 documentation is versioned
+!docs/ris5/*.md
