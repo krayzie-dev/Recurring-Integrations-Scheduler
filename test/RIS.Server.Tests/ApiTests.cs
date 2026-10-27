@@ -1,0 +1,169 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using RIS.Core.Configuration;
+using RIS.Hosting.Tests;
+
+namespace RIS.Server.Tests;
+
+[TestClass]
+public sealed class ApiTests
+{
+    private RisServerFactory _factory = null!;
+
+    [TestInitialize]
+    public void Initialize() => _factory = new RisServerFactory();
+
+    [TestCleanup]
+    public async Task Cleanup() => await _factory.DisposeAsync();
+
+    private string ExportDirectory => Path.Combine(_factory.DataDirectory, "export");
+
+    private async Task ConfigureDailyJobAsync(HttpClient admin)
+    {
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Daily",
+            RisTestHost.Export("Daily", ExportDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" }))).EnsureSuccessStatusCode();
+    }
+
+    [TestMethod]
+    public async Task Roles_AreEnforced()
+    {
+        var admin = _factory.Client("Admin");
+        await ConfigureDailyJobAsync(admin);
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await _factory.Client(null).GetAsync("/api/v1/jobs")).StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await _factory.Client("").GetAsync("/api/v1/jobs")).StatusCode, "Authenticated user without a RIS role.");
+
+        var viewer = _factory.Client("Viewer");
+        Assert.AreEqual(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/jobs")).StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/v1/jobs/Tests/Daily/run", null)).StatusCode);
+
+        var operatorClient = _factory.Client("Operator");
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await operatorClient.GetAsync("/api/v1/connections")).StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await operatorClient.DeleteAsync("/api/v1/jobs/Tests/Daily")).StatusCode);
+        Assert.AreEqual(HttpStatusCode.NoContent, (await operatorClient.PostAsJsonAsync("/api/v1/jobs/Tests/Daily/pause", new { reason = "test" })).StatusCode);
+    }
+
+    [TestMethod]
+    public async Task Connection_SecretIsNeverReturned_NorAudited()
+    {
+        var admin = _factory.Client("Admin", @"TEST\admin");
+        var response = await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(body, SecretPlaceholder.Value);
+        Assert.IsFalse(body.Contains("\"secret\""), body);
+
+        Assert.AreEqual(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/v1/connections/TEST/secret", new { value = "new-secret-value" })).StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/connections/TEST/secret", new { value = "" })).StatusCode);
+
+        foreach (var url in new[] { "/api/v1/connections", "/api/v1/connections/TEST", "/api/v1/config/export", "/api/v1/audit" })
+        {
+            var text = await admin.GetStringAsync(url);
+            Assert.IsFalse(text.Contains("new-secret-value") || text.Contains("\"secret\""), $"{url} leaks a secret: {text}");
+        }
+
+        var audit = await admin.GetFromJsonAsync<JsonElement>("/api/v1/audit");
+        Assert.IsTrue(audit.EnumerateArray().Any(a => a.GetProperty("action").GetString() == "SecretChanged" && a.GetProperty("user").GetString() == @"TEST\admin"));
+    }
+
+    [TestMethod]
+    public async Task InvalidChanges_Return400_WithErrors()
+    {
+        var admin = _factory.Client("Admin");
+        await ConfigureDailyJobAsync(admin);
+
+        var response = await admin.PutRisAsync("/api/v1/jobs/Tests/Broken",
+            RisTestHost.Export("Broken", ExportDirectory, new ScheduleOptions { Interval = TimeSpan.FromHours(2) }));
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var errors = problem.GetProperty("errors").GetProperty("configuration").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.IsTrue(errors.Any(e => e!.Contains("StartAt")), string.Join(" | ", errors));
+        Assert.AreEqual("RIS-CFG-001", problem.GetProperty("errorCode").GetString());
+
+        var delete = await admin.DeleteAsync("/api/v1/connections/TEST");
+        Assert.AreEqual(HttpStatusCode.BadRequest, delete.StatusCode, "Connection used by a job cannot be deleted.");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, (await admin.DeleteAsync("/api/v1/jobs/Tests/Missing")).StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, (await admin.PutRisAsync("/api/v1/jobs/Tests/Other",
+            RisTestHost.Export("Daily", ExportDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" }))).StatusCode, "Name mismatch.");
+    }
+
+    [TestMethod]
+    public async Task Jobs_ListRunPauseAndHistory()
+    {
+        var admin = _factory.Client("Admin");
+        await ConfigureDailyJobAsync(admin);
+        var operatorClient = _factory.Client("Operator", @"TEST\operator");
+
+        var job = await WaitForAsync(async () =>
+        {
+            var jobs = await operatorClient.GetFromJsonAsync<JsonElement>("/api/v1/jobs");
+            var daily = jobs.EnumerateArray().Single();
+            return daily.TryGetProperty("nextRunUtc", out _) ? daily : (JsonElement?)null;
+        });
+        Assert.AreEqual("Tests.Daily", job.GetProperty("key").GetString());
+        Assert.AreEqual("Normal", job.GetProperty("state").GetString());
+
+        Assert.AreEqual(HttpStatusCode.Accepted, (await operatorClient.PostAsync("/api/v1/jobs/Tests/Daily/run", null)).StatusCode);
+        var run = await WaitForAsync(async () =>
+        {
+            var history = await operatorClient.GetFromJsonAsync<JsonElement>("/api/v1/jobs/Tests/Daily/history");
+            return history.GetArrayLength() == 1 ? history[0] : (JsonElement?)null;
+        });
+        Assert.AreEqual("Succeeded", run.GetProperty("result").GetString(), run.ToString());
+        Assert.IsTrue(run.GetProperty("manual").GetBoolean());
+
+        var details = await operatorClient.GetFromJsonAsync<JsonElement>($"/api/v1/runs/{run.GetProperty("runId").GetString()}");
+        StringAssert.Contains(details.GetProperty("log").GetString(), "Daily");
+        Assert.AreEqual(HttpStatusCode.NotFound, (await operatorClient.GetAsync("/api/v1/runs/unknown")).StatusCode);
+
+        Assert.AreEqual(HttpStatusCode.NoContent, (await operatorClient.PostAsJsonAsync("/api/v1/jobs/Tests/Daily/pause", new { reason = "D365 maintenance" })).StatusCode);
+        var paused = await operatorClient.GetFromJsonAsync<JsonElement>("/api/v1/jobs/Tests/Daily");
+        Assert.AreEqual("Paused", paused.GetProperty("summary").GetProperty("state").GetString());
+        Assert.AreEqual(5, paused.GetProperty("upcomingRunsUtc").GetArrayLength());
+
+        Assert.AreEqual(HttpStatusCode.NoContent, (await operatorClient.PostAsync("/api/v1/jobs/Tests/Daily/resume", null)).StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, (await operatorClient.PostAsync("/api/v1/jobs/Tests/Missing/run", null)).StatusCode);
+    }
+
+    [TestMethod]
+    public async Task Health_IsAnonymous_AndReportsRequiredJob()
+    {
+        var anonymous = _factory.Client(null);
+        var response = await anonymous.GetAsync("/health");
+        // The required job has no recorded success yet; it is judged from the first evaluation, so the report is healthy.
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+        Assert.AreEqual("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
+    [TestMethod]
+    public async Task ConfigValidateAndExport()
+    {
+        var admin = _factory.Client("Admin");
+        await ConfigureDailyJobAsync(admin);
+
+        var export = await admin.GetFromJsonAsync<JsonElement>("/api/v1/config/export");
+        Assert.AreEqual(1, export.GetProperty("jobs").GetArrayLength());
+        Assert.AreEqual(SecretPlaceholder.Value, export.GetProperty("connections")[0].GetProperty("clientSecret").GetString());
+
+        var invalid = new RisConfiguration { Jobs = [RisTestHost.Export("X", ExportDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" })] };
+        var result = await (await admin.PostAsync("/api/v1/config/validate", JsonContent.Create(invalid, options: RisJson.Options))).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.IsFalse(result.GetProperty("isValid").GetBoolean());
+        Assert.IsTrue(result.GetProperty("errors").GetArrayLength() > 0);
+
+        var me = await admin.GetFromJsonAsync<JsonElement>("/api/v1/me");
+        Assert.AreEqual("Admin", me.GetProperty("roles")[0].GetString());
+    }
+
+    private static async Task<JsonElement> WaitForAsync(Func<Task<JsonElement?>> probe)
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            if (await probe() is { } value) return value;
+            await Task.Delay(100);
+        }
+        throw new AssertFailedException("Condition not met in time.");
+    }
+}

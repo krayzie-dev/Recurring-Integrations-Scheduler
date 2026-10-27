@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RIS.Server\RIS.Server.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Shared D365 stand-in -->
+    <Compile Include="..\RIS.Hosting.Tests\HostTestSupport.cs" Link="HostTestSupport.cs" />
+  </ItemGroup>
+</Project>

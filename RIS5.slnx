@@ -7,6 +7,7 @@
     <Project Path="src/RIS.Jobs/RIS.Jobs.csproj" />
     <Project Path="src/RIS.Migration/RIS.Migration.csproj" />
     <Project Path="src/RIS.Persistence/RIS.Persistence.csproj" />
+    <Project Path="src/RIS.Server/RIS.Server.csproj" />
     <Project Path="src/RIS.Transfer/RIS.Transfer.csproj" />
   </Folder>
   <Folder Name="/test/">
@@ -16,6 +17,7 @@
     <Project Path="test/RIS.Jobs.Tests/RIS.Jobs.Tests.csproj" />
     <Project Path="test/RIS.Migration.Tests/RIS.Migration.Tests.csproj" />
     <Project Path="test/RIS.Persistence.Tests/RIS.Persistence.Tests.csproj" />
+    <Project Path="test/RIS.Server.Tests/RIS.Server.Tests.csproj" />
     <Project Path="test/RIS.Transfer.Tests/RIS.Transfer.Tests.csproj" />
   </Folder>
 </Solution>

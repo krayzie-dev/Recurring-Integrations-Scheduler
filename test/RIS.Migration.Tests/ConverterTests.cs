@@ -126,10 +126,11 @@ public sealed partial class ConverterTests
         """;
 
     private static ConversionResult ConvertProductionSample() =>
-        new ScheduleXmlConverter().Convert(XDocument.Parse(Production4xSchedule.Replace("</schedule>\r\n  <schedule>", "</schedule>").Replace("<schedule>\n  </schedule>", "")
-            .Replace("  </schedule>\n  <schedule>\n  </schedule>", Triggers + "  </schedule>")
-            .Replace("</job>\r\n  </schedule>", "</job>" + Triggers + "</schedule>")
-            .Replace("</job>\n  </schedule>", "</job>" + Triggers + "</schedule>")));
+        new ScheduleXmlConverter().Convert(XDocument.Parse(WithTriggers()));
+
+    /// <summary>The sample with triggers added to its first schedule element (line endings normalized, the file may be checked out with CRLF).</summary>
+    private static string WithTriggers() =>
+        Production4xSchedule.ReplaceLineEndings("\n").Replace("</job>\n  </schedule>", "</job>" + Triggers + "</schedule>");
 
     [TestMethod]
     public void ProductionLikeSchedule_IsConvertedWithAllSettings()
@@ -183,9 +184,7 @@ public sealed partial class ConverterTests
     [TestMethod]
     public void StartTimeSavedBy4x_IsUsedAsReferenceOfTheRhythm()
     {
-        var xml = Production4xSchedule
-            .Replace("</job>\r\n  </schedule>", "</job>" + Triggers + "</schedule>")
-            .Replace("</job>\n  </schedule>", "</job>" + Triggers + "</schedule>")
+        var xml = WithTriggers()
             .Replace("<repeat-interval>15</repeat-interval>", "<start-time>2026-10-01T12:00:00+02:00</start-time><repeat-interval>15</repeat-interval>");
 
         var result = new ScheduleXmlConverter().Convert(XDocument.Parse(xml));
@@ -234,8 +233,7 @@ public sealed partial class ConverterTests
         var folder = Directory.CreateTempSubdirectory("ris-cli-").FullName;
         var schedule = Path.Combine(folder, "Schedule.xml");
         var jobs = Path.Combine(folder, "jobs.json");
-        await File.WriteAllTextAsync(schedule, Production4xSchedule.Replace("</job>\r\n  </schedule>", "</job>" + Triggers + "</schedule>")
-            .Replace("</job>\n  </schedule>", "</job>" + Triggers + "</schedule>"));
+        await File.WriteAllTextAsync(schedule, WithTriggers());
 
         var convert = await Cli.Program.BuildCommand().Parse(["convert-schedule", schedule, "-o", jobs]).InvokeAsync();
         var dryRun = await Cli.Program.BuildCommand().Parse(["run", jobs, "--job", "CustInvoicejour interface D365_AX2012", "--dry-run"]).InvokeAsync();
