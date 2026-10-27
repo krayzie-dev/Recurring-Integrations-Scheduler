@@ -88,6 +88,35 @@ public sealed class ExportService(IStringLocalizer<UiText> text, TimeProvider ti
         new(text["Audit_After"], o => ((AuditEntry)o!).After)
     ]);
 
+    /// <summary>
+    /// Job definitions as jobs.json (importable with "ris db import" or POST /api/v1/config/import): the selected jobs and
+    /// the connections and SFTP servers they use. <paramref name="exported"/> must come from ConfigurationRepository.ExportAsync
+    /// (secrets replaced by placeholders); null <paramref name="jobKeys"/> = everything.
+    /// </summary>
+    public ExportFile Definitions(Core.Configuration.RisConfiguration exported, IReadOnlyCollection<string>? jobKeys)
+    {
+        var configuration = exported;
+        if (jobKeys is not null)
+        {
+            var keys = jobKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var jobs = exported.Jobs.Where(j => keys.Contains(j.Key)).ToList();
+            var connections = jobs.Select(j => j.Options?.Connection).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var servers = jobs.SelectMany(j => j.Options!.GetType().GetProperties()
+                    .Where(p => p.PropertyType == typeof(Core.Options.SftpTransferOptions))
+                    .Select(p => (p.GetValue(j.Options) as Core.Options.SftpTransferOptions)?.Server))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            configuration = new Core.Configuration.RisConfiguration
+            {
+                Connections = exported.Connections.Where(c => connections.Contains(c.Name)).ToList(),
+                SftpServers = exported.SftpServers.Where(s => servers.Contains(s.Name)).ToList(),
+                Jobs = jobs
+            };
+        }
+        var stamp = TimeZoneInfo.ConvertTime(time.GetUtcNow(), TimeZoneInfo.Local).ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
+        return new ExportFile($"ris-{(jobKeys is null ? "configuration" : "jobs")}-{stamp}.json", "application/json",
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(configuration, Core.Configuration.RisJson.Options));
+    }
+
     /// <summary>Sends the file to the browser (Blazor).</summary>
     public static async Task DownloadAsync(IJSRuntime js, ExportFile file)
     {

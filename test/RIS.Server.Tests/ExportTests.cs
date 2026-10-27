@@ -90,6 +90,45 @@ public sealed class ExportTests
         Assert.AreEqual("Paused", sheet.Cell(3, 7).GetString());
     }
 
+    [TestMethod]
+    public async Task Api_ExportsFollowLanguage_AndDefinitionsRoundTrip()
+    {
+        await using var factory = new RisServerFactory();
+        var admin = factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RIS.Hosting.Tests.RisTestHost.Connection)).EnsureSuccessStatusCode();
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Daily", RIS.Hosting.Tests.RisTestHost.Export("Daily", @"C:\x",
+            new RIS.Core.Configuration.ScheduleOptions { Cron = "0 0 2 * * ?" }))).EnsureSuccessStatusCode();
+
+        var viewer = factory.Client("Viewer");
+        viewer.DefaultRequestHeaders.AcceptLanguage.ParseAdd("pl-PL");
+        var csv = await viewer.GetAsync("/api/v1/export/jobs.csv");
+        Assert.AreEqual("text/csv", csv.Content.Headers.ContentType?.MediaType);
+        var text = Encoding.UTF8.GetString(await csv.Content.ReadAsByteArrayAsync());
+        StringAssert.Contains(text, "Grupa;Zadanie;Typ;");
+        StringAssert.Contains(text, "Tests;Daily;Eksport;TEST;");
+
+        var xlsx = await viewer.GetByteArrayAsync("/api/v1/export/plan.xlsx");
+        using (var workbook = new XLWorkbook(new MemoryStream(xlsx)))
+        {
+            Assert.AreEqual(8, workbook.Worksheet(1).LastRowUsed()!.RowNumber(), "7 daily runs + header.");
+        }
+        Assert.AreEqual(System.Net.HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/export/history.xlsx")).StatusCode);
+        Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, (await viewer.GetAsync("/api/v1/export/audit.csv")).StatusCode);
+        Assert.AreEqual(System.Net.HttpStatusCode.OK, (await admin.GetAsync("/api/v1/export/audit.csv")).StatusCode);
+
+        // Definitions of selected jobs: job + its connection, secrets as placeholders, importable.
+        var services = factory.Services.CreateScope().ServiceProvider;
+        var exported = await services.GetRequiredService<RIS.Persistence.ConfigurationRepository>().ExportAsync();
+        var file = Service().Definitions(exported, ["Tests.Daily"]);
+        var configuration = System.Text.Json.JsonSerializer.Deserialize<RIS.Core.Configuration.RisConfiguration>(file.Content, RIS.Core.Configuration.RisJson.Options)!;
+        Assert.AreEqual(1, configuration.Jobs.Count);
+        Assert.AreEqual("TEST", configuration.Connections.Single().Name);
+        Assert.AreEqual(RIS.Core.Configuration.SecretPlaceholder.Value, configuration.Connections[0].ClientSecret);
+        Assert.AreEqual(System.Net.HttpStatusCode.NoContent,
+            (await admin.PostAsync("/api/v1/config/import", new ByteArrayContent(file.Content) { Headers = { ContentType = new("application/json") } })).StatusCode);
+    }
+
+
     private sealed class CultureScope : IDisposable
     {
         private readonly CultureInfo _culture = CultureInfo.CurrentCulture;

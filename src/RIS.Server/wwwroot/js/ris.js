@@ -7,18 +7,22 @@ window.ris = {
 
     downloadFile: async (fileName, contentType, streamReference) => {
         const buffer = await streamReference.arrayBuffer();
-        const url = URL.createObjectURL(new Blob([buffer], { type: contentType }));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        ris.downloadBlob(new Blob([buffer], { type: contentType }), fileName);
     },
 
-    // Copies computed styles into a clone of the SVG (theme colours come from CSS variables), renders it on a canvas, downloads PNG.
-    exportSvgToPng: (elementId, fileName) => {
+    downloadBlob: (blob, fileName) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    },
+
+    // Renders the SVG chart to a PNG data URL: computed styles are copied into a clone (theme colours come from CSS
+    // variables, which a standalone image does not have), then drawn on a canvas at 2x scale over the page background.
+    renderSvgPng: (elementId) => new Promise((resolve, reject) => {
         const svg = document.getElementById(elementId);
-        if (!svg) return;
+        if (!svg) { reject(new Error(`Chart ${elementId} not found`)); return; }
         const clone = svg.cloneNode(true);
         const source = svg.querySelectorAll("*");
         const target = clone.querySelectorAll("*");
@@ -28,13 +32,13 @@ window.ris = {
             const style = getComputedStyle(node);
             target[i].setAttribute("style", properties.map(p => `${p}:${style.getPropertyValue(p)}`).join(";"));
         });
-        const box = svg.getBoundingClientRect();
-        const width = Math.ceil(box.width);
-        const height = Math.ceil(box.height);
+        const width = Math.ceil(svg.getBoundingClientRect().width);
+        const height = Math.ceil(svg.getBoundingClientRect().height);
         clone.setAttribute("width", width);
         clone.setAttribute("height", height);
-        const background = getComputedStyle(document.querySelector(".mud-main-content") || document.body).backgroundColor;
+        const background = ris.backgroundOf(svg);
         const image = new Image();
+        image.onerror = () => reject(new Error("SVG could not be rendered"));
         image.onload = () => {
             const scale = 2;
             const canvas = document.createElement("canvas");
@@ -45,15 +49,24 @@ window.ris = {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.scale(scale, scale);
             ctx.drawImage(image, 0, 0);
-            canvas.toBlob(blob => {
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
-                a.download = fileName;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-            }, "image/png");
+            resolve(canvas.toDataURL("image/png"));
         };
         image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    }),
+
+    // First non-transparent background of the element or its ancestors; the theme background otherwise.
+    backgroundOf: (element) => {
+        for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
+            const colour = getComputedStyle(node).backgroundColor;
+            if (colour && colour !== "transparent" && !/rgba\(.*,\s*0\)$/.test(colour)) return colour;
+        }
+        return getComputedStyle(document.documentElement).getPropertyValue("--mud-palette-background").trim() || "#ffffff";
+    },
+
+    exportSvgToPng: async (elementId, fileName) => {
+        const dataUrl = await ris.renderSvgPng(elementId);
+        const blob = await (await fetch(dataUrl)).blob();
+        ris.downloadBlob(blob, fileName);
     },
 
     print: () => window.print()

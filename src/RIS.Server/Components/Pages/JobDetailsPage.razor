@@ -1,6 +1,8 @@
 @page "/jobs/{Group}/{Name}"
 @attribute [Authorize(Policy = RisRoles.CanView)]
 @inherits RisPageBase
+@inject ExportService Exports
+@inject IJSRuntime JS
 
 <PageTitle>RIS 5 – @Name</PageTitle>
 
@@ -90,6 +92,11 @@ else
         </MudTabPanel>
 
         <MudTabPanel Text="@T["Job_TabHistory"]" Icon="@Icons.Material.Filled.History">
+            <MudStack Row="true" Class="mb-2">
+                <MudSpacer />
+                <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.TableView" OnClick="@(() => ExportHistoryAsync("xlsx"))">@T["Export_Xlsx"]</MudButton>
+                <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Description" OnClick="@(() => ExportHistoryAsync("csv"))">@T["Export_Csv"]</MudButton>
+            </MudStack>
             <HistoryTable Runs="_history" OnOpen="id => _drawer!.OpenAsync(id)" ShowJob="false" />
         </MudTabPanel>
 
@@ -123,6 +130,8 @@ else
         _definitionJson = System.Text.Json.JsonSerializer.Serialize(_details.Definition, RisJson.Options);
         _breadcrumbs = [new(T["Nav_Jobs"], "/jobs"), new(_details.Summary.Group, $"/jobs?group={Uri.EscapeDataString(_details.Summary.Group)}"), new(_details.Summary.Name, null, disabled: true)];
     }
+
+    private async Task ExportHistoryAsync(string format) => await ExportService.DownloadAsync(JS, Exports.History(_history, format, Prefs.Zone));
 
     private async Task DeleteAsync()
     {

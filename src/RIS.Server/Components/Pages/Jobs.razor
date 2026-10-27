@@ -1,6 +1,9 @@
 @page "/jobs"
 @attribute [Authorize(Policy = RisRoles.CanView)]
 @inherits RisPageBase
+@inject ExportService Exports
+@inject RIS.Persistence.ConfigurationRepository Repository
+@inject IJSRuntime JS
 
 <PageTitle>RIS 5 – @T["Nav_Jobs"]</PageTitle>
 
@@ -12,6 +15,17 @@
     {
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/jobs/new">@T["Editor_NewJob"]</MudButton>
     }
+    <MudMenu Icon="@Icons.Material.Filled.Download" title="@T["Common_Export"]" Dense="true">
+        <MudText Typo="Typo.caption" Class="px-4 pt-2 mud-text-secondary">@(_selected.Count > 0 ? T["Export_Selected", _selected.Count] : T["Export_Filtered", _filtered.Count])</MudText>
+        <MudMenuItem Icon="@Icons.Material.Filled.TableView" OnClick="@(() => ExportAsync("xlsx"))">@T["Export_Xlsx"]</MudMenuItem>
+        <MudMenuItem Icon="@Icons.Material.Filled.Description" OnClick="@(() => ExportAsync("csv"))">@T["Export_Csv"]</MudMenuItem>
+        @if (CanAdminister)
+        {
+            <MudMenuItem Icon="@Icons.Material.Filled.DataObject" OnClick="@(() => ExportAsync("json"))">@T["Export_Json"]</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.SettingsBackupRestore" OnClick="@(() => ExportAsync("configuration"))">@T["Export_Configuration"]</MudMenuItem>
+        }
+    </MudMenu>
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ReloadAsync" title="@T["Common_Refresh"]" />
 </MudStack>
 
@@ -201,6 +215,19 @@
     private async Task DeleteSelectedAsync()
     {
         if (await DeleteJobsAsync(SelectedRefs)) _selected = [];
+    }
+
+    /// <summary>Exports the selection, or the filtered list when nothing is selected.</summary>
+    private async Task ExportAsync(string format)
+    {
+        var jobs = _selected.Count > 0 ? _filtered.Where(j => _selected.Contains(j, _comparer)).ToList() : _filtered;
+        var file = format switch
+        {
+            "json" => Exports.Definitions(await Repository.ExportAsync(), jobs.Select(j => j.Key).ToList()),
+            "configuration" => Exports.Definitions(await Repository.ExportAsync(), null),
+            _ => Exports.Jobs(jobs, format, Prefs.Zone)
+        };
+        await ExportService.DownloadAsync(JS, file);
     }
 
     private async Task BulkEditAsync()

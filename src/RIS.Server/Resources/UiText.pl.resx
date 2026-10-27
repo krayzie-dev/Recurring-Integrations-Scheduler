@@ -403,4 +403,7 @@
   <data name="BulkEdit_PreviewTitle" xml:space="preserve"><value>Zmiany: {0} w zadaniach: {1}</value></data>
   <data name="BulkEdit_Field" xml:space="preserve"><value>Pole</value></data>
   <data name="BulkEdit_Saved" xml:space="preserve"><value>Zapisano zmiany zadań: {0}.</value></data>
+  <data name="Export_Selected" xml:space="preserve"><value>Zaznaczone zadania ({0})</value></data>
+  <data name="Export_Filtered" xml:space="preserve"><value>Zadania z listy ({0})</value></data>
+  <data name="Export_Configuration" xml:space="preserve"><value>Cała konfiguracja (JSON)</value></data>
 </root>

@@ -103,6 +103,7 @@ var healthEndpoint = app.MapHealthChecks("/health");
 if (!health.AllowAnonymous) healthEndpoint.RequireAuthorization(RisRoles.CanView);
 app.MapJobsApi();
 app.MapConfigApi();
+app.MapExportApi();
 app.MapGet("/api/v1/me", (System.Security.Claims.ClaimsPrincipal user) => Results.Ok(new
 {
     name = user.Identity?.Name,
