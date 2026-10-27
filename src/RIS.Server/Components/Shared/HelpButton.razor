@@ -1,0 +1,13 @@
+@* Small ⓘ button showing the detailed help of a field in the help panel. *@
+@if (Visible)
+{
+    <MudTooltip Text="@T["Wizard_FieldHelp"]">
+        <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Color="Color.Info" OnClick="() => OnHelp.InvokeAsync(Property)" aria-label="@T["Wizard_FieldHelp"]" />
+    </MudTooltip>
+}
+
+@code {
+    [Parameter] public string Property { get; set; } = "";
+    [Parameter] public EventCallback<string> OnHelp { get; set; }
+    [Parameter] public bool Visible { get; set; } = true;
+}

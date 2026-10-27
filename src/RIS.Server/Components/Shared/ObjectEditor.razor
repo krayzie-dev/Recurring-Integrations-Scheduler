@@ -1,7 +1,8 @@
 @using System.Reflection
 @using System.Globalization
 @using System.Text.Json.Serialization
-@* Edits the public settable properties of an options object (generated form). Nested option classes are sections. *@
+@* Edits the public settable properties of an options object (generated form). Nested option classes are sections.
+   Labels, hints (FieldHint_*), detailed help (FieldHelp_*, shown through OnHelp) and enum labels (Enum_*) come from UiText. *@
 
 <MudGrid Spacing="2">
     @foreach (var property in Properties(Target.GetType()))
@@ -9,15 +10,17 @@
         var p = property;
         var type = System.Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
         var label = Label(p);
-        var required = p.GetCustomAttribute<System.ComponentModel.DataAnnotations.RequiredAttribute>() is not null;
+        var required = ShowRequired && p.GetCustomAttribute<System.ComponentModel.DataAnnotations.RequiredAttribute>() is not null;
+        var hint = FieldHint(p);
 
         if (IsSection(type))
         {
             var value = p.GetValue(Target);
             <MudItem xs="12">
                 <MudPaper Outlined="true" Elevation="0" Class="pa-3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <MudText Typo="Typo.subtitle2">@label</MudText>
+                        <HelpButton Property="@p.Name" OnHelp="OnHelp" Visible="HasHelp(p)" />
                         <MudSpacer />
                         @if (value is null)
                         {
@@ -28,70 +31,84 @@
                             <MudButton Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Remove" OnClick="() => Set(p, null)">@T["Editor_RemoveSection"]</MudButton>
                         }
                     </MudStack>
+                    @if (!string.IsNullOrEmpty(hint))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@hint</MudText>
+                    }
                     @if (value is not null)
                     {
-                        <ObjectEditor Target="value" Connections="Connections" SftpServers="SftpServers" Changed="Changed" Exclude="Exclude" />
+                        <ObjectEditor Target="value" Connections="Connections" SftpServers="SftpServers" Changed="Changed" Exclude="Exclude"
+                                      ShowRequired="ShowRequired" OnHelp="OnHelp" />
                     }
                 </MudPaper>
             </MudItem>
         }
         else if (type == typeof(bool))
         {
-            <MudItem xs="12" sm="6" md="4">
-                <MudSwitch T="bool" Value="(bool)(p.GetValue(Target) ?? false)" ValueChanged="v => Set(p, v)" Color="Color.Primary" Label="@label" />
+            <MudItem xs="12" sm="6">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                    <MudSwitch T="bool" Value="(bool)(p.GetValue(Target) ?? false)" ValueChanged="v => Set(p, v)" Color="Color.Primary" Label="@label" />
+                    <HelpButton Property="@p.Name" OnHelp="OnHelp" Visible="HasHelp(p)" />
+                </MudStack>
+                @if (!string.IsNullOrEmpty(hint))
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block" Style="margin-left: 58px; margin-top: -6px">@hint</MudText>
+                }
             </MudItem>
         }
-        else if (type.IsEnum)
+        else
         {
-            <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string" Value="@(p.GetValue(Target)?.ToString())" ValueChanged="v => Set(p, v is null ? null : Enum.Parse(type, v))" Label="@label"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="IsNullable(p)">
-                    @foreach (var name in Enum.GetNames(type).Where(n => type.GetField(n)?.GetCustomAttribute<ObsoleteAttribute>() is null || Equals(p.GetValue(Target)?.ToString(), n)))
-                    {
-                        <MudSelectItem Value="name">@name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        }
-        else if (p.Name == "Connection" && type == typeof(string) && Connections is not null)
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
-                           Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @foreach (var connection in Connections)
-                    {
-                        <MudSelectItem Value="connection">@connection</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        }
-        else if (p.Name == "TimeZone" && type == typeof(string))
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudAutocomplete T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, string.IsNullOrWhiteSpace(v) ? null : v)" Label="@label"
-                                 SearchFunc="SearchZones" Clearable="true" ResetValueOnEmptyText="true" CoerceValue="false" MaxItems="null"
-                                 Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@T["Editor_HintTimeZone"]" />
-            </MudItem>
-        }
-        else if (p.Name == "Server" && type == typeof(string) && SftpServers is not null)
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
-                           Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @foreach (var server in SftpServers)
-                    {
-                        <MudSelectItem Value="server">@server</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        }
-        else if (TryFormat(type, out _))
-        {
-            var wide = type == typeof(string) && (p.Name.EndsWith("Dir", StringComparison.Ordinal) || p.Name.EndsWith("Path", StringComparison.Ordinal) || p.Name.EndsWith("Uri", StringComparison.Ordinal));
-            <MudItem xs="12" sm="@(wide ? 12 : 6)" md="@(wide ? 8 : 4)">
-                <MudTextField T="string" Value="@Format(p)" ValueChanged="v => Parse(p, type, v)" Label="@label" Required="required" Immediate="false"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@Hint(type)"
-                              Error="_errors.ContainsKey(Key(p))" ErrorText="@(_errors.GetValueOrDefault(Key(p)))" />
+            var wide = type == typeof(string) && (p.Name.EndsWith("Dir", StringComparison.Ordinal) || p.Name.EndsWith("Path", StringComparison.Ordinal)
+                                                  || p.Name.EndsWith("Template", StringComparison.Ordinal) || p.Name.EndsWith("Uri", StringComparison.Ordinal));
+            <MudItem xs="12" sm="@(wide ? 12 : 6)">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="1">
+                    <div style="flex: 1; min-width: 0">
+                        @if (type.IsEnum)
+                        {
+                            <MudSelect T="string" Value="@(p.GetValue(Target)?.ToString())" ValueChanged="v => Set(p, v is null ? null : Enum.Parse(type, v))" Label="@label"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="IsNullable(p)" HelperText="@hint">
+                                @foreach (var name in Enum.GetNames(type).Where(n => type.GetField(n)?.GetCustomAttribute<ObsoleteAttribute>() is null || Equals(p.GetValue(Target)?.ToString(), n)))
+                                {
+                                    <MudSelectItem Value="name">@EnumLabel(type, name)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else if (p.Name == "Connection" && type == typeof(string) && Connections is not null)
+                        {
+                            <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@hint">
+                                @foreach (var connection in Connections)
+                                {
+                                    <MudSelectItem Value="connection">@connection</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else if (p.Name == "Server" && type == typeof(string) && SftpServers is not null)
+                        {
+                            <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@hint">
+                                @foreach (var server in SftpServers)
+                                {
+                                    <MudSelectItem Value="server">@server</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else if (p.Name == "TimeZone" && type == typeof(string))
+                        {
+                            <MudAutocomplete T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, string.IsNullOrWhiteSpace(v) ? null : v)" Label="@label"
+                                             SearchFunc="SearchZones" Clearable="true" ResetValueOnEmptyText="true" CoerceValue="false" MaxItems="null"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@T["Editor_HintTimeZone"]" />
+                        }
+                        else if (TryFormat(type))
+                        {
+                            <MudTextField T="string" Value="@Format(p)" ValueChanged="v => Parse(p, type, v)" Label="@label" Required="required" Immediate="false"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@TextHint(hint, type)"
+                                          Error="_errors.ContainsKey(Key(p))" ErrorText="@(_errors.GetValueOrDefault(Key(p)))" />
+                        }
+                    </div>
+                    <div style="padding-top: 10px"><HelpButton Property="@p.Name" OnHelp="OnHelp" Visible="HasHelp(p)" /></div>
+                </MudStack>
+                @RenderTestSlot(p.Name)
             </MudItem>
         }
     }
@@ -105,14 +122,31 @@
     [Parameter] public EventCallback Changed { get; set; }
     /// <summary>Properties not shown (e.g. secrets edited separately).</summary>
     [Parameter] public IReadOnlyCollection<string> Exclude { get; set; } = [];
+    /// <summary>Only these top-level properties, in this order (wizard steps). Null = all.</summary>
+    [Parameter] public IReadOnlyList<string>? Include { get; set; }
+    /// <summary>Mark required fields (only after the user tried to continue, not on an empty form).</summary>
+    [Parameter] public bool ShowRequired { get; set; }
+    /// <summary>Called with the property name when the help icon of a field is clicked.</summary>
+    [Parameter] public EventCallback<string> OnHelp { get; set; }
+    /// <summary>Extra content under a field, e.g. a "check access" button for folders.</summary>
+    [Parameter] public RenderFragment<string>? FieldExtra { get; set; }
 
     private readonly Dictionary<string, string> _errors = [];
 
-    private IEnumerable<PropertyInfo> Properties(Type type) =>
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite && p.SetMethod!.IsPublic && p.GetCustomAttribute<JsonIgnoreAttribute>() is null && !Exclude.Contains(p.Name))
+    private IEnumerable<PropertyInfo> Properties(Type type)
+    {
+        var all = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite && p.SetMethod!.IsPublic && p.GetCustomAttribute<JsonIgnoreAttribute>() is null && !Exclude.Contains(p.Name));
+        if (Include is not null)
+        {
+            return Include.Select(name => all.FirstOrDefault(p => p.Name == name)).OfType<PropertyInfo>();
+        }
+        return all
             .OrderBy(p => IsSection(System.Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType) ? 1 : 0)
             .ThenBy(p => p.DeclaringType == type ? 1 : 0); // base class properties (connection, retry, ...) first
+    }
+
+    private RenderFragment? RenderTestSlot(string property) => FieldExtra?.Invoke(property);
 
     private static bool IsSection(Type type) =>
         type.IsClass && type != typeof(string) && type != typeof(Uri) && type.Namespace?.StartsWith("RIS.Core", StringComparison.Ordinal) == true;
@@ -126,22 +160,45 @@
         return localized.ResourceNotFound ? Humanize(p.Name) : localized.Value;
     }
 
+    /// <summary>Short hint under the field; none for OData action paths (their names collide with other settings).</summary>
+    private string? FieldHint(PropertyInfo p)
+    {
+        if (p.DeclaringType == typeof(RIS.Core.Options.D365ActionPaths)) return null;
+        var hint = T["FieldHint_" + p.Name];
+        return hint.ResourceNotFound ? null : hint.Value;
+    }
+
+    private bool HasHelp(PropertyInfo p) =>
+        OnHelp.HasDelegate && p.DeclaringType != typeof(RIS.Core.Options.D365ActionPaths) && !T["FieldHelp_" + p.Name].ResourceNotFound;
+
+    private string EnumLabel(Type type, string name)
+    {
+        var label = T[$"Enum_{type.Name}_{name}"];
+        return label.ResourceNotFound ? name : label.Value;
+    }
+
     private static string Humanize(string name) =>
         string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) && !char.IsUpper(name[i - 1]) ? " " + char.ToLowerInvariant(c) : c.ToString()));
 
     private string Key(PropertyInfo p) => p.DeclaringType!.Name + "." + p.Name;
 
-    private static bool TryFormat(Type type, out string? _)
-    {
-        _ = null;
-        return type == typeof(string) || type == typeof(int) || type == typeof(double) || type == typeof(TimeSpan)
-               || type == typeof(Guid) || type == typeof(Uri) || type == typeof(DateTimeOffset);
-    }
+    private static bool TryFormat(Type type) =>
+        type == typeof(string) || type == typeof(int) || type == typeof(double) || type == typeof(TimeSpan)
+        || type == typeof(Guid) || type == typeof(Uri) || type == typeof(DateTimeOffset);
 
-    private string Hint(Type type) =>
-        type == typeof(TimeSpan) ? T["Editor_HintTimeSpan"]
-        : type == typeof(DateTimeOffset) ? T["Editor_HintDate"]
-        : string.Empty;
+    private string? TextHint(string? hint, Type type)
+    {
+        var format = type == typeof(TimeSpan) ? T["Editor_HintTimeSpan"].Value
+            : type == typeof(DateTimeOffset) ? T["Editor_HintDate"].Value
+            : null;
+        return (hint, format) switch
+        {
+            (null, null) => null,
+            (null, _) => format,
+            (_, null) => hint,
+            _ => $"{hint} · {format}"
+        };
+    }
 
     private string? Format(PropertyInfo p) => p.GetValue(Target) switch
     {

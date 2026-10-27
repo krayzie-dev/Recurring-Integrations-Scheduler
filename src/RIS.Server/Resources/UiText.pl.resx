@@ -413,4 +413,164 @@
   <data name="Sched_MonthlyLast" xml:space="preserve"><value>Ostatniego dnia każdego miesiąca o {0}</value></data>
   <data name="Sched_Every" xml:space="preserve"><value>Co {0} od {1}</value></data>
   <data name="Sched_Cron" xml:space="preserve"><value>Cron: {0}</value></data>
+  <data name="Step_Type" xml:space="preserve"><value>Zadanie</value></data>
+  <data name="Step_D365" xml:space="preserve"><value>Dynamics 365</value></data>
+  <data name="Step_Files" xml:space="preserve"><value>Pliki i foldery</value></data>
+  <data name="Step_Schedule" xml:space="preserve"><value>Harmonogram</value></data>
+  <data name="Step_Advanced" xml:space="preserve"><value>Zaawansowane</value></data>
+  <data name="Step_Summary" xml:space="preserve"><value>Podsumowanie</value></data>
+  <data name="StepHelp_Type" xml:space="preserve"><value>Wybierz, co robi zadanie. Każdy typ odpowiada jednemu typowi zadania z 4.x. Nazwa i grupa identyfikują zadanie na listach, w logach i w historii (Grupa.Nazwa).</value></data>
+  <data name="StepHelp_D365" xml:space="preserve"><value>Z którym środowiskiem D365 i z którym projektem danych lub integracją cykliczną pracuje zadanie. Przycisk „Testuj połączenie” sprawdza logowanie i uprawnienia z serwera.</value></data>
+  <data name="StepHelp_Files" xml:space="preserve"><value>Foldery odczytuje i zapisuje KONTO USŁUGI, nie Ty. Udziały sieciowe (\\serwer\udział) wymagają konta domenowego lub gMSA. Użyj „Sprawdź dostęp” przy folderze.</value></data>
+  <data name="StepHelp_Schedule" xml:space="preserve"><value>Kiedy zadanie się uruchamia. Godziny są w wybranej strefie czasowej. Rytm nie przesuwa się po restarcie usługi.</value></data>
+  <data name="StepHelp_Advanced" xml:space="preserve"><value>Wartości domyślne pasują do większości zadań. Zmieniaj tylko w razie potrzeby: czekanie na D365, ponawianie, zachowanie po błędzie, własne akcje OData.</value></data>
+  <data name="StepHelp_Summary" xml:space="preserve"><value>Sprawdź opis i najbliższe terminy. Zapis sprawdza całą konfigurację (np. czy połączenie istnieje), a zadanie od razu trafia do harmonogramu.</value></data>
+  <data name="JobTypeHelp_Export" xml:space="preserve"><value>Uruchamia eksport projektu danych w D365, czeka na zakończenie i pobiera pakiet do folderu (opcjonalnie rozpakowany, ze znacznikiem czasu, wysłany na SFTP).</value></data>
+  <data name="JobTypeHelp_Import" xml:space="preserve"><value>Pobiera pliki z folderu (lub SFTP), w razie potrzeby pakuje je do pakietu danych i importuje do projektu danych. Połącz z monitorem wykonania, aby zobaczyć wynik w D365.</value></data>
+  <data name="JobTypeHelp_Upload" xml:space="preserve"><value>Wysyła pliki z folderu do integracji cyklicznej (enqueue). Połącz z monitorem przetwarzania, aby sprawdzić, czy D365 przetworzył komunikat.</value></data>
+  <data name="JobTypeHelp_Download" xml:space="preserve"><value>Pobiera komunikaty integracji cyklicznej z D365 (dequeue), zapisuje każdy pakiet do folderu i potwierdza odbiór.</value></data>
+  <data name="JobTypeHelp_ExecutionMonitor" xml:space="preserve"><value>Sprawdza importy uruchomione przez zadanie importu (pliki statusu) i przenosi pliki do przetworzonych lub błędów, z opisem błędów z D365.</value></data>
+  <data name="JobTypeHelp_ProcessingMonitor" xml:space="preserve"><value>Sprawdza komunikaty wysłane przez zadanie wysyłki i przenosi pliki do przetworzonych lub błędów, gdy D365 je przetworzy.</value></data>
+  <data name="JobTypeFlow_Export" xml:space="preserve"><value>Eksport w D365 → pakiet → folder [→ rozpakowanie] [→ SFTP]</value></data>
+  <data name="JobTypeFlow_Import" xml:space="preserve"><value>[SFTP →] folder → pakiet → import do D365 → plik statusu</value></data>
+  <data name="JobTypeFlow_Upload" xml:space="preserve"><value>[SFTP →] folder → enqueue do D365 → plik statusu</value></data>
+  <data name="JobTypeFlow_Download" xml:space="preserve"><value>Dequeue z D365 → pakiet → folder [→ rozpakowanie] [→ SFTP] → potwierdzenie</value></data>
+  <data name="JobTypeFlow_ExecutionMonitor" xml:space="preserve"><value>plik statusu → status wykonania w D365 → przetworzone / błędy</value></data>
+  <data name="JobTypeFlow_ProcessingMonitor" xml:space="preserve"><value>plik statusu → status komunikatu w D365 → przetworzone / błędy</value></data>
+  <data name="Wizard_CreateMonitor" xml:space="preserve"><value>Utwórz też zadanie monitorujące dla tego zadania</value></data>
+  <data name="Wizard_MonitorHint" xml:space="preserve"><value>Utworzy „{0}” z tymi samymi folderami, uruchamiane co 5 minut i powiązane z tym zadaniem.</value></data>
+  <data name="Wizard_MonitorSuffix" xml:space="preserve"><value>monitor</value></data>
+  <data name="Wizard_CopyFrom" xml:space="preserve"><value>Na podstawie istniejącego zadania</value></data>
+  <data name="Wizard_CopyHint" xml:space="preserve"><value>Kopiuje wszystkie ustawienia; zmień nazwę przed zapisem.</value></data>
+  <data name="Wizard_CopySuffix" xml:space="preserve"><value>(kopia)</value></data>
+  <data name="Wizard_Next" xml:space="preserve"><value>Dalej</value></data>
+  <data name="Wizard_Back" xml:space="preserve"><value>Wstecz</value></data>
+  <data name="Wizard_FixProblems" xml:space="preserve"><value>Popraw problemy w tym kroku, aby przejść dalej.</value></data>
+  <data name="Wizard_Help" xml:space="preserve"><value>Pomoc</value></data>
+  <data name="Wizard_FieldHelp" xml:space="preserve"><value>O tym polu</value></data>
+  <data name="Wizard_HelpClick" xml:space="preserve"><value>Kliknij ⓘ przy polu, aby zobaczyć szczegóły.</value></data>
+  <data name="Wizard_4x" xml:space="preserve"><value>RIS 4.x: {0}</value></data>
+  <data name="Wizard_Description" xml:space="preserve"><value>Opis</value></data>
+  <data name="Wizard_NoProblems" xml:space="preserve"><value>Brak problemów w tym kroku.</value></data>
+  <data name="Wizard_NoFields" xml:space="preserve"><value>W tym kroku nie ma ustawień dla tego typu zadania.</value></data>
+  <data name="Wizard_Saved2" xml:space="preserve"><value>Zapisano {0} i {1}.</value></data>
+  <data name="Wizard_NewConnection" xml:space="preserve"><value>Nowe połączenie</value></data>
+  <data name="Sched_Mode" xml:space="preserve"><value>Jak często</value></data>
+  <data name="Sched_ModeDaily" xml:space="preserve"><value>Codziennie / w wybrane dni</value></data>
+  <data name="Sched_ModeEvery" xml:space="preserve"><value>Co N minut lub godzin</value></data>
+  <data name="Sched_ModeMonthly" xml:space="preserve"><value>Co miesiąc</value></data>
+  <data name="Sched_ModeAdvanced" xml:space="preserve"><value>Zaawansowany (cron)</value></data>
+  <data name="Sched_At" xml:space="preserve"><value>O godzinie</value></data>
+  <data name="Sched_DaysLabel" xml:space="preserve"><value>W dni (brak zaznaczenia = codziennie)</value></data>
+  <data name="Sched_Workdays_Button" xml:space="preserve"><value>Pn–Pt</value></data>
+  <data name="Sched_AllDays_Button" xml:space="preserve"><value>Codziennie</value></data>
+  <data name="Sched_EveryValue" xml:space="preserve"><value>Co</value></data>
+  <data name="Sched_Minutes" xml:space="preserve"><value>minut</value></data>
+  <data name="Sched_Hours" xml:space="preserve"><value>godzin</value></data>
+  <data name="Sched_From" xml:space="preserve"><value>począwszy od</value></data>
+  <data name="Sched_EveryHint" xml:space="preserve"><value>Rytm liczony jest od tej godziny, np. co 2 godziny od 12:00 = 00:00, 02:00 … 12:00, 14:00. Restart go nie przesuwa.</value></data>
+  <data name="Sched_DayOfMonth" xml:space="preserve"><value>Dzień miesiąca</value></data>
+  <data name="Sched_LastDay" xml:space="preserve"><value>Ostatni dzień</value></data>
+  <data name="Sched_CronHint" xml:space="preserve"><value>Cron Quartz: sekundy minuty godziny dzień-miesiąca miesiąc dzień-tygodnia. Przykłady: 0 0 2 * * ? = codziennie 02:00; 0 0/15 * * * ? = co 15 minut; 0 0 6 ? * MON-FRI = dni robocze 06:00; 0 0 8-18 ? * MON-FRI = co godzinę 8–18 w dni robocze.</value></data>
+  <data name="Sched_TimeZone" xml:space="preserve"><value>Strefa czasowa</value></data>
+  <data name="Sched_ServerZone" xml:space="preserve"><value>Strefa serwera</value></data>
+  <data name="Sched_MissedHelp" xml:space="preserve"><value>Uruchom raz po starcie: jeśli usługa nie działała w zaplanowanym terminie, zadanie wykona się raz zaraz po starcie (zalecane dla eksportów). Pomiń: czeka na następny termin.</value></data>
+  <data name="Sched_PausedHelp" xml:space="preserve"><value>Zadanie jest zapisane i widoczne, ale nie uruchamia się, dopóki go nie wznowisz.</value></data>
+  <data name="Enum_MissedRunPolicy_RunOnce" xml:space="preserve"><value>Uruchom raz po starcie</value></data>
+  <data name="Enum_MissedRunPolicy_Skip" xml:space="preserve"><value>Pomiń</value></data>
+  <data name="Enum_FileOrder_Created" xml:space="preserve"><value>Czas utworzenia</value></data>
+  <data name="Enum_FileOrder_Modified" xml:space="preserve"><value>Czas modyfikacji</value></data>
+  <data name="Enum_FileOrder_FileName" xml:space="preserve"><value>Nazwa pliku</value></data>
+  <data name="Enum_FileOrder_Size" xml:space="preserve"><value>Rozmiar</value></data>
+  <data name="Enum_LegalEntitySource_Subfolder" xml:space="preserve"><value>Nazwa podfolderu</value></data>
+  <data name="Enum_LegalEntitySource_FileName" xml:space="preserve"><value>Fragment nazwy pliku</value></data>
+  <data name="Enum_D365AuthMode_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
+  <data name="Enum_D365AuthMode_Certificate" xml:space="preserve"><value>Certyfikat</value></data>
+  <data name="FieldHint_Connection" xml:space="preserve"><value>Środowisko D365 i rejestracja aplikacji (strona Połączenia)</value></data>
+  <data name="FieldHelp_Connection" xml:space="preserve"><value>Połączenie ze środowiskiem D365: adres AOS, tenant Entra ID, client id oraz sekret lub certyfikat. Definiowane raz na stronie Połączenia i współdzielone przez zadania.</value></data>
+  <data name="FieldHint_DataProject" xml:space="preserve"><value>Nazwa projektu danych w D365 Zarządzanie danymi</value></data>
+  <data name="FieldHelp_DataProject" xml:space="preserve"><value>Projekt danych (definition group) w D365 → Zarządzanie danymi. Eksport: projekt do wyeksportowania. Import: projekt, do którego trafia pakiet. Musi istnieć w środowisku.</value></data>
+  <data name="FieldHint_ActivityId" xml:space="preserve"><value>Id cyklicznego zadania danych (GUID)</value></data>
+  <data name="FieldHelp_ActivityId" xml:space="preserve"><value>D365 → Zarządzanie danymi → Cykliczne zadania danych → identyfikator zadania (activity id), np. 6F1B3C2A-…</value></data>
+  <data name="FieldHint_EntityName" xml:space="preserve"><value>Encja docelowa, gdy pliki nie są pakietami danych</value></data>
+  <data name="FieldHelp_EntityName" xml:space="preserve"><value>Nazwa encji danych jak w D365 (np. „Customers V3”). Potrzebna tylko, gdy wysyłane pliki są zwykłymi plikami, a nie pakietami danych.</value></data>
+  <data name="FieldHint_IsDataPackage" xml:space="preserve"><value>Pliki są pakietami danych (zip z Manifest.xml)</value></data>
+  <data name="FieldHelp_IsDataPackage" xml:space="preserve"><value>Włączone: każdy plik jest kompletnym pakietem danych. Wyłączone: każdy plik to plik jednej encji i używana jest Nazwa encji.</value></data>
+  <data name="FieldHint_Company" xml:space="preserve"><value>Firma (legal entity), np. USMF</value></data>
+  <data name="FieldHelp_Company" xml:space="preserve"><value>Kod firmy (legal entity) w D365. Przy imporcie do wielu firm pozostaw puste i ustaw sekcję Wiele firm.</value></data>
+  <data name="FieldHint_InputFilesArePackages" xml:space="preserve"><value>Pliki w folderze wejściowym są gotowymi pakietami danych</value></data>
+  <data name="FieldHelp_InputFilesArePackages" xml:space="preserve"><value>Włączone: każdy plik wejściowy to pakiet danych (zip) importowany bez zmian. Wyłączone: każdy plik jest pakowany do szablonu pakietu.</value></data>
+  <data name="FieldHint_PackageTemplate" xml:space="preserve"><value>Plik zip wyeksportowany z D365 z Manifest.xml</value></data>
+  <data name="FieldHelp_PackageTemplate" xml:space="preserve"><value>Ścieżka do szablonu pakietu: wyeksportuj raz projekt danych z D365 i zachowaj plik zip. RIS podmienia w nim plik danych na każdy plik wejściowy.</value></data>
+  <data name="FieldHint_OverwriteDataProject" xml:space="preserve"><value>Zastąp definicję projektu definicją z pakietu</value></data>
+  <data name="FieldHelp_OverwriteDataProject" xml:space="preserve"><value>Przekazywane do ImportFromPackage: definicja projektu danych jest nadpisywana manifestem z pakietu.</value></data>
+  <data name="FieldHint_ExecuteImport" xml:space="preserve"><value>Uruchom import od razu (w przeciwnym razie tylko staging)</value></data>
+  <data name="FieldHelp_ExecuteImport" xml:space="preserve"><value>Włączone: dane trafiają do tabel docelowych. Wyłączone: dane zostają w stagingu, a import kończy się w D365.</value></data>
+  <data name="FieldHint_GetExecutionErrors" xml:space="preserve"><value>Zapisz błędy wykonania z D365 obok nieudanych plików</value></data>
+  <data name="FieldHelp_GetExecutionErrors" xml:space="preserve"><value>Dla nieudanych importów błędy wykonania są pobierane z D365 i zapisywane jako plik tekstowy obok pliku w folderze błędów.</value></data>
+  <data name="FieldHint_GetImportTargetErrorKeysFile" xml:space="preserve"><value>Zapisz klucze błędów per encja dla nieudanych importów</value></data>
+  <data name="FieldHelp_GetImportTargetErrorKeysFile" xml:space="preserve"><value>Generuje i pobiera plik kluczy błędów każdej encji (rekordy, które się nie zaimportowały) obok pliku w folderze błędów.</value></data>
+  <data name="FieldHint_MultiCompany" xml:space="preserve"><value>Firma odczytywana z podfolderu lub nazwy pliku</value></data>
+  <data name="FieldHelp_MultiCompany" xml:space="preserve"><value>Jedno zadanie importu dla wielu firm: firma to nazwa podfolderu folderu wejściowego albo fragment nazwy pliku (separator i pozycja, np. „_” i 2 dla ORDERS_USMF_001.csv).</value></data>
+  <data name="FieldHint_InputDir" xml:space="preserve"><value>Folder z plikami do wysłania</value></data>
+  <data name="FieldHelp_InputDir" xml:space="preserve"><value>Z tego folderu pobierane są pliki pasujące do maski (także z podfolderów; struktura jest zachowana w folderach docelowych).</value></data>
+  <data name="FieldHint_Files" xml:space="preserve"><value>Które pliki i w jakiej kolejności</value></data>
+  <data name="FieldHelp_Files" xml:space="preserve"><value>Maska plików (np. *.csv, *.zip) i kolejność przetwarzania. Kolejność ma znaczenie, gdy pliki zależą od siebie (np. nagłówki przed wierszami).</value></data>
+  <data name="FieldHint_UploadSuccessDir" xml:space="preserve"><value>Tu trafiają pliki wysłane do D365</value></data>
+  <data name="FieldHelp_UploadSuccessDir" xml:space="preserve"><value>Po poprawnym wysłaniu / żądaniu importu plik jest przenoszony tutaj razem z plikiem statusu dla monitora.</value></data>
+  <data name="FieldHint_UploadErrorsDir" xml:space="preserve"><value>Pliki, których nie udało się wysłać</value></data>
+  <data name="FieldHelp_UploadErrorsDir" xml:space="preserve"><value>Pliki odrzucone przez D365 trafiają tutaj wraz z raportem błędu (kod, komunikat, odpowiedź D365).</value></data>
+  <data name="FieldHint_DownloadSuccessDir" xml:space="preserve"><value>Tu zapisywane są pobrane pakiety</value></data>
+  <data name="FieldHelp_DownloadSuccessDir" xml:space="preserve"><value>Folder docelowy wyeksportowanych lub pobranych pakietów. Nazwy plików według wzorca nazwy.</value></data>
+  <data name="FieldHint_DownloadErrorsDir" xml:space="preserve"><value>Pakiety, których nie udało się przetworzyć</value></data>
+  <data name="FieldHelp_DownloadErrorsDir" xml:space="preserve"><value>Pakiety, które nie przeszły po pobraniu (np. rozpakowanie lub potwierdzenie), trafiają tutaj.</value></data>
+  <data name="FieldHint_ProcessingSuccessDir" xml:space="preserve"><value>Pliki poprawnie przetworzone przez D365</value></data>
+  <data name="FieldHelp_ProcessingSuccessDir" xml:space="preserve"><value>Monitor przenosi tu pliki, gdy D365 zgłosi sukces.</value></data>
+  <data name="FieldHint_ProcessingErrorsDir" xml:space="preserve"><value>Pliki z błędem w D365, ze szczegółami błędu</value></data>
+  <data name="FieldHelp_ProcessingErrorsDir" xml:space="preserve"><value>Monitor przenosi tu pliki, gdy D365 zgłosi błąd lub minie limit czasu, razem z kluczami błędów / błędami wykonania i linkiem do D365.</value></data>
+  <data name="FieldHint_FileNamePattern" xml:space="preserve"><value>Nazwa zapisywanych pakietów, np. {timestamp}</value></data>
+  <data name="FieldHelp_FileNamePattern" xml:space="preserve"><value>Tokeny: {timestamp} {date} {executionId} {dataProject} {company} (eksport) lub {number} {correlationId} {activityId} (pobieranie). Dodawane jest „.zip”.</value></data>
+  <data name="FieldHint_UnzipPackage" xml:space="preserve"><value>Rozpakuj pakiet po pobraniu</value></data>
+  <data name="FieldHelp_UnzipPackage" xml:space="preserve"><value>Zawartość pakietu jest rozpakowywana do folderu (podfolder na pakiet).</value></data>
+  <data name="FieldHint_AddTimestamp" xml:space="preserve"><value>Dodaj datę i godzinę do rozpakowanych plików</value></data>
+  <data name="FieldHelp_AddTimestamp" xml:space="preserve"><value>Rozpakowane pliki dostają znacznik czasu w nazwie, aby kolejne uruchomienia ich nie nadpisały.</value></data>
+  <data name="FieldHint_DeletePackage" xml:space="preserve"><value>Usuń zip po rozpakowaniu</value></data>
+  <data name="FieldHelp_DeletePackage" xml:space="preserve"><value>Zachowywane są tylko rozpakowane pliki.</value></data>
+  <data name="FieldHint_WriteStatusFiles" xml:space="preserve"><value>Potrzebne, gdy wynik sprawdza zadanie monitorujące</value></data>
+  <data name="FieldHelp_WriteStatusFiles" xml:space="preserve"><value>Obok każdego wysłanego pliku zapisywany jest mały plik statusu (id wykonania lub komunikatu); czyta go zadanie monitorujące.</value></data>
+  <data name="FieldHint_StatusFileExtension" xml:space="preserve"><value>np. .Status – taka sama w zadaniu i jego monitorze</value></data>
+  <data name="FieldHelp_StatusFileExtension" xml:space="preserve"><value>Rozszerzenie plików statusu. Zadanie i jego monitor muszą używać tego samego.</value></data>
+  <data name="FieldHint_SftpInbound" xml:space="preserve"><value>Najpierw pobierz pliki wejściowe z SFTP</value></data>
+  <data name="FieldHelp_SftpInbound" xml:space="preserve"><value>Przed przetwarzaniem pliki pasujące do maski są pobierane z folderu serwera SFTP do folderu wejściowego.</value></data>
+  <data name="FieldHint_SftpOutbound" xml:space="preserve"><value>Wyślij pakiety także na SFTP</value></data>
+  <data name="FieldHelp_SftpOutbound" xml:space="preserve"><value>Po zapisaniu każdy pakiet jest wysyłany do folderu na serwerze SFTP.</value></data>
+  <data name="FieldHint_Polling" xml:space="preserve"><value>Czekanie na zakończenie w D365</value></data>
+  <data name="FieldHelp_Polling" xml:space="preserve"><value>Sprawdzanie statusu zaczyna się po Początkowym odstępie, odstęp rośnie o Mnożnik do Maksymalnego odstępu. Po Limicie czasu (domyślnie 12 h) uruchomienie kończy się błędem RIS-EXP-001 / RIS-MON-001. W 4.x: 100 prób.</value></data>
+  <data name="FieldHint_Retry" xml:space="preserve"><value>Ponawiaj nieudane żądania i operacje na plikach</value></data>
+  <data name="FieldHelp_Retry" xml:space="preserve"><value>Chwilowe problemy (timeouty, ograniczenia, 5xx, zablokowane pliki) są ponawiane Liczba razy z Odstępem. Start eksportu lub importu nigdy nie jest powtarzany (ryzyko duplikatów).</value></data>
+  <data name="FieldHint_DelayBetweenFiles" xml:space="preserve"><value>Przerwa między plikami lub komunikatami</value></data>
+  <data name="FieldHelp_DelayBetweenFiles" xml:space="preserve"><value>Czeka tyle po każdym pliku, np. aby rozłożyć obciążenie D365. 0 = bez przerwy.</value></data>
+  <data name="FieldHint_ErrorKeysFileTimeout" xml:space="preserve"><value>Jak długo czekać na plik kluczy błędów</value></data>
+  <data name="FieldHelp_ErrorKeysFileTimeout" xml:space="preserve"><value>D365 generuje plik kluczy błędów asynchronicznie; po tym czasie plik jest pomijany z ostrzeżeniem.</value></data>
+  <data name="FieldHint_PauseOnError" xml:space="preserve"><value>Wstrzymaj zadanie po nieudanym uruchomieniu</value></data>
+  <data name="FieldHelp_PauseOnError" xml:space="preserve"><value>Po błędzie zadanie przestaje się uruchamiać, dopóki ktoś go nie wznowi. Przydatne, gdy ponowne uruchomienie mogłoby zaszkodzić.</value></data>
+  <data name="FieldHint_IndefinitePause" xml:space="preserve"><value>Zachowaj zadanie, ale nigdy go nie uruchamiaj</value></data>
+  <data name="FieldHelp_IndefinitePause" xml:space="preserve"><value>Definicja zostaje (np. na później), ale zadanie nigdy się nie uruchamia, nawet przez „Uruchom teraz”. 4.x: IndefinitePause.</value></data>
+  <data name="FieldHint_ActionPaths" xml:space="preserve"><value>Tylko dla zmodyfikowanych akcji OData w D365</value></data>
+  <data name="FieldHelp_ActionPaths" xml:space="preserve"><value>Ścieżki akcji OData zarządzania danymi w D365. Zmieniaj tylko, jeśli środowisko używa własnych akcji.</value></data>
+  <data name="FieldHint_SearchPattern" xml:space="preserve"><value>np. *.csv</value></data>
+  <data name="FieldHint_OrderBy" xml:space="preserve"><value>Kolejność przetwarzania</value></data>
+  <data name="FieldHint_Reverse" xml:space="preserve"><value>Najpierw najnowsze / największe</value></data>
+  <data name="FieldHint_Server" xml:space="preserve"><value>Serwer SFTP (strona Serwery SFTP)</value></data>
+  <data name="FieldHint_RemoteFolder" xml:space="preserve"><value>Folder na serwerze SFTP, np. /out</value></data>
+  <data name="FieldHint_FileMask" xml:space="preserve"><value>Pliki na serwerze SFTP, np. *.zip</value></data>
+  <data name="FieldHint_Source" xml:space="preserve"><value>Skąd brana jest firma</value></data>
+  <data name="FieldHint_FileNameSeparator" xml:space="preserve"><value>np. _ dla ORDERS_USMF_001.csv</value></data>
+  <data name="FieldHint_TokenPosition" xml:space="preserve"><value>Pozycja od 1, np. 2 → USMF</value></data>
+  <data name="FieldHint_InitialDelay" xml:space="preserve"><value>Pierwsze sprawdzenie po</value></data>
+  <data name="FieldHint_MaxDelay" xml:space="preserve"><value>Najdłuższa przerwa między sprawdzeniami</value></data>
+  <data name="FieldHint_GrowthFactor" xml:space="preserve"><value>Przerwa rośnie o ten mnożnik</value></data>
+  <data name="FieldHint_Timeout" xml:space="preserve"><value>Zakończ błędem po (domyślnie 12 h)</value></data>
+  <data name="FieldHint_Count" xml:space="preserve"><value>Liczba ponowień</value></data>
+  <data name="FieldHint_Delay" xml:space="preserve"><value>Odstęp między ponowieniami</value></data>
 </root>
