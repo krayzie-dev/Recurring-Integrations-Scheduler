@@ -6,8 +6,10 @@
 @using RIS.Core.Options
 @using RIS.Jobs.Quartz
 @using RIS.Persistence
+@using RIS.Server.Components.JobEditor
 @inject ConfigurationRepository Repository
 @inject IRisConfigurationStore Store
+@inject ConnectionTestService Tests
 
 <PageTitle>RIS 5 – @(IsNew ? T["Editor_NewJob"] : Name)</PageTitle>
 
@@ -16,7 +18,10 @@
     <MudText Typo="Typo.h5">@(IsNew ? T["Editor_NewJob"] : T["Editor_EditJob", $"{Group}.{Name}"])</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Text" Href="@CancelLink">@T["Common_Cancel"]</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+    @if (!IsNew)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+    }
 </MudStack>
 
 @if (_job is null)
@@ -28,6 +33,21 @@
 }
 else
 {
+    @* Steps: linear for a new job, free navigation (tabs) when editing *@
+    <MudPaper Outlined="true" Elevation="0" Class="pa-2 mb-3 d-flex flex-wrap gap-1">
+        @foreach (var step in Steps)
+        {
+            var s = step;
+            var index = Array.IndexOf(Steps, s);
+            var problems = ProblemsOf(s).Count;
+            <MudButton Variant="@(s == _step ? Variant.Filled : Variant.Text)" Color="@(s == _step ? Color.Primary : Color.Default)" Size="Size.Small"
+                       Disabled="IsNew && index > _reached" OnClick="() => GoTo(s)"
+                       StartIcon="@((_attempted.Contains(s) || !IsNew) && problems > 0 ? Icons.Material.Filled.Warning : _visited.Contains(s) && s != _step ? Icons.Material.Filled.CheckCircle : null)">
+                @(index + 1). @T["Step_" + s]
+            </MudButton>
+        }
+    </MudPaper>
+
     @if (_errors.Count > 0)
     {
         <MudAlert Severity="Severity.Error" Class="mb-3">
@@ -36,113 +56,89 @@ else
         </MudAlert>
     }
 
-    <MudTabs Elevation="0" Outlined="true" TabPanelsClass="pa-4" @bind-ActivePanelIndex="_tab">
-        <MudTabPanel Text="@T["Editor_TabForm"]" Icon="@Icons.Material.Filled.EditNote">
-            <MudGrid Spacing="3">
-                <MudItem xs="12" lg="8">
-                    <MudText Typo="Typo.h6" Class="mb-2">@T["Editor_Identity"]</MudText>
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6">
-                            <MudTextField T="string" @bind-Value="_job.Name" @bind-Value:after="Validate" Label="@T["Job_Name"]" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudAutocomplete T="string" @bind-Value="_job.Group" @bind-Value:after="Validate" Label="@T["Job_Group"]" SearchFunc="SearchGroups" CoerceText="true"
-                                             CoerceValue="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudTextField T="string" @bind-Value="_job.Description" Label="@T["Job_Description"]" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudSelect T="string" Value="_type" ValueChanged="ChangeType" Label="@T["Job_Type"]" Disabled="!IsNew" Variant="Variant.Outlined" Margin="Margin.Dense">
-                                @foreach (var type in Enum.GetNames<JobType>())
-                                {
-                                    <MudSelectItem Value="type">@T["JobType_" + type]</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudSelect T="string" @bind-Value="_job.PairedJob" @bind-Value:after="Validate" Label="@T["Job_PairedJob"]" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
-                                @foreach (var other in Store.Current.Jobs.Where(j => j.Key != _job.Key).Select(j => j.Name).Distinct().Order())
-                                {
-                                    <MudSelectItem Value="other">@other</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                    </MudGrid>
-
-                    <MudText Typo="Typo.h6" Class="mt-4 mb-2">@T["Job_Schedule"]</MudText>
-                    <MudRadioGroup T="bool" Value="_useCron" ValueChanged="SetScheduleMode">
-                        <MudRadio Value="true" Color="Color.Primary">Cron</MudRadio>
-                        <MudRadio Value="false" Color="Color.Primary">@T["Editor_Interval"]</MudRadio>
-                    </MudRadioGroup>
-                    <ObjectEditor Target="_job.Schedule" Changed="Validate" Exclude="ScheduleExclude" />
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(_useCron ? T["Editor_CronHint"] : T["Editor_IntervalHint"])</MudText>
-
-                    <MudText Typo="Typo.h6" Class="mt-4 mb-2">@T["Editor_Options"]</MudText>
-                    <ObjectEditor Target="_job.Options!" Changed="Validate" Connections="_connections" SftpServers="_sftpServers" />
-                </MudItem>
-
-                <MudItem xs="12" lg="4">
-                    <MudPaper Outlined="true" Elevation="0" Class="pa-3" Style="position: sticky; top: 72px">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
-                        @if (_previewError is not null)
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="8">
+            <MudPaper Outlined="true" Elevation="0" Class="pa-4">
+                @switch (_step)
+                {
+                    case JobStep.Type:
+                        @TypeStep
+                        break;
+                    case JobStep.Schedule:
+                        <ScheduleBuilderView Model="_schedule" Changed="SetSchedule" />
+                        break;
+                    case JobStep.Summary:
+                        @SummaryStep
+                        break;
+                    default:
+                        @if (Fields(_step).Count == 0)
                         {
-                            <MudAlert Severity="Severity.Warning" Dense="true">@_previewError</MudAlert>
-                        }
-                        <MudList T="string" Dense="true">
-                            @foreach (var run in _preview)
-                            {
-                                <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">@(Prefs.Format(run, "ddd") + " " + Prefs.Format(run, "g"))</MudListItem>
-                            }
-                        </MudList>
-                        <MudDivider Class="my-2" />
-                        @if (_live.Count == 0)
-                        {
-                            <MudAlert Severity="Severity.Success" Dense="true">@T["Editor_Valid"]</MudAlert>
+                            <MudText Class="mud-text-secondary">@T["Wizard_NoFields"]</MudText>
                         }
                         else
                         {
-                            <MudAlert Severity="Severity.Warning" Dense="true">
-                                @foreach (var problem in _live) { <div class="ris-mono">@problem</div> }
-                            </MudAlert>
+                            <ObjectEditor @key="_step" Target="_job.Options!" Include="Fields(_step)" Changed="Changed" Connections="_connections" SftpServers="_sftpServers"
+                                          ShowRequired="_attempted.Contains(_step)" OnHelp="f => _helpField = f" FieldExtra="FieldExtra" />
                         }
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-        </MudTabPanel>
+                        @StepExtra
+                        break;
+                }
 
-        <MudTabPanel Text="JSON" Icon="@Icons.Material.Filled.Code" OnClick="ToJson">
-            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Editor_JsonHint"]</MudText>
-            <MudTextField T="string" @bind-Value="_json" Lines="28" Variant="Variant.Outlined" Class="ris-mono" Immediate="true" />
-            <MudButton Class="mt-2" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Check" OnClick="FromJson">@T["Editor_ApplyJson"]</MudButton>
-        </MudTabPanel>
-    </MudTabs>
+                <MudDivider Class="my-4" />
+                <MudStack Row="true">
+                    @if (_step != Steps[0])
+                    {
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="Back">@T["Wizard_Back"]</MudButton>
+                    }
+                    <MudSpacer />
+                    @if (_step != JobStep.Summary)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" OnClick="Next">@T["Wizard_Next"]</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" lg="4">
+            <HelpPanel Step="_step" JobType="@_type.ToString()" Field="@_helpField" Problems="@(_attempted.Contains(_step) || !IsNew ? ProblemsOf(_step) : [])" />
+        </MudItem>
+    </MudGrid>
 }
 
 @code {
     [Parameter] public string? Group { get; set; }
     [Parameter] public string? Name { get; set; }
 
-    private static readonly string[] ScheduleExcludeCron = ["Interval", "StartAt"];
-    private static readonly string[] ScheduleExcludeInterval = ["Cron"];
+    private static readonly JobStep[] Steps = [JobStep.Type, JobStep.D365, JobStep.Files, JobStep.Schedule, JobStep.Advanced, JobStep.Summary];
 
     private JobDefinition? _job;
-    private string _type = nameof(JobType.Export);
-    private bool _useCron = true;
-    private int _tab;
-    private string _json = "";
+    private ScheduleModel _schedule = new();
+    private JobType _type = JobType.Export;
+    private JobStep _step = JobStep.Type;
+    private int _reached;
+    private readonly HashSet<JobStep> _attempted = [];
+    private readonly HashSet<JobStep> _visited = [JobStep.Type];
+    private string? _helpField;
     private bool _saving;
     private List<string> _errors = [];
-    private List<string> _live = [];
-    private List<DateTimeOffset> _preview = [];
-    private string? _previewError;
+    private IReadOnlyList<string> _live = [];
     private IReadOnlyList<string> _connections = [];
     private IReadOnlyList<string> _sftpServers = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
+    private string? _copyFrom;
+
+    // Monitor created together with an import/upload job
+    private bool _createMonitor;
+    private string? _monitorProcessed;
+    private string? _monitorErrors;
 
     private bool IsNew => Name is null;
-    private string[] ScheduleExclude => _useCron ? ScheduleExcludeCron : ScheduleExcludeInterval;
     private string CancelLink => IsNew ? "/jobs" : $"/jobs/{Uri.EscapeDataString(Group!)}/{Uri.EscapeDataString(Name!)}";
+    private bool CanHaveMonitor => IsNew && JobTemplates.CanHaveMonitor(_type);
+    private string MonitorName => $"{_job?.Name} – {T["Wizard_MonitorSuffix"]}";
 
     protected override TimeSpan? RefreshInterval => null;
 
@@ -154,131 +150,177 @@ else
         var configuration = Store.Current;
         _connections = configuration.Connections.Select(c => c.Name).Order().ToList();
         _sftpServers = configuration.SftpServers.Select(s => s.Name).Order().ToList();
-        if (IsNew)
+        var from = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query)["from"];
+        if (IsNew && from is not null && configuration.FindJob(from) is { } source)
         {
-            _job = new JobDefinition { Group = "Default", Schedule = new ScheduleOptions { Cron = "0 0 2 * * ?" }, Options = NewOptions(_type) };
+            LoadCopy(source);
+        }
+        else if (IsNew)
+        {
+            _job = new JobDefinition { Group = "Default", Schedule = new ScheduleOptions { Cron = "0 0 2 * * ?" }, Options = JobFieldCatalog.NewOptions(_type) };
+            if (_connections.Count == 1) _job.Options!.Connection = _connections[0];
         }
         else if (configuration.FindJob($"{Group}.{Name}") is { } existing)
         {
             _job = Clone(existing);
-            _type = existing.Type.ToString();
-            _useCron = existing.Schedule.Cron is not null;
+            _type = existing.Type;
+            _reached = Steps.Length - 1;
+            foreach (var step in Steps) _visited.Add(step);
         }
+        if (_job is not null) _schedule = ScheduleBuilder.Parse(_job.Schedule);
         _breadcrumbs = [new(T["Nav_Jobs"], "/jobs"), new(IsNew ? T["Editor_NewJob"] : $"{Group}.{Name}", IsNew ? null : CancelLink, disabled: IsNew)];
-        Validate();
+        Changed();
         return Task.CompletedTask;
+    }
+
+    private void LoadCopy(JobDefinition source)
+    {
+        _job = Clone(source);
+        _job.Name = $"{source.Name} {T["Wizard_CopySuffix"]}";
+        _job.PairedJob = null;
+        _type = source.Type;
+        _schedule = ScheduleBuilder.Parse(_job.Schedule);
+        _copyFrom = source.Key;
+        Changed();
     }
 
     private static JobDefinition Clone(JobDefinition job) =>
         JsonSerializer.Deserialize<JobDefinition>(JsonSerializer.Serialize(job, RisJson.Options), RisJson.Options)!;
 
-    private static JobOptionsBase NewOptions(string type) => Enum.Parse<JobType>(type) switch
-    {
-        JobType.Import => new ImportJobOptions(),
-        JobType.Upload => new UploadJobOptions(),
-        JobType.Download => new DownloadJobOptions(),
-        JobType.ExecutionMonitor => new ExecutionMonitorJobOptions(),
-        JobType.ProcessingMonitor => new ProcessingMonitorJobOptions(),
-        _ => new ExportJobOptions()
-    };
+    private IReadOnlyList<string> Fields(JobStep step) => JobFieldCatalog.PropertiesOf(_job!.Options!.GetType(), step);
 
-    private void ChangeType(string type)
-    {
-        _type = type;
-        var connection = _job!.Options?.Connection ?? string.Empty;
-        _job.Options = NewOptions(type);
-        _job.Options.Connection = connection;
-        Validate();
-    }
-
-    private void SetScheduleMode(bool cron)
-    {
-        _useCron = cron;
-        if (cron)
-        {
-            _job!.Schedule.Interval = null;
-            _job.Schedule.StartAt = null;
-            _job.Schedule.Cron ??= "0 0 2 * * ?";
-        }
-        else
-        {
-            _job!.Schedule.Cron = null;
-            _job.Schedule.Interval ??= TimeSpan.FromHours(1);
-            _job.Schedule.StartAt ??= new DateTimeOffset(DateTime.Today, TimeZoneInfo.Local.GetUtcOffset(DateTime.Today));
-        }
-        Validate();
-    }
-
-    /// <summary>Validation of the job alone (references are checked on save) and preview of the next runs.</summary>
-    private void Validate()
+    private void Changed()
     {
         if (_job is null) return;
         _live = ConfigurationValidator.ValidateObject(_job, string.IsNullOrEmpty(_job.Name) ? "job" : _job.Key).ToList();
-        _preview = [];
-        _previewError = null;
-        try
-        {
-            var trigger = RisJobScheduling.BuildTrigger(_job, DateTimeOffset.UtcNow);
-            var next = trigger.GetFireTimeAfter(DateTimeOffset.UtcNow);
-            for (var i = 0; i < 5 && next is not null; i++)
-            {
-                _preview.Add(next.Value);
-                next = trigger.GetFireTimeAfter(next);
-            }
-        }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException or TimeZoneNotFoundException or Core.Errors.RisException)
-        {
-            _previewError = ex.Message;
-        }
+        _errors = [];
     }
+
+    private IReadOnlyList<string> ProblemsOf(JobStep step)
+    {
+        if (_job is null) return [];
+        var problems = (step == JobStep.Summary ? _live : JobFieldCatalog.ProblemsOf(_live, _job.Options!.GetType(), step)).Select(Friendly).Distinct().ToList();
+        if (step == JobStep.Files && _createMonitor && CanHaveMonitor && (string.IsNullOrWhiteSpace(_monitorProcessed) || string.IsNullOrWhiteSpace(_monitorErrors)))
+        {
+            problems.Add(T["Wizard_RequiredField", T["Field_ProcessingSuccessDir"] + " / " + T["Field_ProcessingErrorsDir"]]);
+        }
+        return problems;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex RequiredPattern = new(@"\.(?<field>\w+): The \w+ field is required\.$");
+
+    /// <summary>"job.Options.DataProject: The DataProject field is required." → "Required: Data project" in the UI language.</summary>
+    private string Friendly(string problem)
+    {
+        var match = RequiredPattern.Match(problem);
+        if (!match.Success) return problem;
+        var field = match.Groups["field"].Value;
+        var label = field == "Name" ? T["Job_Name"] : T["Field_" + field];
+        return T["Wizard_RequiredField", label.ResourceNotFound ? field : label.Value];
+    }
+
+    private void SetSchedule(ScheduleOptions schedule)
+    {
+        _job!.Schedule = schedule;
+        Changed();
+    }
+
+    private void SetType(JobType type)
+    {
+        if (!IsNew || _copyFrom is not null && type == _type) return;
+        var connection = _job!.Options?.Connection ?? string.Empty;
+        _type = type;
+        _job.Options = JobFieldCatalog.NewOptions(type);
+        _job.Options.Connection = connection;
+        _copyFrom = null;
+        Changed();
+    }
+
+    private void GoTo(JobStep step)
+    {
+        _step = step;
+        _visited.Add(step);
+        _helpField = null;
+    }
+
+    private void Next()
+    {
+        if (IsNew && ProblemsOf(_step).Count > 0)
+        {
+            _attempted.Add(_step);
+            Snackbar.Add(T["Wizard_FixProblems"], Severity.Warning);
+            return;
+        }
+        var index = Array.IndexOf(Steps, _step) + 1;
+        _reached = Math.Max(_reached, index);
+        GoTo(Steps[index]);
+    }
+
+    private void Back() => GoTo(Steps[Array.IndexOf(Steps, _step) - 1]);
 
     private Task<IEnumerable<string>> SearchGroups(string? text, CancellationToken _) =>
         Task.FromResult(Store.Current.Jobs.Select(j => j.Group).Distinct().Order()
             .Where(g => string.IsNullOrWhiteSpace(text) || g.Contains(text, StringComparison.OrdinalIgnoreCase)));
 
-    private void ToJson() => _json = JsonSerializer.Serialize(_job, RisJson.Options);
-
-    private void FromJson()
+    /// <summary>"Check access" under folder fields, "Test connection" under the connection.</summary>
+    private RenderFragment<string> FieldExtra => property => builder =>
     {
-        try
+        if (property.EndsWith("Dir", StringComparison.Ordinal) || property == "PackageTemplate")
         {
-            var parsed = JsonSerializer.Deserialize<JobDefinition>(_json, RisJson.Options) ?? throw new JsonException("Empty JSON.");
-            if (!IsNew && parsed.Type.ToString() != _type) throw new JsonException(T["Editor_TypeChange"]);
-            _job = parsed;
-            _type = parsed.Type.ToString();
-            _useCron = parsed.Schedule.Cron is not null;
-            Validate();
-            _tab = 0;
-            Snackbar.Add(T["Editor_JsonApplied"], Severity.Info);
+            var value = _job!.Options!.GetType().GetProperty(property)?.GetValue(_job.Options) as string;
+            var folder = property == "PackageTemplate" ? System.IO.Path.GetDirectoryName(value) : value;
+            builder.OpenComponent<TestButton>(0);
+            builder.AddAttribute(1, nameof(TestButton.Label), T["Test_Folder"].Value);
+            builder.AddAttribute(2, nameof(TestButton.Icon), Icons.Material.Filled.FolderOpen);
+            builder.AddAttribute(3, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(folder));
+            builder.AddAttribute(4, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.FolderAsync(folder)));
+            builder.CloseComponent();
         }
-        catch (JsonException ex)
+        else if (property == "Connection")
         {
-            Snackbar.Add(T["Editor_JsonInvalid", ex.Message], Severity.Error);
+            var connection = _job!.Options!.Connection;
+            builder.OpenComponent<TestButton>(0);
+            builder.AddAttribute(1, nameof(TestButton.Label), T["Test_Run"].Value);
+            builder.AddAttribute(2, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(connection));
+            builder.AddAttribute(3, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.D365Async(connection)));
+            builder.CloseComponent();
         }
-    }
+    };
 
     private async Task SaveAsync()
     {
         if (_job is null) return;
-        if (_tab == 1) FromJson();
         _saving = true;
         _errors = [];
         try
         {
-            if (!IsNew && !string.Equals($"{Group}.{Name}", _job.Key, StringComparison.OrdinalIgnoreCase))
+            if (!IsNew)
             {
-                await Repository.SaveJobsAsync([new JobChange(Group!, Name!, _job)], UserName);
+                if (!string.Equals($"{Group}.{Name}", _job.Key, StringComparison.OrdinalIgnoreCase))
+                    await Repository.SaveJobsAsync([new JobChange(Group!, Name!, _job)], UserName);
+                else
+                    await Repository.SaveJobAsync(_job, UserName);
+                Snackbar.Add(T["Editor_Saved", _job.Key], Severity.Success);
             }
             else
             {
-                if (IsNew && Store.Current.FindJob(_job.Key) is not null)
+                if (Store.Current.FindJob(_job.Key) is not null)
                 {
                     _errors = [T["Editor_Exists", _job.Key]];
                     return;
                 }
-                await Repository.SaveJobAsync(_job, UserName);
+                if (_createMonitor && CanHaveMonitor)
+                {
+                    var monitor = JobTemplates.CreateMonitor(_job, MonitorName, _monitorProcessed!, _monitorErrors!);
+                    await Repository.ImportAsync(new RisConfiguration { Jobs = [_job, monitor] }, UserName);
+                    Snackbar.Add(T["Wizard_Saved2", _job.Key, monitor.Key], Severity.Success);
+                }
+                else
+                {
+                    await Repository.SaveJobAsync(_job, UserName);
+                    Snackbar.Add(T["Editor_Saved", _job.Key], Severity.Success);
+                }
             }
-            Snackbar.Add(T["Editor_Saved", _job.Key], Severity.Success);
             Navigation.NavigateTo($"/jobs/{Uri.EscapeDataString(_job.Group)}/{Uri.EscapeDataString(_job.Name)}");
         }
         catch (ConfigurationValidationException ex)
@@ -290,4 +332,190 @@ else
             _saving = false;
         }
     }
+
+    private RenderFragment TypeStep => __builder =>
+    {
+        <MudGrid Spacing="2" Class="mb-3">
+            @foreach (var type in Enum.GetValues<JobType>())
+            {
+                var t = type;
+                var selected = t == _type;
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Outlined="true" Elevation="@(selected ? 4 : 0)" Class="@("pa-3 " + (IsNew ? "ris-clickable" : ""))"
+                              Style="@(selected ? "border: 2px solid var(--mud-palette-primary); height: 100%" : IsNew ? "height: 100%" : "height: 100%; opacity: .45")"
+                              @onclick="() => SetType(t)">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@TypeIcon(t)" Color="@(selected ? Color.Primary : Color.Default)" />
+                            <MudText Typo="Typo.subtitle1"><b>@T["JobType_" + t]</b></MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.body2" Class="mt-1">@T["JobTypeHelp_" + t]</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary ris-mono d-block mt-1">@T["JobTypeFlow_" + t]</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @if (IsNew)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3" Spacing="2">
+                <MudSelect T="string" Value="_copyFrom" ValueChanged="v => { if (v is not null && Store.Current.FindJob(v) is { } source) LoadCopy(source); }"
+                           Label="@T["Wizard_CopyFrom"]" HelperText="@T["Wizard_CopyHint"]" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 480px">
+                    @foreach (var job in Store.Current.Jobs.OrderBy(j => j.Key))
+                    {
+                        <MudSelectItem Value="job.Key">@job.Key (@T["JobType_" + job.Type])</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+        }
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" @bind-Value="_job!.Name" @bind-Value:after="Changed" Label="@T["Job_Name"]" Required="_attempted.Contains(JobStep.Type)"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@T["FieldHint_JobName"]" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete T="string" @bind-Value="_job!.Group" @bind-Value:after="Changed" Label="@T["Job_Group"]" SearchFunc="SearchGroups" CoerceText="true"
+                                 CoerceValue="true" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@T["FieldHint_JobGroup"]" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="_job!.Description" Label="@T["Job_Description"]" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2"
+                              HelperText="@T["FieldHint_JobDescription"]" />
+            </MudItem>
+            @if (CanHaveMonitor)
+            {
+                <MudItem xs="12">
+                    <MudCheckBox T="bool" @bind-Value="_createMonitor" Color="Color.Primary"
+                                 Label="@($"{T["Wizard_CreateMonitor"]} ({T["JobType_" + (_type == JobType.Import ? JobType.ExecutionMonitor : JobType.ProcessingMonitor)]})")" />
+                    @if (_createMonitor)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block ml-8">@T["Wizard_MonitorHint", MonitorName]</MudText>
+                    }
+                </MudItem>
+            }
+            else if (!IsNew)
+            {
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_job!.PairedJob" @bind-Value:after="Changed" Label="@T["Job_PairedJob"]" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var other in Store.Current.Jobs.Where(j => j.Key != _job.Key).Select(j => j.Name).Distinct().Order())
+                        {
+                            <MudSelectItem Value="other">@other</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+        </MudGrid>
+    };
+
+    /// <summary>Additional content of a step: monitor folders, SFTP tests, link to new connection.</summary>
+    private RenderFragment StepExtra => __builder =>
+    {
+        if (_step == JobStep.D365 && _connections.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                <MudLink Href="/connections">@T["Wizard_NewConnection"]</MudLink>
+            </MudAlert>
+        }
+        if (_step == JobStep.Files)
+        {
+            foreach (var property in new[] { "SftpInbound", "SftpOutbound" })
+            {
+                if (_job!.Options!.GetType().GetProperty(property)?.GetValue(_job.Options) is SftpTransferOptions transfer && !string.IsNullOrEmpty(transfer.Server))
+                {
+                    <TestButton Label="@($"{T["Test_Sftp"]}: {T["Field_" + property]}")" Icon="@Icons.Material.Filled.Dns"
+                                Test="@(() => Tests.SftpAsync(transfer.Server, transfer.RemoteFolder))" />
+                }
+            }
+            if (_createMonitor && CanHaveMonitor)
+            {
+                <MudPaper Outlined="true" Elevation="0" Class="pa-3 mt-3">
+                    <MudText Typo="Typo.subtitle2">@MonitorName</MudText>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudTextField T="string" @bind-Value="_monitorProcessed" Label="@T["Field_ProcessingSuccessDir"]" HelperText="@T["FieldHint_ProcessingSuccessDir"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <TestButton Label="@T["Test_Folder"]" Icon="@Icons.Material.Filled.FolderOpen" Disabled="string.IsNullOrWhiteSpace(_monitorProcessed)"
+                                        Test="@(() => Tests.FolderAsync(_monitorProcessed))" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField T="string" @bind-Value="_monitorErrors" Label="@T["Field_ProcessingErrorsDir"]" HelperText="@T["FieldHint_ProcessingErrorsDir"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <TestButton Label="@T["Test_Folder"]" Icon="@Icons.Material.Filled.FolderOpen" Disabled="string.IsNullOrWhiteSpace(_monitorErrors)"
+                                        Test="@(() => Tests.FolderAsync(_monitorErrors))" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+        }
+    };
+
+    private RenderFragment SummaryStep => __builder =>
+    {
+        var options = _job!.Options!;
+        <MudSimpleTable Dense="true" Elevation="0">
+            <tbody>
+                <tr><td style="width: 30%">@T["Job_Name"]</td><td><b>@_job.Key</b></td></tr>
+                <tr><td>@T["Job_Type"]</td><td>@T["JobType_" + _type] <span class="mud-text-secondary ris-mono" style="font-size: .75rem">@T["JobTypeFlow_" + _type]</span></td></tr>
+                <tr><td>@T["Job_Connection"]</td><td>@options.Connection</td></tr>
+                @foreach (var property in Fields(JobStep.D365).Concat(Fields(JobStep.Files)))
+                {
+                    var value = options.GetType().GetProperty(property)?.GetValue(options);
+                    if (value is string text && !string.IsNullOrWhiteSpace(text) && property != "Connection")
+                    {
+                        <tr><td>@Label(property)</td><td class="ris-mono">@text</td></tr>
+                    }
+                    else if (value is Guid guid && guid != Guid.Empty)
+                    {
+                        <tr><td>@Label(property)</td><td class="ris-mono">@guid</td></tr>
+                    }
+                    else if (value is true)
+                    {
+                        <tr><td>@Label(property)</td><td>@T["Common_Yes"]</td></tr>
+                    }
+                }
+                <tr><td>@T["Job_Schedule"]</td><td>@ScheduleBuilder.Describe(_job.Schedule, T)</td></tr>
+                <tr><td>@T["Field_MissedRuns"]</td><td>@T["Enum_MissedRunPolicy_" + _job.Schedule.MissedRuns]</td></tr>
+                @if (_createMonitor && CanHaveMonitor)
+                {
+                    <tr><td>@T["Job_PairedJob"]</td><td>@MonitorName</td></tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <MudText Typo="Typo.subtitle2" Class="mt-3">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
+        <MudText Typo="Typo.body2">@string.Join(" · ", NextRuns().Select(r => Prefs.Format(r, "ddd") + " " + Prefs.Format(r, "g")))</MudText>
+    };
+
+    private string Label(string property)
+    {
+        var label = T["Field_" + property];
+        return label.ResourceNotFound ? property : label.Value;
+    }
+
+    private IEnumerable<DateTimeOffset> NextRuns()
+    {
+        var result = new List<DateTimeOffset>();
+        try
+        {
+            var trigger = RisJobScheduling.BuildTrigger(_job!, DateTimeOffset.UtcNow);
+            var next = trigger.GetFireTimeAfter(DateTimeOffset.UtcNow);
+            for (var i = 0; i < 5 && next is not null; i++)
+            {
+                result.Add(next.Value);
+                next = trigger.GetFireTimeAfter(next);
+            }
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException or TimeZoneNotFoundException or RIS.Core.Errors.RisException)
+        {
+        }
+        return result;
+    }
+
+    private static string TypeIcon(JobType type) => type switch
+    {
+        JobType.Export => Icons.Material.Filled.CloudDownload,
+        JobType.Import => Icons.Material.Filled.CloudUpload,
+        JobType.Upload => Icons.Material.Filled.Outbox,
+        JobType.Download => Icons.Material.Filled.MoveToInbox,
+        JobType.ExecutionMonitor => Icons.Material.Filled.FactCheck,
+        _ => Icons.Material.Filled.Monitor
+    };
 }

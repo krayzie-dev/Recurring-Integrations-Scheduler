@@ -586,4 +586,9 @@
   <data name="Test_Folder" xml:space="preserve"><value>Sprawdź dostęp</value></data>
   <data name="Test_Sftp" xml:space="preserve"><value>Testuj SFTP</value></data>
   <data name="Test_Running" xml:space="preserve"><value>Sprawdzanie…</value></data>
+  <data name="FieldHint_JobName" xml:space="preserve"><value>Unikalna w grupie, np. Eksport CustInvoiceJour</value></data>
+  <data name="FieldHint_JobGroup" xml:space="preserve"><value>Grupuje zadania na listach i wykresach, np. Export jobs</value></data>
+  <data name="FieldHint_JobDescription" xml:space="preserve"><value>Opcjonalnie: cel, właściciel, powiązane systemy</value></data>
+  <data name="Action_Duplicate" xml:space="preserve"><value>Duplikuj</value></data>
+  <data name="Wizard_RequiredField" xml:space="preserve"><value>Wymagane: {0}</value></data>
 </root>

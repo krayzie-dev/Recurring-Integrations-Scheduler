@@ -1,0 +1,54 @@
+@* Right column of the wizard: what the step is about, details of the selected field, problems of the step. *@
+<MudPaper Outlined="true" Elevation="0" Class="pa-4" Style="position: sticky; top: 72px">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+        <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Info" />
+        <MudText Typo="Typo.h6">@T["Step_" + Step]</MudText>
+    </MudStack>
+    <MudText Typo="Typo.body2" Class="mb-3">@T["StepHelp_" + Step]</MudText>
+
+    @if (JobType is not null && Step is JobStep.Type or JobStep.Summary)
+    {
+        <MudText Typo="Typo.subtitle2">@T["JobType_" + JobType]</MudText>
+        <MudText Typo="Typo.body2" Class="mb-1">@T["JobTypeHelp_" + JobType]</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary ris-mono d-block mb-3">@T["JobTypeFlow_" + JobType]</MudText>
+    }
+
+    @if (Field is not null)
+    {
+        <MudDivider Class="my-2" />
+        <MudText Typo="Typo.subtitle2">@FieldLabel</MudText>
+        <MudText Typo="Typo.body2">@T["FieldHelp_" + Field]</MudText>
+    }
+    else if (Step is JobStep.D365 or JobStep.Files or JobStep.Advanced)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@T["Wizard_HelpClick"]</MudText>
+    }
+
+    @if (Problems.Count > 0)
+    {
+        <MudDivider Class="my-2" />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            @foreach (var problem in Problems) { <div class="ris-mono" style="font-size: .75rem">@problem</div> }
+        </MudAlert>
+    }
+    else if (Step != JobStep.Type)
+    {
+        <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">@T["Wizard_NoProblems"]</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public JobStep Step { get; set; }
+    [Parameter] public string? JobType { get; set; }
+    [Parameter] public string? Field { get; set; }
+    [Parameter] public IReadOnlyList<string> Problems { get; set; } = [];
+
+    private string FieldLabel
+    {
+        get
+        {
+            var label = T["Field_" + Field];
+            return label.ResourceNotFound ? Field! : label.Value;
+        }
+    }
+}

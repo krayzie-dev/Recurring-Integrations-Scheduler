@@ -41,6 +41,7 @@ else
         @if (CanAdminister)
         {
             <MudButton StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Outlined" Href="@($"/jobs/{Uri.EscapeDataString(Group)}/{Uri.EscapeDataString(Name)}/edit")">@T["Action_Edit"]</MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.ContentCopy" Variant="Variant.Outlined" Href="@($"/jobs/new?from={Uri.EscapeDataString(Group + "." + Name)}")">@T["Action_Duplicate"]</MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="DeleteAsync" title="@T["Common_Delete"]" />
         }
     </MudStack>

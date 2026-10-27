@@ -1,0 +1,40 @@
+@* Runs a server-side check (D365, folder, SFTP) and shows the result under the button (long messages clamped, full text in the tooltip). *@
+<div class="mt-1">
+    <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icon" Disabled="_running || Disabled" OnClick="RunAsync" Style="white-space: nowrap">
+        @(_running ? T["Test_Running"] : Label)
+    </MudButton>
+    @if (_result is not null)
+    {
+        <div class="d-flex align-start mt-1" style="gap: 4px" title="@_result.Message">
+            <MudIcon Icon="@(_result.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small"
+                     Color="@(_result.Succeeded ? Color.Success : Color.Error)" />
+            <MudText Typo="Typo.caption" Color="@(_result.Succeeded ? Color.Success : Color.Error)" Class="ris-clamp-3">
+                @_result.Message (@UiFormat.Duration(_result.Duration))
+            </MudText>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.NetworkCheck;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter, EditorRequired] public Func<Task<TestResult>> Test { get; set; } = null!;
+
+    private bool _running;
+    private TestResult? _result;
+
+    private async Task RunAsync()
+    {
+        _running = true;
+        _result = null;
+        try
+        {
+            _result = await Test();
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+}

@@ -512,4 +512,9 @@
   <data name="Test_Folder" xml:space="preserve"><value>Check access</value></data>
   <data name="Test_Sftp" xml:space="preserve"><value>Test SFTP</value></data>
   <data name="Test_Running" xml:space="preserve"><value>Checking…</value></data>
+  <data name="FieldHint_JobName" xml:space="preserve"><value>Unique within the group, e.g. CustInvoiceJour export</value></data>
+  <data name="FieldHint_JobGroup" xml:space="preserve"><value>Groups jobs in lists and charts, e.g. Export jobs</value></data>
+  <data name="FieldHint_JobDescription" xml:space="preserve"><value>Optional: purpose, owner, related systems</value></data>
+  <data name="Action_Duplicate" xml:space="preserve"><value>Duplicate</value></data>
+  <data name="Wizard_RequiredField" xml:space="preserve"><value>Required: {0}</value></data>
 </root>

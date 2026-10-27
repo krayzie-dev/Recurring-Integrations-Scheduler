@@ -37,3 +37,4 @@
 /* Long messages: two lines in lists, full text in the tooltip / details. */
 .ris-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ris-ellipsis { display: block; max-width: 640px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ris-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

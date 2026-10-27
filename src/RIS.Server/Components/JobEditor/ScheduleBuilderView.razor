@@ -1,0 +1,200 @@
+@using RIS.Jobs.Quartz
+@* Schedule builder: patterns instead of raw cron/ISO values, description in words, next runs. *@
+
+<MudStack Spacing="3">
+    <MudRadioGroup T="ScheduleMode" Value="Model.Mode" ValueChanged="SetModeAsync">
+        <MudRadio Value="ScheduleMode.Daily" Color="Color.Primary">@T["Sched_ModeDaily"]</MudRadio>
+        <MudRadio Value="ScheduleMode.Every" Color="Color.Primary">@T["Sched_ModeEvery"]</MudRadio>
+        <MudRadio Value="ScheduleMode.Monthly" Color="Color.Primary">@T["Sched_ModeMonthly"]</MudRadio>
+        <MudRadio Value="ScheduleMode.Advanced" Color="Color.Primary">@T["Sched_ModeAdvanced"]</MudRadio>
+    </MudRadioGroup>
+
+    @switch (Model.Mode)
+    {
+        case ScheduleMode.Daily:
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="4">
+                    <MudTimePicker Time="Model.At" TimeChanged="t => SetAsync(() => Model.At = t ?? Model.At)" Label="@T["Sched_At"]" AmPm="false"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Sched_DaysLabel"]</MudText>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+                        @foreach (var day in Week)
+                        {
+                            var d = day;
+                            <MudChip T="string" Size="Size.Small" Color="@(Model.Days.Contains(d) ? Color.Primary : Color.Default)"
+                                     Variant="@(Model.Days.Contains(d) ? Variant.Filled : Variant.Outlined)" OnClick="() => ToggleDayAsync(d)">
+                                @CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(d)
+                            </MudChip>
+                        }
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => SetAsync(() => Model.Days = [.. ScheduleBuilder.Workdays])">@T["Sched_Workdays_Button"]</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => SetAsync(() => Model.Days = [])">@T["Sched_AllDays_Button"]</MudButton>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+            break;
+
+        case ScheduleMode.Every:
+            <MudGrid Spacing="2">
+                <MudItem xs="4" sm="2">
+                    <MudNumericField T="int" Value="EveryValue" ValueChanged="v => SetAsync(() => SetEvery(v, _unitHours))" Label="@T["Sched_EveryValue"]" Min="1" Max="@(_unitHours ? 24 : 1440)"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="8" sm="3">
+                    <MudSelect T="bool" Value="_unitHours" ValueChanged="v => SetAsync(() => SetEvery(EveryValue, v))" Variant="Variant.Outlined" Margin="Margin.Dense" Label=" ">
+                        <MudSelectItem Value="false">@T["Sched_Minutes"]</MudSelectItem>
+                        <MudSelectItem Value="true">@T["Sched_Hours"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTimePicker Time="Model.From" TimeChanged="t => SetAsync(() => Model.From = t ?? Model.From)" Label="@T["Sched_From"]" AmPm="false"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12"><MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Sched_EveryHint"]</MudText></MudItem>
+            </MudGrid>
+            break;
+
+        case ScheduleMode.Monthly:
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="4">
+                    <MudSelect T="int" Value="Model.DayOfMonth" ValueChanged="v => SetAsync(() => Model.DayOfMonth = v)" Label="@T["Sched_DayOfMonth"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @for (var i = 1; i <= 31; i++) { var day = i; <MudSelectItem Value="day">@day</MudSelectItem> }
+                        <MudSelectItem Value="0">@T["Sched_LastDay"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6" sm="4">
+                    <MudTimePicker Time="Model.At" TimeChanged="t => SetAsync(() => Model.At = t ?? Model.At)" Label="@T["Sched_At"]" AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+            break;
+
+        default:
+            <MudTextField T="string" Value="Model.Cron" ValueChanged="v => SetAsync(() => Model.Cron = v)" Label="Cron" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Class="ris-mono" Immediate="false" HelperText="@T["Sched_CronHint"]" />
+            break;
+    }
+
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="6">
+            <MudSelect T="string" Value="@(Model.TimeZone ?? "")" ValueChanged="v => SetAsync(() => Model.TimeZone = string.IsNullOrEmpty(v) ? null : v)"
+                       Label="@T["Sched_TimeZone"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="@("")">@T["Sched_ServerZone"] – @TimeZoneInfo.Local.DisplayName</MudSelectItem>
+                @foreach (var zone in Zones)
+                {
+                    <MudSelectItem Value="zone.Id">@zone.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudSelect T="MissedRunPolicy" Value="Model.MissedRuns" ValueChanged="v => SetAsync(() => Model.MissedRuns = v)" Label="@T["Field_MissedRuns"]"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem Value="MissedRunPolicy.RunOnce">@T["Enum_MissedRunPolicy_RunOnce"]</MudSelectItem>
+                <MudSelectItem Value="MissedRunPolicy.Skip">@T["Enum_MissedRunPolicy_Skip"]</MudSelectItem>
+            </MudSelect>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Sched_MissedHelp"]</MudText>
+        </MudItem>
+        <MudItem xs="12">
+            <MudSwitch T="bool" Value="Model.Paused" ValueChanged="v => SetAsync(() => Model.Paused = v)" Color="Color.Warning" Label="@T["Field_Paused"]" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block" Style="margin-left: 58px; margin-top: -6px">@T["Sched_PausedHelp"]</MudText>
+        </MudItem>
+    </MudGrid>
+
+    <MudAlert Severity="@(_error is null ? Severity.Info : Severity.Warning)" Dense="true" Icon="@Icons.Material.Filled.Schedule">
+        @if (_error is null)
+        {
+            <MudText Typo="Typo.subtitle2">@_description</MudText>
+            <MudText Typo="Typo.body2">@T["Job_UpcomingRuns"]: @string.Join(" · ", _next.Select(n => Format(n)))</MudText>
+        }
+        else
+        {
+            <span>@_error</span>
+        }
+    </MudAlert>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public ScheduleModel Model { get; set; } = null!;
+    [Parameter] public EventCallback<ScheduleOptions> Changed { get; set; }
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+
+    private static readonly DayOfWeek[] Week =
+        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+    private static readonly IReadOnlyList<TimeZoneInfo> Zones = TimeZoneInfo.GetSystemTimeZones();
+
+    private bool _unitHours;
+    private string _description = "";
+    private List<DateTimeOffset> _next = [];
+    private string? _error;
+
+    private int EveryValue => _unitHours ? Math.Max(1, (int)Model.Every.TotalHours) : Math.Max(1, (int)Model.Every.TotalMinutes);
+
+    protected override void OnParametersSet()
+    {
+        _unitHours = Model.Every.TotalMinutes >= 60 && Model.Every.TotalMinutes % 60 == 0;
+        Preview();
+    }
+
+    private void SetEvery(int value, bool hours)
+    {
+        _unitHours = hours;
+        Model.Every = hours ? TimeSpan.FromHours(Math.Clamp(value, 1, 24)) : TimeSpan.FromMinutes(Math.Clamp(value, 1, 1440));
+    }
+
+    private Task SetModeAsync(ScheduleMode mode) => SetAsync(() =>
+    {
+        // Switching to advanced keeps the current schedule as a starting cron.
+        if (mode == ScheduleMode.Advanced && Model.Mode != ScheduleMode.Every) Model.Cron = ScheduleBuilder.Build(Model).Cron;
+        if (mode == ScheduleMode.Advanced && string.IsNullOrWhiteSpace(Model.Cron)) Model.Cron = "0 0 2 * * ?";
+        Model.Mode = mode;
+    });
+
+    private Task ToggleDayAsync(DayOfWeek day) => SetAsync(() =>
+    {
+        if (!Model.Days.Remove(day)) Model.Days.Add(day);
+    });
+
+    private async Task SetAsync(Action change)
+    {
+        change();
+        Preview();
+        await Changed.InvokeAsync(ScheduleBuilder.Build(Model));
+    }
+
+    private void Preview()
+    {
+        _error = null;
+        _next = [];
+        var schedule = ScheduleBuilder.Build(Model);
+        try
+        {
+            var problems = ConfigurationValidator.ValidateObject(schedule, "schedule");
+            if (problems.Count > 0)
+            {
+                _error = string.Join(" ", problems);
+                return;
+            }
+            var trigger = RisJobScheduling.BuildTrigger(new JobDefinition { Name = "preview", Schedule = schedule, Options = new RIS.Core.Options.ExportJobOptions() }, DateTimeOffset.UtcNow);
+            var next = trigger.GetFireTimeAfter(DateTimeOffset.UtcNow);
+            for (var i = 0; i < 5 && next is not null; i++)
+            {
+                _next.Add(next.Value);
+                next = trigger.GetFireTimeAfter(next);
+            }
+            _description = ScheduleBuilder.Describe(schedule, T);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException or TimeZoneNotFoundException or RIS.Core.Errors.RisException)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    /// <summary>Run time in the job time zone (that is what the schedule means).</summary>
+    private string Format(DateTimeOffset utc)
+    {
+        TimeZoneInfo zone;
+        try { zone = Model.TimeZone is null ? TimeZoneInfo.Local : TimeZoneInfo.FindSystemTimeZoneById(Model.TimeZone); }
+        catch (TimeZoneNotFoundException) { zone = TimeZoneInfo.Local; }
+        return TimeZoneInfo.ConvertTime(utc, zone).ToString("ddd d.MM HH:mm", CultureInfo.CurrentCulture);
+    }
+}

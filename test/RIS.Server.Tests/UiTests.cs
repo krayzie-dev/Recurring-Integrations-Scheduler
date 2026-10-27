@@ -136,9 +136,16 @@ public sealed class UiTests
 
         var editor = await GetPageAsync("/jobs/Tests/Daily/edit", "Admin", "pl-PL");
         StringAssert.Contains(editor, "Edycja Tests.Daily");
-        StringAssert.Contains(editor, "Projekt danych", "Generated form with Polish field labels.");
-        StringAssert.Contains(editor, "Najbliższe uruchomienia");
-        StringAssert.Contains(await GetPageAsync("/jobs/new", "Admin", "en-US"), "New job");
+        StringAssert.Contains(editor, "2. Dynamics 365", "Wizard steps as tabs.");
+        StringAssert.Contains(editor, "pobiera pakiet do folderu", "Job type cards with descriptions.");
+        StringAssert.Contains(editor, "Wybierz, co robi zadanie", "Help panel of the step.");
+        Assert.IsFalse(editor.Contains("Pole wymagane"), "No required-field errors before the user tries to continue.");
+
+        var wizard = await GetPageAsync("/jobs/new", "Admin", "en-US");
+        StringAssert.Contains(wizard, "New job");
+        StringAssert.Contains(wizard, "Based on an existing job");
+        var copy = await GetPageAsync("/jobs/new?from=Tests.Daily", "Admin", "en-US");
+        StringAssert.Contains(copy, "Daily (copy)", "Copy of an existing job.");
 
         var connections = await GetPageAsync("/connections", "Admin", "en-US");
         StringAssert.Contains(connections, "TEST");
@@ -185,8 +192,10 @@ public sealed class UiTests
         var problems = new List<string>();
         foreach (var (key, value) in polish)
         {
-            // string.Format is used for every text (also by MudBlazor): only {0}, {1}, ... are allowed.
-            if (System.Text.RegularExpressions.Regex.IsMatch(value, @"\{(?!\d+(:[^}]*)?\})")) problems.Add($"{key}: non-positional placeholder in '{value}'");
+            // Texts formatted with arguments (also by MudBlazor) may only use {0}, {1}, ... Field help is shown without
+            // arguments (never formatted) and documents file name tokens such as {timestamp}.
+            var neverFormatted = key.StartsWith("FieldHint_", StringComparison.Ordinal) || key.StartsWith("FieldHelp_", StringComparison.Ordinal);
+            if (!neverFormatted && System.Text.RegularExpressions.Regex.IsMatch(value, @"\{(?!\d+(:[^}]*)?\})")) problems.Add($"{key}: non-positional placeholder in '{value}'");
             if (english.TryGetValue(key, out var en) && Placeholders(en) != Placeholders(value)) problems.Add($"{key}: '{en}' vs '{value}'");
         }
         Assert.AreEqual(0, problems.Count, string.Join(Environment.NewLine, problems));
