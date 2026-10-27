@@ -40,6 +40,12 @@ public sealed class WindowsRoleClaimsTransformation : IClaimsTransformation
             var names = new HashSet<string>(members, StringComparer.OrdinalIgnoreCase);
             foreach (var member in members)
             {
+                // SIDs work on every Windows language (BUILTIN\Administrators is "BUILTIN\Administratorzy" on Polish Windows).
+                if (member.StartsWith("S-1-", StringComparison.OrdinalIgnoreCase))
+                {
+                    sids.Add(member);
+                    continue;
+                }
                 if (!OperatingSystem.IsWindows()) continue;
                 try
                 {
