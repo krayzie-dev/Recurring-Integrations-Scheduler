@@ -195,12 +195,9 @@ function Helper(Action, Arguments: String; var Output: String): Integer;
 var
   Script: String;
 begin
-  Script := ExpandConstant('{app}\setup\setup-helpers.ps1');
-  if not FileExists(Script) then
-  begin
-    ExtractTemporaryFile('setup-helpers.ps1');
-    Script := ExpandConstant('{tmp}\setup-helpers.ps1');
-  end;
+  { Always the helper of THIS setup: on upgrade the installed one may be older (or broken). }
+  Script := ExpandConstant('{tmp}\setup-helpers.ps1');
+  if not FileExists(Script) then ExtractTemporaryFile('setup-helpers.ps1');
   Result := RunCaptured(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -ExecutionPolicy Bypass -File "' + Script + '" -Action ' + Action + ' ' + Arguments, Output);
 end;
@@ -378,14 +375,45 @@ begin
 end;
 
 { Stops the running service and backs up the databases before files are replaced. }
+{ True when "sc query" reports the service as STOPPED. }
+function ServiceStopped(): Boolean;
+var
+  Output: String;
+begin
+  RunCaptured(ExpandConstant('{sys}\sc.exe'), 'query {#ServiceName}', Output);
+  Result := Pos('STOPPED', Uppercase(Output)) > 0;
+end;
+
+{ Stops the service without depending on PowerShell; running jobs are interrupted within seconds. }
+function StopService(): Boolean;
+var
+  Code, Waited: Integer;
+begin
+  Result := ServiceStopped();
+  if Result then Exit;
+  Exec(ExpandConstant('{sys}\net.exe'), 'stop {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Waited := 0;
+  while (not ServiceStopped()) and (Waited < 90) do
+  begin
+    Sleep(1000);
+    Waited := Waited + 1;
+  end;
+  Result := ServiceStopped();
+  Log('Service stopped: ' + IntToStr(Ord(Result)) + ' after ' + IntToStr(Waited) + ' s');
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
-  Output, Backup: String;
+  Backup: String;
 begin
   Result := '';
   if ServiceExists() then
   begin
-    Helper('StopService', '', Output);
+    if not StopService() then
+    begin
+      Result := 'The RIS5 service could not be stopped. Stop it (services.msc) and run the setup again.';
+      Exit;
+    end;
     Backup := DataDir() + '\backup\before-upgrade-' + GetDateTimeString('yyyymmdd-hhnnss', '-', '-');
     if FileExists(DataDir() + '\ris.db') then
     begin
@@ -526,8 +554,7 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
-    Exec(ExpandConstant('{sys}\sc.exe'), 'stop {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, Code);
-    Sleep(3000);
+    StopService();
     Exec(ExpandConstant('{sys}\sc.exe'), 'delete {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, Code);
     Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="{#FirewallRule}"', '', SW_HIDE, ewWaitUntilTerminated, Code);
   end
