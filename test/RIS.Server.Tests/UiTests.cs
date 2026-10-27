@@ -106,6 +106,27 @@ public sealed class UiTests
 
 
     [TestMethod]
+    public async Task PlanAndHistory_RenderGanttCharts()
+    {
+        var admin = _factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Frequent", RisTestHost.Export("Frequent", Path.Combine(_factory.DataDirectory, "export"),
+            new ScheduleOptions { Interval = TimeSpan.FromMinutes(5), StartAt = DateTimeOffset.UtcNow.Date }))).EnsureSuccessStatusCode();
+        (await admin.PostAsync("/api/v1/jobs/Tests/Frequent/run", null)).EnsureSuccessStatusCode();
+        await Task.Delay(1500);
+
+        var plan = await GetPageAsync("/plan", "Viewer", "pl-PL");
+        StringAssert.Contains(plan, "id=\"plan-gantt\"");
+        StringAssert.Contains(plan, "class=\"bar band\"", "Every 5 minutes is shown as a band.");
+        StringAssert.Contains(plan, "Frequent");
+
+        var history = await GetPageAsync("/history", "Viewer", "en-US");
+        StringAssert.Contains(history, "id=\"history-gantt\"");
+        StringAssert.Contains(history, "class=\"bar succeeded\"");
+    }
+
+
+    [TestMethod]
     public void Translations_AreComplete()
     {
         var folder = Path.Combine(RepoRoot(), "src", "RIS.Server", "Resources");

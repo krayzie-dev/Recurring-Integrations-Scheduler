@@ -19,7 +19,7 @@
         </PropertyColumn>
         <PropertyColumn Property="r => r.ErrorCode" Title="@T["Run_ErrorCode"]" />
         <PropertyColumn Property="r => r.Summary" Title="@T["Run_Summary"]" Sortable="false">
-            <CellTemplate><MudText Typo="Typo.body2" Style="max-width: 640px" Class="text-truncate" title="@context.Item.Summary">@context.Item.Summary</MudText></CellTemplate>
+            <CellTemplate><span class="ris-ellipsis" title="@context.Item.Summary">@context.Item.Summary</span></CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="r => r.Manual" Title="@T["Run_Manual"]">
             <CellTemplate>@if (context.Item.Manual) { <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" /> }</CellTemplate>

@@ -8,7 +8,7 @@
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudText Typo="Typo.h5">@T["Nav_Dashboard"]</MudText>
     <MudSpacer />
-    <MudText Typo="Typo.caption" Color="Color.Secondary">@T["Dashboard_Updated", Prefs.Format(_loadedUtc, "T")]</MudText>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Dashboard_Updated", Prefs.Format(_loadedUtc, "T")]</MudText>
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ReloadAsync" title="@T["Common_Refresh"]" />
 </MudStack>
 
@@ -44,7 +44,7 @@ else
                                     <td style="width: 1%"><MudIcon Icon="@AttentionIcon(item.Kind)" Color="@AttentionColour(item.Kind)" Size="Size.Small" /></td>
                                     <td>
                                         <MudLink Href="@($"/jobs/{Uri.EscapeDataString(item.Job.Group)}/{Uri.EscapeDataString(item.Job.Name)}")">@item.Job.Key</MudLink>
-                                        <MudText Typo="Typo.caption" Class="d-block">@AttentionText(item)</MudText>
+                                        <MudText Typo="Typo.caption" Class="ris-clamp-2" title="@AttentionText(item)">@AttentionText(item)</MudText>
                                     </td>
                                     <td style="width: 1%; white-space: nowrap"><MudText Typo="Typo.caption">@(item.SinceUtc is null ? "" : Prefs.Format(item.SinceUtc))</MudText></td>
                                 </tr>
@@ -60,7 +60,7 @@ else
                 <MudText Typo="Typo.h6" Class="mb-2">@T["Dashboard_RunningNow"]</MudText>
                 @if (_data.RunningNow.Count == 0)
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@T["Dashboard_NothingRunning"]</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["Dashboard_NothingRunning"]</MudText>
                 }
                 @foreach (var run in _data.RunningNow)
                 {

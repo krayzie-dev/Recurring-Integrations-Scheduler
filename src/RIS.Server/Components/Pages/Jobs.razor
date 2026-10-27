@@ -84,7 +84,7 @@
         <PropertyColumn Property="j => j.Key" Title="@T["Job_Name"]">
             <CellTemplate>
                 <MudLink Href="@JobLink(context.Item)">@context.Item.Name</MudLink>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block">@context.Item.Group</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@context.Item.Group</MudText>
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Type" Title="@T["Job_Type"]">
@@ -102,7 +102,10 @@
             <CellTemplate>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <ResultChip Result="@context.Item.LastResult" Tooltip="@context.Item.LastSummary" />
-                    <MudText Typo="Typo.caption">@Prefs.Format(context.Item.LastRunUtc)</MudText>
+                    @if (context.Item.LastRunUtc is not null)
+                    {
+                        <MudText Typo="Typo.caption">@Prefs.Format(context.Item.LastRunUtc)</MudText>
+                    }
                 </MudStack>
             </CellTemplate>
         </PropertyColumn>

@@ -1,0 +1,150 @@
+@using RIS.Server.Services
+@* Gantt chart (SVG). Colours come from theme CSS variables (ris.css), so light/dark mode work and PNG export copies them. *@
+
+@if (Timeline.Rows.Count == 0)
+{
+    <MudText Class="pa-4 mud-text-secondary">@T["Gantt_NoRows"]</MudText>
+}
+else
+{
+    var geo = new GanttLayout(Timeline.FromUtc, Timeline.ToUtc, TimeWidth, Zone);
+    var rows = Rows();
+    var height = GanttLayout.HeaderHeight + rows.Sum(r => r.IsGroup ? GanttLayout.GroupHeight : GanttLayout.RowHeight) + 4;
+    var width = geo.Width;
+    var now = DateTimeOffset.UtcNow;
+    <div class="gantt-scroll">
+        <svg id="@Id" class="gantt" width="@F(width)" height="@F(height)" viewBox="0 0 @F(width) @F(height)" xmlns="http://www.w3.org/2000/svg">
+            @* Header: days and hours *@
+            @foreach (var hour in geo.Hours(HourStep))
+            {
+                var x = geo.X(hour);
+                <line class="grid" x1="@F(x)" x2="@F(x)" y1="@F(GanttLayout.HeaderHeight - 6)" y2="@F(height)" />
+                <g><text class="axis" x="@F(x + 2)" y="@F(GanttLayout.HeaderHeight - 10)">@geo.Label(hour, "HH")</text></g>
+            }
+            @foreach (var day in geo.Days())
+            {
+                var x = geo.X(day);
+                <line class="grid-day" x1="@F(x)" x2="@F(x)" y1="0" y2="@F(height)" />
+                <g><text x="@F(x + 4)" y="14" font-weight="600">@geo.Label(day, DayFormat)</text></g>
+            }
+            @if (geo.Days().Count == 0 || geo.Days()[0] > Timeline.FromUtc)
+            {
+                <g><text x="@F(GanttLayout.LabelWidth + 4)" y="14" font-weight="600">@geo.Label(Timeline.FromUtc, DayFormat)</text></g>
+            }
+            <g><text class="axis" x="6" y="@F(GanttLayout.HeaderHeight - 10)">@ZoneLabel</text></g>
+
+            @* Rows *@
+            @{
+                var y = GanttLayout.HeaderHeight;
+                var index = 0;
+            }
+            @foreach (var row in rows)
+            {
+                if (row.IsGroup)
+                {
+                    <rect class="group" x="0" y="@F(y)" width="@F(width)" height="@F(GanttLayout.GroupHeight)" />
+                    <g><text class="group-label" x="6" y="@F(y + 15)">@row.Label (@row.Count)</text></g>
+                    y += GanttLayout.GroupHeight;
+                    continue;
+                }
+
+                var rowY = y;
+                var data = row.Row!;
+                if (index++ % 2 == 1)
+                {
+                    <rect class="row-alt" x="0" y="@F(rowY)" width="@F(width)" height="@F(GanttLayout.RowHeight)" />
+                }
+                @if (data.Link is not null)
+                {
+                    <a href="@data.Link"><text x="16" y="@F(rowY + 15)">@Short(data.Label)<title>@data.Key</title></text></a>
+                }
+                else
+                {
+                    <g><text x="16" y="@F(rowY + 15)" class="axis">@Short(data.Label)<title>@data.Key</title></text></g>
+                }
+
+                @foreach (var item in data.Items)
+                {
+                    if (item.Kind == TimelineItemKind.Missed)
+                    {
+                        var mx = geo.X(item.StartUtc);
+                        if (mx < GanttLayout.LabelWidth || mx > width) continue;
+                        <polygon class="misfire" points="@F(mx),@F(rowY + 4) @F(mx + 5),@F(rowY + 13) @F(mx - 5),@F(rowY + 13)">
+                            <title>@T["Gantt_Missed"]: @geo.Label(item.StartUtc, "g") (@item.Status)</title>
+                        </polygon>
+                        continue;
+                    }
+
+                    if (geo.Bar(item.StartUtc, item.EndUtc) is not { } bar) continue;
+                    var band = item.Kind is TimelineItemKind.Band or TimelineItemKind.BandPaused;
+                    var inset = band ? 6 : 4;
+                    <rect class="bar @Css(item)" x="@F(bar.X)" y="@F(rowY + inset)" width="@F(bar.Width)" height="@F(GanttLayout.RowHeight - 2 * inset)"
+                          rx="2" @onclick="() => OnItemClick.InvokeAsync(item)">
+                        <title>@Tooltip(data, item, geo)</title>
+                    </rect>
+                    @if (band && bar.Width > 70)
+                    {
+                        <g><text class="axis" x="@F(bar.X + 4)" y="@F(rowY + 15)" font-size="10">@T["Gantt_Every", item.Label ?? ""]</text></g>
+                    }
+                }
+                y += GanttLayout.RowHeight;
+            }
+
+            @if (now >= Timeline.FromUtc && now < Timeline.ToUtc)
+            {
+                var nx = geo.X(now);
+                <line class="now" x1="@F(nx)" x2="@F(nx)" y1="@F(GanttLayout.HeaderHeight - 6)" y2="@F(height)"><title>@T["Gantt_Now"]</title></line>
+            }
+            <line class="grid" x1="@F(GanttLayout.LabelWidth)" x2="@F(GanttLayout.LabelWidth)" y1="0" y2="@F(height)" />
+        </svg>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Timeline Timeline { get; set; } = null!;
+    [Parameter] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Local;
+    [Parameter] public string ZoneLabel { get; set; } = "";
+    [Parameter] public double TimeWidth { get; set; } = 1400;
+    [Parameter] public int HourStep { get; set; } = 6;
+    [Parameter] public string DayFormat { get; set; } = "ddd d.MM";
+    [Parameter] public string Id { get; set; } = "gantt";
+    [Parameter] public EventCallback<TimelineItem> OnItemClick { get; set; }
+
+    private sealed record RenderRow(bool IsGroup, string Label, int Count, TimelineRow? Row);
+
+    private List<RenderRow> Rows()
+    {
+        var result = new List<RenderRow>();
+        foreach (var group in Timeline.Rows.GroupBy(r => r.GroupLabel))
+        {
+            if (!string.IsNullOrEmpty(group.Key)) result.Add(new RenderRow(true, group.Key, group.Count(), null));
+            result.AddRange(group.Select(r => new RenderRow(false, r.Label, 0, r)));
+        }
+        return result;
+    }
+
+    private static string Css(TimelineItem item) => item.Kind switch
+    {
+        TimelineItemKind.Planned => "planned",
+        TimelineItemKind.PlannedPaused => "paused",
+        TimelineItemKind.Band => "band",
+        TimelineItemKind.BandPaused => "band paused",
+        TimelineItemKind.Running => "running",
+        _ => (item.Status ?? "").ToLowerInvariant()
+    };
+
+    private string Tooltip(TimelineRow row, TimelineItem item, GanttLayout geo)
+    {
+        var time = $"{geo.Label(item.StartUtc, "g")} – {geo.Label(item.EndUtc, "t")}";
+        return item.Kind switch
+        {
+            TimelineItemKind.Band or TimelineItemKind.BandPaused => $"{row.Key}\n{time}\n{T["Gantt_Every", item.Label ?? ""]} · {T["Gantt_Runs", item.Count]}",
+            TimelineItemKind.Planned or TimelineItemKind.PlannedPaused => $"{row.Key}\n{time}" + (item.EndUtc > item.StartUtc ? $"\n{T["Gantt_EstimatedDuration", Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)]}" : ""),
+            _ => $"{row.Key}\n{time} ({Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)})\n{T["Result_" + (item.Status ?? "")]}" + (item.Label is null ? "" : $" {item.Label}")
+        };
+    }
+
+    private static string Short(string label) => label.Length > 34 ? label[..33] + "…" : label;
+
+    private static string F(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}

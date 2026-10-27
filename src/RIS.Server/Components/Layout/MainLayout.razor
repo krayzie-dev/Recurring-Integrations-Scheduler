@@ -24,13 +24,15 @@
             <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="() => SetThemeAsync(ThemeMode.Dark)">@T["Theme_Dark"]</MudMenuItem>
         </MudMenu>
         <MudMenu Icon="@Icons.Material.Filled.Schedule" Color="Color.Inherit" Dense="true">
-            <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Server)">@T["TimeZone_Server", TimeZoneInfo.Local.StandardName]</MudMenuItem>
+            <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Server)">@T["TimeZone_Server", UiPreferences.ServerZoneLabel]</MudMenuItem>
             <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Utc)">@T["TimeZone_Utc"]</MudMenuItem>
         </MudMenu>
         <AuthorizeView>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit" Class="ml-2" Icon="@Icons.Material.Filled.Person">
-                @context.User.Identity?.Name · @RoleLabel(context.User)
-            </MudChip>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="ml-3 d-none d-sm-flex">
+                <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" />
+                <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+                <MudText Typo="Typo.caption" Style="opacity: .8">(@RoleLabel(context.User))</MudText>
+            </MudStack>
         </AuthorizeView>
     </MudAppBar>
 

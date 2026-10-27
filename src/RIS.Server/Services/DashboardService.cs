@@ -44,7 +44,7 @@ public sealed class DashboardService(JobQueryService queries, RunningJobs runnin
 
             if (job.IsPaused)
             {
-                attention.Add(new AttentionItem(job, AttentionKind.Paused, job.PauseReason is null ? null : $"{job.PauseReason} ({job.PausedBy})", null));
+                attention.Add(new AttentionItem(job, AttentionKind.Paused, job.PauseReason is null ? null : string.IsNullOrEmpty(job.PausedBy) ? job.PauseReason : $"{job.PauseReason} ({job.PausedBy})", null));
             }
             else if (job.State == "NotScheduled")
             {

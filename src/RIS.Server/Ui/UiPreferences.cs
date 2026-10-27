@@ -44,7 +44,19 @@ public sealed record UiPreferences(ThemeMode Theme = ThemeMode.System, DisplayTi
     public string Format(DateTimeOffset? value, string format = "g") =>
         value is null ? "–" : ToDisplay(value.Value).ToString(format, CultureInfo.CurrentCulture);
 
-    public string ZoneLabel => TimeZone == DisplayTimeZone.Utc ? "UTC" : TimeZoneInfo.Local.StandardName;
+    public TimeZoneInfo Zone => TimeZone == DisplayTimeZone.Utc ? TimeZoneInfo.Utc : TimeZoneInfo.Local;
+
+    /// <summary>"UTC" or the current offset of the server time zone, e.g. "UTC+01:00" (OS zone names are in the OS language).</summary>
+    public string ZoneLabel => TimeZone == DisplayTimeZone.Utc ? "UTC" : ServerZoneLabel;
+
+    public static string ServerZoneLabel
+    {
+        get
+        {
+            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.UtcNow);
+            return $"UTC{(offset < TimeSpan.Zero ? "-" : "+")}{offset:hh\\:mm}";
+        }
+    }
 }
 
 /// <summary>Supported UI languages.</summary>
@@ -76,6 +88,17 @@ public static class RisCultures
                     new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1), IsEssential = true, SameSite = SameSiteMode.Lax });
             }
             // Local redirects only.
+            return Results.LocalRedirect(string.IsNullOrEmpty(redirect) || !redirect.StartsWith('/') || redirect.StartsWith("//") ? "/" : redirect);
+        }).RequireAuthorization();
+
+    /// <summary>Sets UI preferences (theme, displayed time zone) in the cookie; usable as a link, e.g. /prefs/set?theme=Dark.</summary>
+    public static void MapPreferencesEndpoint(this IEndpointRouteBuilder app) =>
+        app.MapGet("/prefs/set", (ThemeMode? theme, DisplayTimeZone? zone, string? redirect, HttpContext context) =>
+        {
+            var current = UiPreferences.FromCookie(context.Request.Cookies[UiPreferences.CookieName]);
+            var updated = current with { Theme = theme ?? current.Theme, TimeZone = zone ?? current.TimeZone };
+            context.Response.Cookies.Append(UiPreferences.CookieName, updated.ToCookie(),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1), IsEssential = true, SameSite = SameSiteMode.Lax });
             return Results.LocalRedirect(string.IsNullOrEmpty(redirect) || !redirect.StartsWith('/') || redirect.StartsWith("//") ? "/" : redirect);
         }).RequireAuthorization();
 }

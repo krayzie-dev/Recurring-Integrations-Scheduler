@@ -235,4 +235,46 @@
   <data name="Error_RIS_SFTP_001" xml:space="preserve"><value>Transfer SFTP nie powiódł się: sprawdź serwer, dane logowania i folder zdalny.</value></data>
   <data name="Error_RIS_GEN_001" xml:space="preserve"><value>Nieoczekiwany błąd; stos wywołań jest w logu.</value></data>
   <data name="Error_RIS_GEN_002" xml:space="preserve"><value>D365 zwrócił status nieznany dla RIS.</value></data>
+  <data name="Audit_Time" xml:space="preserve"><value>Czas</value></data>
+  <data name="Audit_User" xml:space="preserve"><value>Użytkownik</value></data>
+  <data name="Audit_Entity" xml:space="preserve"><value>Obiekt</value></data>
+  <data name="Audit_Key" xml:space="preserve"><value>Nazwa</value></data>
+  <data name="Audit_Action" xml:space="preserve"><value>Akcja</value></data>
+  <data name="Audit_Before" xml:space="preserve"><value>Przed</value></data>
+  <data name="Audit_After" xml:space="preserve"><value>Po</value></data>
+  <data name="Export_Png" xml:space="preserve"><value>Wykres jako PNG</value></data>
+  <data name="Export_Pdf" xml:space="preserve"><value>Drukuj / PDF</value></data>
+  <data name="Export_Xlsx" xml:space="preserve"><value>Excel (xlsx)</value></data>
+  <data name="Export_Csv" xml:space="preserve"><value>CSV</value></data>
+  <data name="Export_Json" xml:space="preserve"><value>Definicje (JSON)</value></data>
+  <data name="Gantt_Day" xml:space="preserve"><value>Dzień</value></data>
+  <data name="Gantt_Week" xml:space="preserve"><value>Tydzień</value></data>
+  <data name="Gantt_Previous" xml:space="preserve"><value>Poprzedni</value></data>
+  <data name="Gantt_Next" xml:space="preserve"><value>Następny</value></data>
+  <data name="Gantt_Today" xml:space="preserve"><value>Dziś</value></data>
+  <data name="Gantt_GroupBy" xml:space="preserve"><value>Grupuj wg</value></data>
+  <data name="Gantt_GroupBy_Group" xml:space="preserve"><value>Grupa</value></data>
+  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Gantt_GroupBy_Type" xml:space="preserve"><value>Typ</value></data>
+  <data name="Gantt_GroupBy_None" xml:space="preserve"><value>Bez grupowania</value></data>
+  <data name="Gantt_Every" xml:space="preserve"><value>co {0}</value></data>
+  <data name="Gantt_Runs" xml:space="preserve"><value>uruchomień: {0}</value></data>
+  <data name="Gantt_EstimatedDuration" xml:space="preserve"><value>szacowany czas {0}</value></data>
+  <data name="Gantt_Missed" xml:space="preserve"><value>Przegapiony termin</value></data>
+  <data name="Gantt_Now" xml:space="preserve"><value>Teraz</value></data>
+  <data name="Gantt_Planned" xml:space="preserve"><value>Zaplanowane</value></data>
+  <data name="Gantt_Frequent" xml:space="preserve"><value>Częste (pas)</value></data>
+  <data name="Gantt_NoRows" xml:space="preserve"><value>Brak zadań do pokazania.</value></data>
+  <data name="History_Title" xml:space="preserve"><value>Historia uruchomień</value></data>
+  <data name="History_FailedOnly" xml:space="preserve"><value>Tylko błędy</value></data>
+  <data name="History_Runs" xml:space="preserve"><value>Uruchomienia ({0})</value></data>
+  <data name="History_Truncated" xml:space="preserve"><value>Pokazano tylko {0} najnowszych uruchomień; zawęź zakres.</value></data>
+  <data name="Job_Description" xml:space="preserve"><value>Opis</value></data>
+  <data name="Plan_Title" xml:space="preserve"><value>Harmonogram</value></data>
+  <data name="Plan_Hint" xml:space="preserve"><value>Długość paska = mediana czasu ostatnich uruchomień. Częste zadania są pokazane jako pasy. Kliknij pasek, aby otworzyć zadanie.</value></data>
+  <data name="Plan_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Plan_EstimatedEnd" xml:space="preserve"><value>Szacowany koniec</value></data>
+  <data name="Plan_Kind" xml:space="preserve"><value>Rodzaj</value></data>
+  <data name="Plan_Runs" xml:space="preserve"><value>Uruchomienia</value></data>
+  <data name="Run_Finished" xml:space="preserve"><value>Koniec</value></data>
 </root>

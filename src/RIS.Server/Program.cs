@@ -19,6 +19,9 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Services.AddWindowsService(service => service.ServiceName = "RIS5");
+// Static files of packages (MudBlazor, blazor.web.js) also when started from the build output outside Development;
+// a published app has no runtime manifest and this does nothing.
+builder.WebHost.UseStaticWebAssets();
 // Serilog (console, files, Event Log) replaces the default providers; must run before AddRisServer (Quartz log capture provider).
 builder.Logging.ClearProviders();
 builder.Services.AddRisServer(builder.Configuration, configureHost: host =>
@@ -60,6 +63,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<RIS.Server.Services.JobQueryService>();
 builder.Services.AddScoped<RIS.Server.Services.JobOperationsService>();
 builder.Services.AddScoped<RIS.Server.Services.DashboardService>();
+builder.Services.AddScoped<RIS.Server.Services.SchedulePlanService>();
+builder.Services.AddScoped<RIS.Server.Services.HistoryTimelineService>();
+builder.Services.AddScoped<RIS.Server.Services.ExportService>();
 
 var health = builder.Configuration.GetSection("Ris:Health").Get<HealthOptions>() ?? new HealthOptions();
 builder.Services.AddSingleton(health);
@@ -86,6 +92,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapCultureEndpoint();
+app.MapPreferencesEndpoint();
 app.MapRazorComponents<RIS.Server.Components.App>()
     .AddInteractiveServerRenderMode()
     .RequireAuthorization();

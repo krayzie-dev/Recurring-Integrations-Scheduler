@@ -1,0 +1,61 @@
+@page "/plan"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+@inject SchedulePlanService Plans
+@inject ExportService Exports
+@inject IJSRuntime JS
+
+<PageTitle>RIS 5 – @T["Nav_Plan"]</PageTitle>
+<MudText Typo="Typo.h5" Class="mb-2">@T["Plan_Title"]</MudText>
+
+<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
+                 Search="@_search" SearchChanged="SetSearchAsync" ChartId="plan-gantt" FileName="ris-plan" OnExport="ExportAsync" />
+<GanttLegend />
+
+@if (_timeline is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudText Typo="Typo.caption" Class="mud-text-secondary ris-no-print">@T["Plan_Hint"]</MudText>
+    <Gantt Id="plan-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidth" HourStep="_window.HourStep"
+           DayFormat="@_window.DayFormat" OnItemClick="OpenJob" />
+}
+
+@code {
+    private TimelineWindow _window = null!;
+    private TimelineGrouping _grouping = TimelineGrouping.Group;
+    private string? _search;
+    private Timeline? _timeline;
+
+    protected override TimeSpan? RefreshInterval => TimeSpan.FromMinutes(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _window = TimelineWindow.Current(TimelineRange.Week, Prefs.Zone);
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadAsync() =>
+        _timeline = await Plans.PlanAsync(_window.FromUtc, _window.UntilUtc, _window.BandThreshold, _grouping,
+            job => string.IsNullOrWhiteSpace(_search) || job.Key.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                   || (job.Options?.Connection?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private async Task SetWindowAsync(TimelineWindow window) { _window = window; await LoadAsync(); }
+    private async Task SetGroupingAsync(TimelineGrouping grouping) { _grouping = grouping; await LoadAsync(); }
+    private async Task SetSearchAsync(string? search) { _search = search; await LoadAsync(); }
+
+    private void OpenJob(TimelineItem item)
+    {
+        var row = _timeline?.Rows.FirstOrDefault(r => r.Items.Contains(item));
+        if (row?.Link is not null) Navigation.NavigateTo(row.Link);
+    }
+
+    private async Task ExportAsync(string format)
+    {
+        if (_timeline is null) return;
+        var file = Exports.Plan(_timeline, format, Prefs.Zone);
+        await ExportService.DownloadAsync(JS, file);
+    }
+}

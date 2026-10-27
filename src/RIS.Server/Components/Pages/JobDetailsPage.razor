@@ -77,12 +77,12 @@ else
                     <MudText Typo="Typo.subtitle2" Class="mb-1">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
                     @if (_details.UpcomingRunsUtc.Count == 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">–</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">–</MudText>
                     }
                     <MudList T="string" Dense="true">
                         @foreach (var run in _details.UpcomingRunsUtc)
                         {
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">@Prefs.Format(run, "dddd, g")</MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">@(Prefs.Format(run, "dddd") + ", " + Prefs.Format(run, "g"))</MudListItem>
                         }
                     </MudList>
                 </MudItem>
@@ -94,7 +94,7 @@ else
         </MudTabPanel>
 
         <MudTabPanel Text="@T["Job_TabDefinition"]" Icon="@Icons.Material.Filled.Code">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@T["Job_DefinitionHint"]</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Job_DefinitionHint"]</MudText>
             <pre class="ris-log ris-mono">@_definitionJson</pre>
         </MudTabPanel>
     </MudTabs>

@@ -161,4 +161,46 @@
   <data name="Error_RIS_SFTP_001" xml:space="preserve"><value>SFTP transfer failed: check server, credentials and remote folder.</value></data>
   <data name="Error_RIS_GEN_001" xml:space="preserve"><value>Unexpected error; the stack trace is in the log.</value></data>
   <data name="Error_RIS_GEN_002" xml:space="preserve"><value>D365 returned a status RIS does not recognise.</value></data>
+  <data name="Audit_Time" xml:space="preserve"><value>Time</value></data>
+  <data name="Audit_User" xml:space="preserve"><value>User</value></data>
+  <data name="Audit_Entity" xml:space="preserve"><value>Object</value></data>
+  <data name="Audit_Key" xml:space="preserve"><value>Name</value></data>
+  <data name="Audit_Action" xml:space="preserve"><value>Action</value></data>
+  <data name="Audit_Before" xml:space="preserve"><value>Before</value></data>
+  <data name="Audit_After" xml:space="preserve"><value>After</value></data>
+  <data name="Export_Png" xml:space="preserve"><value>Chart as PNG</value></data>
+  <data name="Export_Pdf" xml:space="preserve"><value>Print / PDF</value></data>
+  <data name="Export_Xlsx" xml:space="preserve"><value>Excel (xlsx)</value></data>
+  <data name="Export_Csv" xml:space="preserve"><value>CSV</value></data>
+  <data name="Export_Json" xml:space="preserve"><value>Definitions (JSON)</value></data>
+  <data name="Gantt_Day" xml:space="preserve"><value>Day</value></data>
+  <data name="Gantt_Week" xml:space="preserve"><value>Week</value></data>
+  <data name="Gantt_Previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="Gantt_Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Gantt_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Gantt_GroupBy" xml:space="preserve"><value>Group by</value></data>
+  <data name="Gantt_GroupBy_Group" xml:space="preserve"><value>Group</value></data>
+  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Gantt_GroupBy_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Gantt_GroupBy_None" xml:space="preserve"><value>None</value></data>
+  <data name="Gantt_Every" xml:space="preserve"><value>every {0}</value></data>
+  <data name="Gantt_Runs" xml:space="preserve"><value>{0} runs</value></data>
+  <data name="Gantt_EstimatedDuration" xml:space="preserve"><value>estimated duration {0}</value></data>
+  <data name="Gantt_Missed" xml:space="preserve"><value>Missed run</value></data>
+  <data name="Gantt_Now" xml:space="preserve"><value>Now</value></data>
+  <data name="Gantt_Planned" xml:space="preserve"><value>Planned</value></data>
+  <data name="Gantt_Frequent" xml:space="preserve"><value>Frequent (band)</value></data>
+  <data name="Gantt_NoRows" xml:space="preserve"><value>No jobs to show.</value></data>
+  <data name="History_Title" xml:space="preserve"><value>Run history</value></data>
+  <data name="History_FailedOnly" xml:space="preserve"><value>Failures only</value></data>
+  <data name="History_Runs" xml:space="preserve"><value>Runs ({0})</value></data>
+  <data name="History_Truncated" xml:space="preserve"><value>Only the newest {0} runs are shown; narrow the range.</value></data>
+  <data name="Job_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Plan_Title" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Plan_Hint" xml:space="preserve"><value>Bar length = median duration of the last runs. Frequent jobs are shown as bands. Click a bar to open the job.</value></data>
+  <data name="Plan_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Plan_EstimatedEnd" xml:space="preserve"><value>Estimated end</value></data>
+  <data name="Plan_Kind" xml:space="preserve"><value>Kind</value></data>
+  <data name="Plan_Runs" xml:space="preserve"><value>Runs</value></data>
+  <data name="Run_Finished" xml:space="preserve"><value>Finished</value></data>
 </root>

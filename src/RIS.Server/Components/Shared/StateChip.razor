@@ -9,7 +9,7 @@
     private string Key => Job.Running ? "Running" : Job.State;
 
     private string? Tooltip => Job.IsPaused && Job.PauseReason is not null
-        ? $"{Job.PauseReason} ({Job.PausedBy})"
+        ? (string.IsNullOrEmpty(Job.PausedBy) ? Job.PauseReason : $"{Job.PauseReason} ({Job.PausedBy})")
         : null;
 
     private Color Colour => Key switch

@@ -1,0 +1,76 @@
+@page "/history"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inherits RisPageBase
+@inject HistoryTimelineService Timelines
+@inject ExportService Exports
+@inject IJSRuntime JS
+
+<PageTitle>RIS 5 – @T["Nav_History"]</PageTitle>
+<MudText Typo="Typo.h5" Class="mb-2">@T["History_Title"]</MudText>
+
+<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
+                 Search="@_search" SearchChanged="SetSearchAsync" ChartId="history-gantt" FileName="ris-history" OnExport="ExportAsync">
+    <MudSwitch T="bool" Value="_failedOnly" ValueChanged="SetFailedOnlyAsync" Color="Color.Error" Label="@T["History_FailedOnly"]" />
+</TimelineToolbar>
+<GanttLegend History="true" />
+
+@if (_timeline is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    @if (_timeline.Truncated)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@T["History_Truncated", HistoryTimelineService.MaxRuns]</MudAlert>
+    }
+    <Gantt Id="history-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidth" HourStep="_window.HourStep"
+           DayFormat="@_window.DayFormat" OnItemClick="OpenRunAsync" />
+
+    <MudText Typo="Typo.h6" Class="mt-4 mb-2 ris-no-print">@T["History_Runs", _runs.Count]</MudText>
+    <div class="ris-no-print">
+        <HistoryTable Runs="_runs" OnOpen="id => _drawer!.OpenAsync(id)" />
+    </div>
+}
+
+<RunDrawer @ref="_drawer" CanOperate="CanOperate" UserName="@UserName" />
+
+@code {
+    private TimelineWindow _window = null!;
+    private TimelineGrouping _grouping = TimelineGrouping.Group;
+    private string? _search;
+    private bool _failedOnly;
+    private Timeline? _timeline;
+    private IReadOnlyList<RunDetails> _runs = [];
+    private RunDrawer? _drawer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _window = TimelineWindow.Current(TimelineRange.Day, Prefs.Zone);
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadAsync()
+    {
+        IReadOnlyCollection<Quartz.JobRunResult>? results = _failedOnly ? [Quartz.JobRunResult.Failed] : null;
+        _timeline = await Timelines.HistoryAsync(_window.FromUtc, _window.UntilUtc, _grouping, Matches, results);
+        _runs = (await Queries.HistoryAsync(new HistoryFilter(FromUtc: _window.FromUtc, ToUtc: _window.UntilUtc, Results: results,
+                Take: HistoryTimelineService.MaxRuns)))
+            .Where(r => Matches(r.Job)).ToList();
+    }
+
+    private bool Matches(string job) => string.IsNullOrWhiteSpace(_search) || job.Contains(_search, StringComparison.OrdinalIgnoreCase);
+
+    private async Task SetWindowAsync(TimelineWindow window) { _window = window; await LoadAsync(); }
+    private async Task SetGroupingAsync(TimelineGrouping grouping) { _grouping = grouping; await LoadAsync(); }
+    private async Task SetSearchAsync(string? search) { _search = search; await LoadAsync(); }
+    private async Task SetFailedOnlyAsync(bool value) { _failedOnly = value; await LoadAsync(); }
+
+    private async Task OpenRunAsync(TimelineItem item)
+    {
+        if (item.RunId is not null && item.Kind == TimelineItemKind.Run) await _drawer!.OpenAsync(item.RunId);
+    }
+
+    private async Task ExportAsync(string format) =>
+        await ExportService.DownloadAsync(JS, Exports.History(_runs, format, Prefs.Zone));
+}

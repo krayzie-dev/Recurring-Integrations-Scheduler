@@ -1,0 +1,53 @@
+@using RIS.Server.Services
+@inject IJSRuntime JS
+@* Range, navigation, grouping, search and export of a Gantt view. *@
+
+<MudPaper Class="pa-2 mb-2 d-flex align-center flex-wrap gap-2 ris-no-print" Elevation="0" Outlined="true">
+    <MudToggleGroup T="TimelineRange" Value="Window.Range" ValueChanged="r => WindowChanged.InvokeAsync(Window.WithRange(r))" Size="Size.Small" Outlined="true">
+        <MudToggleItem Value="TimelineRange.Day">@T["Gantt_Day"]</MudToggleItem>
+        <MudToggleItem Value="TimelineRange.Week">@T["Gantt_Week"]</MudToggleItem>
+    </MudToggleGroup>
+    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" OnClick="() => WindowChanged.InvokeAsync(Window.Previous())" title="@T["Gantt_Previous"]" />
+    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => WindowChanged.InvokeAsync(TimelineWindow.Current(Window.Range, Window.Zone))">@T["Gantt_Today"]</MudButton>
+    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="() => WindowChanged.InvokeAsync(Window.Next())" title="@T["Gantt_Next"]" />
+    <MudText Typo="Typo.subtitle1" Class="mx-2">@Window.Title</MudText>
+
+    <MudSpacer />
+    @ChildContent
+    <MudSelect T="TimelineGrouping" Value="Grouping" ValueChanged="g => GroupingChanged.InvokeAsync(g)" Label="@T["Gantt_GroupBy"]" Dense="true"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 170px">
+        @foreach (var grouping in Enum.GetValues<TimelineGrouping>())
+        {
+            <MudSelectItem Value="grouping">@T["Gantt_GroupBy_" + grouping]</MudSelectItem>
+        }
+    </MudSelect>
+    <MudTextField T="string" Value="Search" ValueChanged="s => SearchChanged.InvokeAsync(s)" Placeholder="@T["Common_Search"]" Immediate="true" DebounceInterval="300"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Style="max-width: 220px" />
+    <MudMenu Icon="@Icons.Material.Filled.Download" Dense="true" title="@T["Common_Export"]">
+        <MudMenuItem Icon="@Icons.Material.Filled.Image" OnClick="ExportPngAsync">@T["Export_Png"]</MudMenuItem>
+        <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" OnClick="PrintAsync">@T["Export_Pdf"]</MudMenuItem>
+        @if (OnExport.HasDelegate)
+        {
+            <MudMenuItem Icon="@Icons.Material.Filled.TableView" OnClick="@(() => OnExport.InvokeAsync("xlsx"))">@T["Export_Xlsx"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Description" OnClick="@(() => OnExport.InvokeAsync("csv"))">@T["Export_Csv"]</MudMenuItem>
+        }
+    </MudMenu>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public TimelineWindow Window { get; set; } = null!;
+    [Parameter] public EventCallback<TimelineWindow> WindowChanged { get; set; }
+    [Parameter] public TimelineGrouping Grouping { get; set; }
+    [Parameter] public EventCallback<TimelineGrouping> GroupingChanged { get; set; }
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public EventCallback<string?> SearchChanged { get; set; }
+    [Parameter] public string ChartId { get; set; } = "gantt";
+    [Parameter] public string FileName { get; set; } = "ris";
+    [Parameter] public EventCallback<string> OnExport { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task ExportPngAsync() =>
+        await JS.InvokeVoidAsync("ris.exportSvgToPng", ChartId, $"{FileName}-{Window.StartLocal:yyyy-MM-dd}.png");
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("ris.print");
+}
