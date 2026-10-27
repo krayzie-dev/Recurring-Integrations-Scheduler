@@ -17,7 +17,9 @@ public static class RisJson
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
+            // "type" of job options may come anywhere in the object (hand-written or generated JSON).
+            AllowOutOfOrderMetadataProperties = true
         };
         options.Converters.Add(new JsonStringEnumConverter());
         return options;

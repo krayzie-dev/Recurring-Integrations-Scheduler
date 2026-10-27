@@ -51,6 +51,7 @@ builder.Services.ConfigureHttpJsonOptions(json =>
     // Same JSON as jobs.json (RisJson): camelCase, enums as strings, nulls omitted.
     json.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     json.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    json.SerializerOptions.AllowOutOfOrderMetadataProperties = true;
 });
 // Web UI (Blazor, interactive server rendering) with MudBlazor; PL/EN texts in Resources/UiText*.resx.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

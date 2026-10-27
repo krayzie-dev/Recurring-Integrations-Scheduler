@@ -204,4 +204,29 @@ public sealed class ApiTests
         }
         throw new AssertFailedException("Condition not met in time.");
     }
+
+    [TestMethod]
+    public async Task PutJob_TypeAnywhereInOptions_AndMissingTypeIs400()
+    {
+        await using var factory = new RisServerFactory();
+        var admin = factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+
+        // "type" after the other option fields (e.g. JSON built from a PowerShell hashtable).
+        const string job = """
+            { "name": "Late type", "group": "Tests", "schedule": { "cron": "0 0 2 * * ?" },
+              "options": { "connection": "TEST", "dataProject": "Customers", "company": "USMF", "downloadSuccessDir": "C:\\ris\\out", "type": "Export" } }
+            """;
+        var ok = await admin.PutAsync("/api/v1/jobs/Tests/Late%20type", new StringContent(job, System.Text.Encoding.UTF8, "application/json"));
+        Assert.IsTrue(ok.IsSuccessStatusCode, await ok.Content.ReadAsStringAsync());
+
+        // Broken JSON (unescaped backslash) is a client error too.
+        var broken = await admin.PutAsync("/api/v1/jobs/Tests/Broken", new StringContent(job.Replace(@"C:\\ris\\out", @"C:\ris\out"), System.Text.Encoding.UTF8, "application/json"));
+        Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, broken.StatusCode, await broken.Content.ReadAsStringAsync());
+
+        var missing = await admin.PutAsync("/api/v1/jobs/Tests/No%20type",
+            new StringContent(job.Replace(", \"type\": \"Export\"", "").Replace("Late type", "No type"), System.Text.Encoding.UTF8, "application/json"));
+        Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, missing.StatusCode);
+        StringAssert.Contains(await missing.Content.ReadAsStringAsync(), "type discriminator");
+    }
 }
