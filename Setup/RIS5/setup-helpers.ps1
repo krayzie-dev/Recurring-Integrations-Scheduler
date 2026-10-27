@@ -16,9 +16,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Setup started from PowerShell 7 passes its PSModulePath on (pwsh only fixes it when it starts powershell.exe itself), so
+# Windows PowerShell would autoload the PS7 modules, fail, and e.g. have no Cert: drive. Use the Windows PowerShell paths only.
+$env:PSModulePath = "$env:ProgramFiles\WindowsPowerShell\Modules;$env:windir\system32\WindowsPowerShell\v1.0\Modules"
+
+# .NET store instead of the Cert: drive: does not depend on any PowerShell module.
 function Get-Certificate([string] $thumb) {
     $normalized = ($thumb -replace '[^0-9A-Fa-f]', '').ToUpperInvariant()
-    Get-Item "Cert:\LocalMachine\My\$normalized" -ErrorAction SilentlyContinue
+    $store = [System.Security.Cryptography.X509Certificates.X509Store]::new("My", "LocalMachine")
+    try {
+        $store.Open("ReadOnly, OpenExistingOnly")
+        $store.Certificates.Find("FindByThumbprint", $normalized, $false) | Select-Object -First 1
+    }
+    finally { $store.Close() }
 }
 
 try {

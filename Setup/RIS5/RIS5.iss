@@ -344,7 +344,7 @@ begin
       User := Copy(Account, Position + 1, Length(Account));
       if not LogonUser(User, Domain, CredentialsPage.Values[1], LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, Token) then
       begin
-        MsgBox(FmtMessage(CustomMessage('InvalidCredentials'), [Account]), mbError, MB_OK);
+        SuppressibleMsgBox(FmtMessage(CustomMessage('InvalidCredentials'), [Account]), mbError, MB_OK, IDOK);
         Result := False;
       end
       else
@@ -355,19 +355,19 @@ begin
   begin
     if not IsPort(NetworkPage.Values[0]) or ((Trim(NetworkPage.Values[1]) <> '') and not IsPort(NetworkPage.Values[1])) then
     begin
-      MsgBox(CustomMessage('InvalidPort'), mbError, MB_OK);
+      SuppressibleMsgBox(CustomMessage('InvalidPort'), mbError, MB_OK, IDOK);
       Result := False;
     end
     else if Trim(NetworkPage.Values[1]) <> '' then
     begin
       if Trim(NetworkPage.Values[2]) = '' then
       begin
-        MsgBox(CustomMessage('CertificateRequired'), mbError, MB_OK);
+        SuppressibleMsgBox(CustomMessage('CertificateRequired'), mbError, MB_OK, IDOK);
         Result := False;
       end
       else if Helper('TestCertificate', '-Thumbprint "' + Trim(NetworkPage.Values[2]) + '"', Output) <> 0 then
       begin
-        MsgBox(FmtMessage(CustomMessage('CertificateInvalid'), [Output]), mbError, MB_OK);
+        SuppressibleMsgBox(FmtMessage(CustomMessage('CertificateInvalid'), [Output]), mbError, MB_OK, IDOK);
         Result := False;
       end;
     end;

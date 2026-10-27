@@ -36,6 +36,11 @@ foreach ($script in @("Setup\RIS5\setup-helpers.ps1")) {
         "`$e = `$null; [System.Management.Automation.Language.Parser]::ParseFile('$(Join-Path $root $script)', [ref]`$null, [ref]`$e) | Out-Null; `$e.Count"
     if ("$legacy".Trim() -ne "0") { throw "$script has syntax errors in Windows PowerShell 5.1." }
 }
+# Setup runs the helper through cmd.exe, so it inherits the module path of a PowerShell 7 session (see the helper). An unknown
+# thumbprint must give "not found" (2), not a failure to read the certificate store (1).
+$helper = Join-Path $root "Setup\RIS5\setup-helpers.ps1"
+$check = & "$env:SystemRoot\System32\cmd.exe" /c "`"$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$helper`" -Action TestCertificate -Thumbprint 00"
+if ($LASTEXITCODE -ne 2) { throw "setup-helpers.ps1 TestCertificate: expected exit code 2, got $LASTEXITCODE ($check)." }
 Remove-Item $publish -Recurse -Force -ErrorAction SilentlyContinue
 
 foreach ($project in @(
