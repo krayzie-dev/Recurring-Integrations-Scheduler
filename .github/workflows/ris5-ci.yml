@@ -1,0 +1,97 @@
+# RIS 5: build, tests and installer on every push and pull request touching RIS 5.
+name: RIS 5 CI
+
+on:
+  push:
+    branches: [master, "feature/**"]
+    paths:
+      - "src/**"
+      - "test/**"
+      - "RIS5.slnx"
+      - "Setup/RIS5/**"
+      - "scripts/**"
+      - "Tests/TestData/Schedules/**"
+      - "Common/Contracts/SettingsConstants.cs"
+      - ".github/workflows/ris5-*.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/**"
+      - "RIS5.slnx"
+      - "Setup/RIS5/**"
+      - "scripts/**"
+      - "Tests/TestData/Schedules/**"
+      - "Common/Contracts/SettingsConstants.cs"
+      - ".github/workflows/ris5-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ris5-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test, installer
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: NuGet cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('src/Directory.Packages.props', 'src/**/*.csproj', 'test/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Build
+        run: dotnet build RIS5.slnx -c Release --nologo
+
+      - name: Test
+        run: >
+          dotnet test RIS5.slnx -c Release --no-build --nologo
+          --filter "TestCategory!=Integration"
+          --logger "trx" --results-directory TestResults
+
+      - name: Test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $base = ([xml](Get-Content src/Directory.Build.props)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          "value=$base-ci.${{ github.run_number }}" >> $env:GITHUB_OUTPUT
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Installer
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: RIS5-${{ steps.version.outputs.value }}
+          path: |
+            artifacts/RIS5-Setup-*.exe
+            artifacts/RIS5-Setup-*.sha256
+            artifacts/ris-cli-*.zip
+          if-no-files-found: error
