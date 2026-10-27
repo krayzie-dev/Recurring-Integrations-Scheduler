@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <InternalsVisibleTo Include="RIS.Transfer.Tests" />
     <ProjectReference Include="..\RIS.Core\RIS.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
