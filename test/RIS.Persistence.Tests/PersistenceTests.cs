@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using RIS.Core.Configuration;
 using RIS.Core.Options;
@@ -67,6 +67,50 @@ public sealed class PersistenceTests
         var raw = RawColumn("SELECT ProtectedClientSecret FROM Connections");
         Assert.IsFalse(raw.Contains("s3cr3t", StringComparison.Ordinal), "Secret must not be stored in plain text.");
         Assert.IsTrue(raw.Length > 50);
+    }
+
+    [TestMethod]
+    public async Task SwitchingAuthMode_RemovesCredentialsOfTheOtherMode()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+
+        var certificate = Connection(secret: "");
+        certificate.ClientSecret = null;
+        certificate.AuthMode = D365AuthMode.Certificate;
+        certificate.CertificateThumbprint = "0123456789ABCDEF0123456789ABCDEF01234567";
+        await _repository.SaveConnectionAsync(certificate, "tester");
+
+        var saved = (await _repository.LoadAsync()).FindConnection("PROD")!;
+        Assert.AreEqual(D365AuthMode.Certificate, saved.AuthMode);
+        Assert.IsNull(saved.ClientSecret, "The client secret is removed when the connection switches to a certificate.");
+        Assert.AreEqual("", RawColumn("SELECT ProtectedClientSecret FROM Connections"));
+
+        // Back to a secret: the thumbprint goes; the old secret does not come back (the form requires a new one).
+        await _repository.SaveConnectionAsync(Connection(secret: ""), "tester");
+        Assert.IsTrue(SecretPlaceholder.IsPlaceholderOrEmpty((await _repository.LoadAsync()).FindConnection("PROD")!.ClientSecret), "Not set (placeholder).");
+        await _repository.SaveConnectionAsync(Connection("new-secret"), "tester");
+        saved = (await _repository.LoadAsync()).FindConnection("PROD")!;
+        Assert.AreEqual("new-secret", saved.ClientSecret);
+        Assert.IsNull(saved.CertificateThumbprint);
+    }
+
+    [TestMethod]
+    public async Task SftpSwitchingToKey_RemovesPassword_AndBack()
+    {
+        var server = new SftpServerOptions { Name = "PARTNER", Host = "sftp.contoso.com", UserName = "ris", Password = "pw" };
+        await _repository.SaveSftpServerAsync(server, "tester");
+
+        await _repository.SaveSftpServerAsync(new SftpServerOptions { Name = "PARTNER", Host = "sftp.contoso.com", UserName = "ris", UseKey = true, KeyPath = @"C:\keys\id" }, "tester");
+        var saved = (await _repository.LoadAsync()).FindSftpServer("PARTNER")!;
+        Assert.IsNull(saved.Password);
+        Assert.AreEqual(@"C:\keys\id", saved.KeyPath);
+
+        await _repository.SaveSftpServerAsync(new SftpServerOptions { Name = "PARTNER", Host = "sftp.contoso.com", UserName = "ris" }, "tester");
+        Assert.IsTrue(SecretPlaceholder.IsPlaceholderOrEmpty((await _repository.LoadAsync()).FindSftpServer("PARTNER")!.Password), "The old password does not come back.");
+        await _repository.SaveSftpServerAsync(server, "tester");
+        saved = (await _repository.LoadAsync()).FindSftpServer("PARTNER")!;
+        Assert.AreEqual("pw", saved.Password);
+        Assert.IsNull(saved.KeyPath);
     }
 
     [TestMethod]

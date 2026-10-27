@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +18,15 @@ public sealed class ConnectionTestTests
     private sealed class FakeTokens : ID365TokenProvider
     {
         public Task<string> GetAuthorizationHeaderAsync(D365ConnectionOptions connection, CancellationToken cancellationToken) => Task.FromResult("Bearer test-token");
+    }
+
+    private static ServiceProvider TestServices()
+    {
+        var services = new ServiceCollection().AddLogging().AddLocalization();
+        services.AddHttpClient();
+        services.ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(() =>
+            new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }));
+        return services.BuildServiceProvider();
     }
 
     [TestMethod]
@@ -46,14 +55,14 @@ public sealed class ConnectionTestTests
     [TestMethod]
     public async Task D365_SignsInAndReadsDataManagement()
     {
-        using var d365 = WireMockServer.Start();
+        using var d365 = WireMockServer.Start(new WireMock.Settings.WireMockServerSettings { UseSSL = true });
         d365.Given(Request.Create().WithPath("/data/DataManagementDefinitionGroups").WithHeader("Authorization", "Bearer test-token").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new { value = Array.Empty<object>() }));
 
-        // Directly against the service: configuration validation requires https for AOS, WireMock runs on http.
+        // Directly against the service (the AOS must be https; WireMock uses its own certificate).
         var connection = RisTestHost.Connection;
         connection.AosUri = new Uri(d365.Url! + "/");
-        using var services = new ServiceCollection().AddLogging().AddLocalization().AddHttpClient().BuildServiceProvider();
+        using var services = TestServices();
         var tests = new ConnectionTestService(
             new RIS.Core.Configuration.StaticConfigurationStore(new RIS.Core.Configuration.RisConfiguration { Connections = [connection] }),
             new FakeTokens(), services.GetRequiredService<IHttpClientFactory>(), null!,
@@ -71,5 +80,56 @@ public sealed class ConnectionTestTests
         StringAssert.Contains(denied.Message, "missing Data management role");
 
         StringAssert.Contains((await tests.D365Async("NOPE")).Message, "RIS-CFG-002");
+    }
+
+    private sealed class RecordingTokens : ID365TokenProvider
+    {
+        public D365ConnectionOptions? Last { get; private set; }
+
+        public Task<string> GetAuthorizationHeaderAsync(D365ConnectionOptions connection, CancellationToken cancellationToken)
+        {
+            Last = connection;
+            return Task.FromResult("Bearer test-token");
+        }
+    }
+
+    [TestMethod]
+    public async Task D365_UnsavedForm_UsesStoredSecretWhenEmpty_AndRemembersNamedTests()
+    {
+        using var d365 = WireMockServer.Start(new WireMock.Settings.WireMockServerSettings { UseSSL = true });
+        d365.Given(Request.Create().WithPath("/data/DataManagementDefinitionGroups").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new { value = Array.Empty<object>() }));
+        var stored = RisTestHost.Connection;
+        stored.AosUri = new Uri(d365.Url! + "/");
+        stored.ClientSecret = "stored-secret";
+        var tokens = new RecordingTokens();
+        var results = new ConnectionTestResults();
+        using var services = TestServices();
+        var tests = new ConnectionTestService(
+            new RIS.Core.Configuration.StaticConfigurationStore(new RIS.Core.Configuration.RisConfiguration { Connections = [stored] }),
+            tokens, services.GetRequiredService<IHttpClientFactory>(), null!,
+            services.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<RIS.Server.Resources.UiText>>(), results);
+
+        // Edited form (other client id), secret left empty: the stored secret is used, nothing is saved.
+        var form = ConnectionTestService.WithStoredSecrets(stored, null);
+        form.ClientSecret = null;
+        form.ClientId = Guid.NewGuid().ToString();
+        Assert.IsTrue((await tests.D365Async(form, stored.Name)).Succeeded);
+        Assert.AreEqual("stored-secret", tokens.Last!.ClientSecret);
+        Assert.AreEqual(form.ClientId, tokens.Last.ClientId);
+
+        form.ClientSecret = "typed-secret";
+        await tests.D365Async(form, stored.Name);
+        Assert.AreEqual("typed-secret", tokens.Last!.ClientSecret, "A typed secret wins over the stored one.");
+
+        // New connection without a secret: reported before signing in.
+        form.ClientSecret = null;
+        var missing = await tests.D365Async(form, null);
+        Assert.IsFalse(missing.Succeeded);
+        StringAssert.Contains(missing.Message, "ClientSecret is required");
+
+        Assert.IsNull(results.Get(TestTarget.D365, stored.Name), "Form tests are not remembered.");
+        await tests.D365Async(stored.Name);
+        Assert.IsTrue(results.Get(TestTarget.D365, stored.Name.ToLowerInvariant())!.Result.Succeeded);
     }
 }

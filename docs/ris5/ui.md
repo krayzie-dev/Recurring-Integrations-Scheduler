@@ -27,12 +27,12 @@ Links: `/culture/set?culture=pl-PL`, `/prefs/set?theme=Dark&zone=Utc` (both acce
 | Page | Content |
 |---|---|
 | Dashboard `/` | Tiles (jobs, OK, failing, paused, running), **needs attention** (failing jobs with the error, no success for longer than `Ris:Health:RequiredJobs` or 2× the job period + 1 h, paused with reason, not scheduled), running now, runs per hour in the last 24 h, failures of the last 24 h. Refreshes when a job starts/finishes or configuration changes. |
-| Jobs `/jobs` | Search and filters (group, type, connection, failing/paused/running), multi-select, bulk actions, exports. `?filter=failing`, `?group=…` |
+| Jobs `/jobs` | Search and filters (group, type, connection, failing/paused/running), multi-select, bulk actions, exports. `?filter=failing`, `?group=…`, `?connection=…` |
 | Job `/jobs/{group}/{name}` | Overview (schedule, next 5 runs, last result), history (export), definition JSON; actions. |
 | Schedule `/plan` | Gantt chart of planned runs, week or day. |
 | History `/history` | Gantt chart of executed runs (colour by result, running, missed runs) + table; click opens run details. |
 | Run `/runs/{runId}` | Result, duration, D365 execution/message id, error code with description, metrics, captured job log; run again. |
-| Connections, SFTP servers | List with secret status and jobs using it; edit with write-only secret; delete refused while in use. |
+| Connections, SFTP servers | List with sign-in method, secret / certificate status, last test ("Test" per row, "Test all") and jobs using it (link filters the job list). The form shows only the fields of the chosen method – D365: client secret **or** certificate (picked from the server certificate store or pasted); SFTP: password **or** private key – and removes the other method's credentials on save. Secrets are write-only (empty = keep the saved one). "Test connection" in the form checks the unsaved values with the service account. Delete refused while in use. |
 | Audit | Every configuration change: who, when, before/after (without secrets); search, export. |
 
 ## Gantt charts

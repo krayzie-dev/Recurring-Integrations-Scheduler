@@ -5,11 +5,14 @@
 @using RIS.Persistence
 @inject ConfigurationRepository Repository
 @inject IRisConfigurationStore Store
+@inject ConnectionTestService Tests
+@inject ConnectionTestResults TestResults
 
 <PageTitle>RIS 5 – @T["Nav_Connections"]</PageTitle>
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudText Typo="Typo.h5">@T["Nav_Connections"]</MudText>
     <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NetworkCheck" OnClick="TestAllAsync" Disabled="_items.Count == 0 || _running.Count > 0">@T["Test_All"]</MudButton>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="() => EditAsync(null)">@T["Connections_Add"]</MudButton>
 </MudStack>
 
@@ -19,10 +22,22 @@
         <PropertyColumn Property="c => c.AosUri" Title="AOS" />
         <PropertyColumn Property="c => c.Tenant" Title="@T["Field_Tenant"]" />
         <PropertyColumn Property="c => c.ClientId" Title="@T["Field_ClientId"]" CellClass="ris-mono" />
-        <PropertyColumn Property="c => c.AuthMode" Title="@T["Field_AuthMode"]" />
+        <TemplateColumn T="D365ConnectionOptions" Title="@T["Conn_Method"]">
+            <CellTemplate>@T["Enum_D365AuthMode_" + context.Item.AuthMode]</CellTemplate>
+        </TemplateColumn>
         <TemplateColumn T="D365ConnectionOptions" Title="@T["Secret"]">
             <CellTemplate>
-                @if (HasSecret(context.Item))
+                @if (context.Item.AuthMode == D365AuthMode.Certificate)
+                {
+                    var certificate = Certificate(context.Item.CertificateThumbprint);
+                    var ok = certificate is { HasPrivateKey: true, Expired: false };
+                    <MudTooltip Text="@(certificate is null ? T["Cert_NotFound"] : certificate.Subject)">
+                        <MudChip T="string" Size="Size.Small" Color="@(ok ? Color.Success : Color.Warning)" Icon="@Icons.Material.Filled.VerifiedUser" Class="ris-mono">
+                            @Short(context.Item.CertificateThumbprint)@(certificate is null ? "" : $" · {certificate.NotAfter.ToString("d", CultureInfo.CurrentCulture)}")
+                        </MudChip>
+                    </MudTooltip>
+                }
+                else if (HasSecret(context.Item))
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@T["Secret_Set"]</MudChip>
                 }
@@ -32,11 +47,16 @@
                 }
             </CellTemplate>
         </TemplateColumn>
+        <TemplateColumn T="D365ConnectionOptions" Title="@T["Test_Last"]">
+            <CellTemplate>
+                <TestStatus Last="TestResults.Get(TestTarget.D365, context.Item.Name)" Running="_running.Contains(context.Item.Name)" OnTest="() => TestAsync(context.Item.Name)" />
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn T="D365ConnectionOptions" Title="@T["Usage_Jobs"]">
             <CellTemplate>
                 @{ var jobs = UsedBy(context.Item.Name); }
                 <MudTooltip Text="@string.Join(", ", jobs)" Disabled="jobs.Count == 0">
-                    <MudLink Href="@($"/jobs")">@jobs.Count</MudLink>
+                    <MudLink Href="@($"/jobs?connection={Uri.EscapeDataString(context.Item.Name)}")">@jobs.Count</MudLink>
                 </MudTooltip>
             </CellTemplate>
         </TemplateColumn>
@@ -51,18 +71,29 @@
 
 @code {
     private IReadOnlyList<D365ConnectionOptions> _items = [];
+    private IReadOnlyList<CertificateInfo> _certificates = [];
+    private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly string[] SecretFields = ["ClientSecret", "UserPassword"];
-
-    protected override async Task LoadAsync() =>
+    protected override async Task LoadAsync()
+    {
         _items = (await Repository.LoadAsync()).Connections.Select(ConfigurationRepository.WithoutSecrets).OrderBy(c => c.Name).ToList();
+        try { _certificates = Certificates.List(); }
+        catch (System.Security.Cryptography.CryptographicException) { _certificates = []; }
+    }
+
+    private CertificateInfo? Certificate(string? thumbprint) =>
+        _certificates.FirstOrDefault(c => string.Equals(c.Thumbprint, thumbprint?.Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
+
+    private static string Short(string? thumbprint) => thumbprint is { Length: > 8 } ? thumbprint[..8] + "…" : thumbprint ?? "";
 
     /// <summary>Whether the secret needed by the authentication mode is stored (checked on the server; secrets never reach the browser).</summary>
-    private bool HasSecret(D365ConnectionOptions c)
+    private bool HasSecret(D365ConnectionOptions c) => HasSecret(c.Name, c.AuthMode);
+
+    private bool HasSecret(string name, D365AuthMode mode)
     {
-        var stored = Store.Current.FindConnection(c.Name);
+        var stored = Store.Current.FindConnection(name);
 #pragma warning disable CS0618
-        return c.AuthMode switch
+        return mode switch
         {
             D365AuthMode.Certificate => true,
             D365AuthMode.UsernamePassword => stored is not null && !SecretPlaceholder.IsPlaceholderOrEmpty(stored.UserPassword),
@@ -74,21 +105,47 @@
     private IReadOnlyList<string> UsedBy(string name) =>
         Store.Current.Jobs.Where(j => string.Equals(j.Options?.Connection, name, StringComparison.OrdinalIgnoreCase)).Select(j => j.Key).ToList();
 
+    private async Task TestAsync(string name)
+    {
+        _running.Add(name);
+        StateHasChanged();
+        try { await Tests.D365Async(name, Disposed); }
+        finally
+        {
+            _running.Remove(name);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Tests every connection, four at a time; each row updates when its test ends.</summary>
+    private async Task TestAllAsync()
+    {
+        using var slots = new SemaphoreSlim(4);
+        await Task.WhenAll(_items.Select(async c =>
+        {
+            await slots.WaitAsync();
+            try { await TestAsync(c.Name); }
+            finally { slots.Release(); }
+        }));
+    }
+
     private async Task EditAsync(D365ConnectionOptions? existing)
     {
         var item = existing is null
             ? new D365ConnectionOptions { Name = "", Tenant = "", ClientId = "" }
             : ConfigurationRepository.WithoutSecrets(existing);
         var originalName = existing?.Name;
-        var dialog = await Dialogs.ShowAsync<Shared.ReferenceDialog>(T["Nav_Connections"], new DialogParameters<Shared.ReferenceDialog>
+#pragma warning disable CS0618
+        var dialog = await Dialogs.ShowAsync<ConnectionDialog>(T["Nav_Connections"], new DialogParameters<ConnectionDialog>
         {
             { d => d.Title, existing is null ? T["Connections_Add"] : existing.Name },
             { d => d.Item, item },
             { d => d.IsNew, existing is null },
-            { d => d.Secrets, SecretFields },
-            { d => d.SecretLabel, T["Secret_Connection"] },
-            { d => d.Save, (o, secret) => SaveAsync((D365ConnectionOptions)o, originalName, secret) }
+            { d => d.StoredClientSecret, existing is not null && HasSecret(existing.Name, D365AuthMode.ClientSecret) },
+            { d => d.StoredUserPassword, existing is not null && HasSecret(existing.Name, D365AuthMode.UsernamePassword) },
+            { d => d.Save, c => SaveAsync(c, originalName) }
         }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+#pragma warning restore CS0618
         if (await dialog.Result is { Canceled: false })
         {
             Snackbar.Add(T["Saved"], Severity.Success);
@@ -96,19 +153,12 @@
         }
     }
 
-    private async Task<IReadOnlyList<string>> SaveAsync(D365ConnectionOptions connection, string? originalName, string? secret)
+    private async Task<IReadOnlyList<string>> SaveAsync(D365ConnectionOptions connection, string? originalName)
     {
         if (originalName is not null && !string.Equals(originalName, connection.Name, StringComparison.OrdinalIgnoreCase))
         {
             return [T["Reference_NoRename"]];
         }
-#pragma warning disable CS0618
-        if (secret is not null)
-        {
-            if (connection.AuthMode == D365AuthMode.UsernamePassword) connection.UserPassword = secret;
-            else connection.ClientSecret = secret;
-        }
-#pragma warning restore CS0618
         try
         {
             await Repository.SaveConnectionAsync(connection, UserName);

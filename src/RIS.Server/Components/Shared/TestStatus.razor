@@ -1,0 +1,38 @@
+@* Last test of a saved connection / SFTP server with a button to run it again (lists). *@
+<div class="d-flex align-center" style="gap: 6px">
+    @if (Running)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        <MudText Typo="Typo.caption">@T["Test_Running"]</MudText>
+    }
+    else
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.NetworkCheck" Size="Size.Small" OnClick="OnTest" title="@T["Test_Connection"]" />
+        @if (Last is null)
+        {
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Test_Never"]</MudText>
+        }
+        else
+        {
+            <MudTooltip Text="@Last.Result.Message">
+                <div class="d-flex align-center" style="gap: 4px">
+                    <MudIcon Icon="@(Last.Result.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small"
+                             Color="@(Last.Result.Succeeded ? Color.Success : Color.Error)" />
+                    <MudText Typo="Typo.caption" Color="@(Last.Result.Succeeded ? Color.Success : Color.Error)">@Ago(Last.At)</MudText>
+                </div>
+            </MudTooltip>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public LastTest? Last { get; set; }
+    [Parameter] public bool Running { get; set; }
+    [Parameter] public EventCallback OnTest { get; set; }
+
+    private string Ago(DateTimeOffset at)
+    {
+        var age = DateTimeOffset.Now - at;
+        return age < TimeSpan.FromMinutes(1) ? T["Test_JustNow"] : T["Test_Ago", UiFormat.Duration(age)];
+    }
+}

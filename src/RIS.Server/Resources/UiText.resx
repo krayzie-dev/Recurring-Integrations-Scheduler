@@ -230,10 +230,6 @@
   <data name="Secret" xml:space="preserve"><value>Secret</value></data>
   <data name="Secret_Set" xml:space="preserve"><value>Set</value></data>
   <data name="Secret_Missing" xml:space="preserve"><value>Missing</value></data>
-  <data name="Secret_Connection" xml:space="preserve"><value>Client secret / password</value></data>
-  <data name="Secret_Sftp" xml:space="preserve"><value>Password / key passphrase</value></data>
-  <data name="Secret_HintNew" xml:space="preserve"><value>Stored encrypted; never shown again.</value></data>
-  <data name="Secret_HintKeep" xml:space="preserve"><value>Leave empty to keep the stored value.</value></data>
   <data name="Connections_Add" xml:space="preserve"><value>New connection</value></data>
   <data name="Sftp_Add" xml:space="preserve"><value>New SFTP server</value></data>
   <data name="Usage_Jobs" xml:space="preserve"><value>Used by jobs</value></data>
@@ -517,4 +513,46 @@
   <data name="FieldHint_JobDescription" xml:space="preserve"><value>Optional: purpose, owner, related systems</value></data>
   <data name="Action_Duplicate" xml:space="preserve"><value>Duplicate</value></data>
   <data name="Wizard_RequiredField" xml:space="preserve"><value>Required: {0}</value></data>
+  <data name="Conn_SectionEnvironment" xml:space="preserve"><value>D365 environment</value></data>
+  <data name="Conn_SectionAuth" xml:space="preserve"><value>Sign-in to Entra ID</value></data>
+  <data name="Conn_AosHint" xml:space="preserve"><value>Address of the environment, e.g. https://contoso.operations.dynamics.com</value></data>
+  <data name="Conn_TenantHint" xml:space="preserve"><value>Tenant domain or id, e.g. contoso.onmicrosoft.com</value></data>
+  <data name="Conn_ClientIdHint" xml:space="preserve"><value>Application (client) ID of the app registration. The app must be added in D365: System administration &gt; Microsoft Entra ID applications.</value></data>
+  <data name="Conn_AuthorityHint" xml:space="preserve"><value>Change only for national clouds.</value></data>
+  <data name="Conn_NameLocked" xml:space="preserve"><value>The name cannot be changed: jobs refer to it.</value></data>
+  <data name="Conn_Method" xml:space="preserve"><value>Sign-in</value></data>
+  <data name="Auth_ClientSecret_Help" xml:space="preserve"><value>The application signs in with a secret created in the app registration (Certificates &amp; secrets). Secrets expire: note the date and replace the secret here in time.</value></data>
+  <data name="Auth_Certificate_Help" xml:space="preserve"><value>The application signs in with a certificate whose public key is uploaded to the app registration. The certificate with its private key must be in the certificate store of this server and the service account must be able to read the key.</value></data>
+  <data name="Auth_UsernamePassword_Help" xml:space="preserve"><value>Obsolete (from 4.x): user name and password. Does not work with MFA; switch to client secret or certificate.</value></data>
+  <data name="Auth_Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Secret_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
+  <data name="Secret_Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Secret_KeyPassphrase" xml:space="preserve"><value>Key passphrase</value></data>
+  <data name="Secret_StoredKeep" xml:space="preserve"><value>Saved (encrypted). Leave empty to keep it, type a new value to replace it.</value></data>
+  <data name="Secret_NoneRequired" xml:space="preserve"><value>Not saved yet: required.</value></data>
+  <data name="Secret_NoneOptional" xml:space="preserve"><value>Not saved: needed only for an encrypted key.</value></data>
+  <data name="Secret_Required" xml:space="preserve"><value>{0}: enter the value (nothing is saved yet).</value></data>
+  <data name="Cert_FromStore" xml:space="preserve"><value>Certificate from the store of this server</value></data>
+  <data name="Cert_ThumbprintHint" xml:space="preserve"><value>Pick a certificate above or paste the thumbprint (spaces are ignored).</value></data>
+  <data name="Cert_ValidUntil" xml:space="preserve"><value>valid until {0}</value></data>
+  <data name="Cert_Expired" xml:space="preserve"><value>expired {0}</value></data>
+  <data name="Cert_ExpiresSoon" xml:space="preserve"><value>expires in {0} days</value></data>
+  <data name="Cert_NoKey" xml:space="preserve"><value>no private key</value></data>
+  <data name="Cert_NotFound" xml:space="preserve"><value>Not found in the certificate store of this server.</value></data>
+  <data name="Test_Connection" xml:space="preserve"><value>Test connection</value></data>
+  <data name="Test_ConnectionHint" xml:space="preserve"><value>Runs on the server with the service account and uses the values of this form; nothing is saved.</value></data>
+  <data name="Test_All" xml:space="preserve"><value>Test all</value></data>
+  <data name="Test_Last" xml:space="preserve"><value>Last test</value></data>
+  <data name="Test_Never" xml:space="preserve"><value>not tested</value></data>
+  <data name="Test_Ago" xml:space="preserve"><value>{0} ago</value></data>
+  <data name="Test_JustNow" xml:space="preserve"><value>just now</value></data>
+  <data name="Sftp_HostHint" xml:space="preserve"><value>Host name or IP address</value></data>
+  <data name="Sftp_AuthPassword" xml:space="preserve"><value>Password</value></data>
+  <data name="Sftp_AuthKey" xml:space="preserve"><value>Private key</value></data>
+  <data name="Sftp_PasswordHelp" xml:space="preserve"><value>The user signs in with a password.</value></data>
+  <data name="Sftp_KeyHelp" xml:space="preserve"><value>The user signs in with a private key file (OpenSSH format) stored on this server. The service account must be able to read the file.</value></data>
+  <data name="Sftp_KeyPathHint" xml:space="preserve"><value>Path on the RIS server, e.g. C:\ProgramData\RIS5\sftp\id_ed25519</value></data>
+  <data name="Sftp_RemoteFolderTest" xml:space="preserve"><value>Remote folder to check</value></data>
+  <data name="Sftp_TimeoutsHint" xml:space="preserve"><value>Limits for connecting and for a single upload or download (hh:mm:ss).</value></data>
+  <data name="Enum_D365AuthMode_UsernamePassword" xml:space="preserve"><value>User name and password (obsolete)</value></data>
 </root>

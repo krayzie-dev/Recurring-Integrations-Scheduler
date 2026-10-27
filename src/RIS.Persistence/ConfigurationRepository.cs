@@ -309,10 +309,15 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         entity.Authority = options.Authority.ToString();
         entity.ClientId = options.ClientId;
         entity.AuthMode = options.AuthMode;
-        entity.CertificateThumbprint = options.CertificateThumbprint;
-        entity.UserName = options.UserName;
-        if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.ClientSecret)) entity.ProtectedClientSecret = secrets.Protect(options.ClientSecret);
-        if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.UserPassword)) entity.ProtectedUserPassword = secrets.Protect(options.UserPassword);
+        // Only the credentials of the chosen mode are kept: switching mode removes the others (also stored secrets).
+#pragma warning disable CS0618 // UsernamePassword is obsolete but still supported
+        entity.CertificateThumbprint = options.AuthMode == D365AuthMode.Certificate ? options.CertificateThumbprint : null;
+        entity.UserName = options.AuthMode == D365AuthMode.UsernamePassword ? options.UserName : null;
+        if (options.AuthMode != D365AuthMode.ClientSecret) entity.ProtectedClientSecret = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.ClientSecret)) entity.ProtectedClientSecret = secrets.Protect(options.ClientSecret);
+        if (options.AuthMode != D365AuthMode.UsernamePassword) entity.ProtectedUserPassword = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.UserPassword)) entity.ProtectedUserPassword = secrets.Protect(options.UserPassword);
+#pragma warning restore CS0618
     }
 
     private void Apply(SftpServerEntity entity, SftpServerOptions options)
@@ -322,11 +327,14 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         entity.Port = options.Port;
         entity.UserName = options.UserName;
         entity.UseKey = options.UseKey;
-        entity.KeyPath = options.KeyPath;
+        entity.KeyPath = options.UseKey ? options.KeyPath : null;
         entity.ConnectTimeoutSeconds = (int)options.ConnectTimeout.TotalSeconds;
         entity.OperationTimeoutSeconds = (int)options.OperationTimeout.TotalSeconds;
-        if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.Password)) entity.ProtectedPassword = secrets.Protect(options.Password);
-        if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.KeyPassphrase)) entity.ProtectedKeyPassphrase = secrets.Protect(options.KeyPassphrase);
+        // Password or key, not both: switching removes the stored secret of the other method.
+        if (options.UseKey) entity.ProtectedPassword = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.Password)) entity.ProtectedPassword = secrets.Protect(options.Password);
+        if (!options.UseKey) entity.ProtectedKeyPassphrase = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.KeyPassphrase)) entity.ProtectedKeyPassphrase = secrets.Protect(options.KeyPassphrase);
     }
 
     private static void Apply(JobDefinitionEntity entity, JobDefinition job)

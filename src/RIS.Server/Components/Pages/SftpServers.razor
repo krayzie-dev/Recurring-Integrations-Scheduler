@@ -5,11 +5,14 @@
 @using RIS.Persistence
 @inject ConfigurationRepository Repository
 @inject IRisConfigurationStore Store
+@inject ConnectionTestService Tests
+@inject ConnectionTestResults TestResults
 
 <PageTitle>RIS 5 – @T["Nav_SftpServers"]</PageTitle>
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudText Typo="Typo.h5">@T["Nav_SftpServers"]</MudText>
     <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NetworkCheck" OnClick="TestAllAsync" Disabled="_items.Count == 0 || _running.Count > 0">@T["Test_All"]</MudButton>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="() => EditAsync(null)">@T["Sftp_Add"]</MudButton>
 </MudStack>
 
@@ -19,9 +22,18 @@
         <PropertyColumn Property="c => c.Host" Title="@T["Field_Host"]" />
         <PropertyColumn Property="c => c.Port" Title="@T["Field_Port"]" />
         <PropertyColumn Property="c => c.UserName" Title="@T["Field_UserName"]" />
-        <PropertyColumn Property="c => c.UseKey" Title="@T["Field_UseKey"]">
-            <CellTemplate>@(context.Item.UseKey ? T["Common_Yes"] : T["Common_No"])</CellTemplate>
-        </PropertyColumn>
+        <TemplateColumn T="SftpServerOptions" Title="@T["Conn_Method"]">
+            <CellTemplate>
+                @if (context.Item.UseKey)
+                {
+                    <MudTooltip Text="@context.Item.KeyPath"><span>@T["Sftp_AuthKey"]</span></MudTooltip>
+                }
+                else
+                {
+                    @T["Sftp_AuthPassword"]
+                }
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn T="SftpServerOptions" Title="@T["Secret"]">
             <CellTemplate>
                 @if (HasSecret(context.Item))
@@ -32,6 +44,11 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen">@T["Secret_Missing"]</MudChip>
                 }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="SftpServerOptions" Title="@T["Test_Last"]">
+            <CellTemplate>
+                <TestStatus Last="TestResults.Get(TestTarget.Sftp, context.Item.Name)" Running="_running.Contains(context.Item.Name)" OnTest="() => TestAsync(context.Item.Name)" />
             </CellTemplate>
         </TemplateColumn>
         <TemplateColumn T="SftpServerOptions" Title="@T["Usage_Jobs"]">
@@ -53,19 +70,17 @@
 
 @code {
     private IReadOnlyList<SftpServerOptions> _items = [];
-
-    private static readonly string[] SecretFields = ["Password", "KeyPassphrase"];
+    private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task LoadAsync() =>
         _items = (await Repository.LoadAsync()).SftpServers.Select(ConfigurationRepository.WithoutSecrets).OrderBy(c => c.Name).ToList();
 
+    private bool StoredPassword(string name) => Store.Current.FindSftpServer(name) is { } s && !SecretPlaceholder.IsPlaceholderOrEmpty(s.Password);
+
+    private bool StoredKeyPassphrase(string name) => Store.Current.FindSftpServer(name) is { } s && !SecretPlaceholder.IsPlaceholderOrEmpty(s.KeyPassphrase);
+
     /// <summary>Whether the secret needed by the authentication mode is stored (checked on the server; secrets never reach the browser).</summary>
-    private bool HasSecret(SftpServerOptions s)
-    {
-        var stored = Store.Current.FindSftpServer(s.Name);
-        // A key without passphrase needs no secret.
-        return s.UseKey || stored is not null && !SecretPlaceholder.IsPlaceholderOrEmpty(stored.Password);
-    }
+    private bool HasSecret(SftpServerOptions s) => s.UseKey || StoredPassword(s.Name); // a key without passphrase needs no secret
 
     /// <summary>Jobs with an SFTP transfer (inbound/outbound) to this server.</summary>
     private IReadOnlyList<string> UsedBy(string name) =>
@@ -74,20 +89,44 @@
                 .Any(p => p.GetValue(j.Options) is SftpTransferOptions t && string.Equals(t.Server, name, StringComparison.OrdinalIgnoreCase)))
             .Select(j => j.Key).ToList();
 
+    private async Task TestAsync(string name)
+    {
+        _running.Add(name);
+        StateHasChanged();
+        try { await Tests.SftpAsync(name, null, Disposed); }
+        finally
+        {
+            _running.Remove(name);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Tests every server, four at a time; each row updates when its test ends.</summary>
+    private async Task TestAllAsync()
+    {
+        using var slots = new SemaphoreSlim(4);
+        await Task.WhenAll(_items.Select(async s =>
+        {
+            await slots.WaitAsync();
+            try { await TestAsync(s.Name); }
+            finally { slots.Release(); }
+        }));
+    }
+
     private async Task EditAsync(SftpServerOptions? existing)
     {
         var item = existing is null
             ? new SftpServerOptions { Name = "", Host = "", UserName = "" }
             : ConfigurationRepository.WithoutSecrets(existing);
         var originalName = existing?.Name;
-        var dialog = await Dialogs.ShowAsync<Shared.ReferenceDialog>(T["Nav_SftpServers"], new DialogParameters<Shared.ReferenceDialog>
+        var dialog = await Dialogs.ShowAsync<SftpServerDialog>(T["Nav_SftpServers"], new DialogParameters<SftpServerDialog>
         {
             { d => d.Title, existing is null ? T["Sftp_Add"] : existing.Name },
             { d => d.Item, item },
             { d => d.IsNew, existing is null },
-            { d => d.Secrets, SecretFields },
-            { d => d.SecretLabel, T["Secret_Sftp"] },
-            { d => d.Save, (o, secret) => SaveAsync((SftpServerOptions)o, originalName, secret) }
+            { d => d.StoredPassword, existing is not null && StoredPassword(existing.Name) },
+            { d => d.StoredKeyPassphrase, existing is not null && StoredKeyPassphrase(existing.Name) },
+            { d => d.Save, s => SaveAsync(s, originalName) }
         }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
         if (await dialog.Result is { Canceled: false })
         {
@@ -96,20 +135,15 @@
         }
     }
 
-    private async Task<IReadOnlyList<string>> SaveAsync(SftpServerOptions connection, string? originalName, string? secret)
+    private async Task<IReadOnlyList<string>> SaveAsync(SftpServerOptions server, string? originalName)
     {
-        if (originalName is not null && !string.Equals(originalName, connection.Name, StringComparison.OrdinalIgnoreCase))
+        if (originalName is not null && !string.Equals(originalName, server.Name, StringComparison.OrdinalIgnoreCase))
         {
             return [T["Reference_NoRename"]];
         }
-        if (secret is not null)
-        {
-            if (connection.UseKey) connection.KeyPassphrase = secret;
-            else connection.Password = secret;
-        }
         try
         {
-            await Repository.SaveSftpServerAsync(connection, UserName);
+            await Repository.SaveSftpServerAsync(server, UserName);
             return [];
         }
         catch (ConfigurationValidationException ex)
@@ -118,12 +152,12 @@
         }
     }
 
-    private async Task DeleteAsync(SftpServerOptions connection)
+    private async Task DeleteAsync(SftpServerOptions server)
     {
-        if (!await ConfirmAsync(T["Reference_DeleteTitle", connection.Name], T["Reference_DeleteText"], T["Common_Delete"], Color.Error)) return;
+        if (!await ConfirmAsync(T["Reference_DeleteTitle", server.Name], T["Reference_DeleteText"], T["Common_Delete"], Color.Error)) return;
         try
         {
-            await Repository.DeleteSftpServerAsync(connection.Name, UserName);
+            await Repository.DeleteSftpServerAsync(server.Name, UserName);
             await ReloadAsync();
         }
         catch (ConfigurationValidationException ex)

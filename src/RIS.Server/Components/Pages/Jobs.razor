@@ -176,6 +176,7 @@
         var query = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
         if (query["filter"] is { } filter) _quick = filter.Split(',');
         if (query["group"] is { } group) _groups = [group];
+        if (query["connection"] is { } connection) _connections = [connection];
         await base.OnInitializedAsync();
     }
 

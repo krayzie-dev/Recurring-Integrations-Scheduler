@@ -1,0 +1,205 @@
+@* D365 connection: environment, Entra ID application and ONE sign-in method (fields of the other methods are hidden and
+   removed on save). The test uses the values of the form, so a connection can be checked before it is saved. *@
+@using RIS.Core.Options
+@using RIS.Server.Components.JobEditor
+@inject ConnectionTestService Tests
+
+<MudDialog>
+    <TitleContent>@Title</TitleContent>
+    <DialogContent>
+        @if (_errors.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@foreach (var error in _errors) { <div class="ris-mono">@error</div> }</MudAlert>
+        }
+
+        <MudText Typo="Typo.subtitle2" Class="mb-1">@T["Conn_SectionEnvironment"]</MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_name" Label="@T["Field_Name"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!IsNew"
+                              HelperText="@(IsNew ? null : T["Conn_NameLocked"].Value)" Error="Missing(_name)" />
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudTextField @bind-Value="_aos" Label="@T["Field_AosUri"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="https://contoso.operations.dynamics.com" HelperText="@T["Conn_AosHint"]" Error="Missing(_aos)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_tenant" Label="@T["Field_Tenant"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="contoso.onmicrosoft.com" HelperText="@T["Conn_TenantHint"]" Error="Missing(_tenant)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_clientId" Label="@T["Field_ClientId"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="00000000-0000-0000-0000-000000000000" HelperText="@T["Conn_ClientIdHint"]" Error="Missing(_clientId)" />
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-5 mb-2">@T["Conn_SectionAuth"]</MudText>
+        <MudToggleGroup T="D365AuthMode" @bind-Value="_mode" Color="Color.Primary" Outlined="true" CheckMark="true" Style="max-width: 640px">
+            <MudToggleItem Value="D365AuthMode.ClientSecret" Text="@T["Enum_D365AuthMode_ClientSecret"]" />
+            <MudToggleItem Value="D365AuthMode.Certificate" Text="@T["Enum_D365AuthMode_Certificate"]" />
+            @if (_legacyAllowed)
+            {
+                <MudToggleItem Value="Legacy" Text="@T["Enum_D365AuthMode_UsernamePassword"]" />
+            }
+        </MudToggleGroup>
+
+        <div class="mt-3" style="max-width: 900px">
+            @if (_mode == D365AuthMode.ClientSecret)
+            {
+                <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">@T["Auth_ClientSecret_Help"]</MudText>
+                <SecretField Label="@T["Secret_ClientSecret"]" @bind-Value="_clientSecret" Stored="StoredClientSecret" Error="_attempted && SecretMissing" />
+            }
+            else if (_mode == D365AuthMode.Certificate)
+            {
+                <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">@T["Auth_Certificate_Help"]</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" Value="SelectedCertificate?.Thumbprint" ValueChanged="v => _thumbprint = v" Label="@T["Cert_FromStore"]"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                            @foreach (var c in _certificates.Where(c => c.HasPrivateKey))
+                            {
+                                <MudSelectItem Value="c.Thumbprint">@Shorten(c.Subject) · @CertificateState(c)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_thumbprint" Label="@T["Field_CertificateThumbprint"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      HelperText="@T["Cert_ThumbprintHint"]" Error="Missing(_thumbprint)" />
+                    </MudItem>
+                </MudGrid>
+                @if (!string.IsNullOrWhiteSpace(_thumbprint))
+                {
+                    var certificate = SelectedCertificate;
+                    var ok = certificate is { HasPrivateKey: true, Expired: false };
+                    <MudAlert Severity="@(certificate is null ? Severity.Warning : ok ? Severity.Success : Severity.Error)" Dense="true" Class="mt-2">
+                        @(certificate is null ? T["Cert_NotFound"] : $"{certificate.Subject} · {CertificateState(certificate)} ({certificate.Location}\\My)")
+                    </MudAlert>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@T["Auth_UsernamePassword_Help"]</MudAlert>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_userName" Label="@T["Field_UserName"]" Variant="Variant.Outlined" Margin="Margin.Dense" Error="Missing(_userName)" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <SecretField Label="@T["Secret_Password"]" @bind-Value="_userPassword" Stored="StoredUserPassword" Error="_attempted && SecretMissing" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
+
+        <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
+            <MudExpansionPanel Text="@T["Auth_Advanced"]">
+                <MudTextField @bind-Value="_authority" Label="@T["Field_Authority"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@T["Conn_AuthorityHint"]" Style="max-width: 640px" />
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        <MudPaper Outlined="true" Class="pa-3 mt-4">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Test_ConnectionHint"]</MudText>
+            <TestButton Label="@T["Test_Connection"]" Test="TestAsync" />
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+#pragma warning disable CS0618 // UsernamePassword is obsolete but still supported for connections imported from 4.x
+    private const D365AuthMode Legacy = D365AuthMode.UsernamePassword;
+#pragma warning restore CS0618
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "";
+    /// <summary>The connection without secrets.</summary>
+    [Parameter] public D365ConnectionOptions Item { get; set; } = null!;
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool StoredClientSecret { get; set; }
+    [Parameter] public bool StoredUserPassword { get; set; }
+    /// <summary>Saves the connection (secrets null = keep the saved ones); returns validation errors.</summary>
+    [Parameter] public Func<D365ConnectionOptions, Task<IReadOnlyList<string>>> Save { get; set; } = null!;
+
+    private string? _name, _aos, _tenant, _clientId, _authority, _thumbprint, _userName, _clientSecret, _userPassword;
+    private D365AuthMode _mode;
+    private bool _legacyAllowed, _attempted, _saving;
+    private IReadOnlyList<CertificateInfo> _certificates = [];
+    private IReadOnlyList<string> _errors = [];
+
+    protected override void OnInitialized()
+    {
+        _name = Item.Name;
+        _aos = Item.AosUri?.ToString();
+        _tenant = Item.Tenant;
+        _clientId = Item.ClientId;
+        _authority = Item.Authority.ToString();
+        _mode = Item.AuthMode;
+        _thumbprint = Item.CertificateThumbprint;
+        _userName = Item.UserName;
+        _legacyAllowed = Item.AuthMode == Legacy;
+        try { _certificates = Certificates.List(); }
+        catch (System.Security.Cryptography.CryptographicException) { _certificates = []; }
+    }
+
+    private bool Missing(string? value) => _attempted && string.IsNullOrWhiteSpace(value);
+
+    private bool SecretMissing => _mode switch
+    {
+        D365AuthMode.ClientSecret => !StoredClientSecret && string.IsNullOrEmpty(_clientSecret),
+        Legacy => !StoredUserPassword && string.IsNullOrEmpty(_userPassword),
+        _ => false
+    };
+
+    private static string Shorten(string subject) => subject.Length > 70 ? subject[..70] + "…" : subject;
+
+    private CertificateInfo? SelectedCertificate
+    {
+        get
+        {
+            var normalized = (_thumbprint ?? "").Replace(" ", "").Replace("‎", "").Trim();
+            return _certificates.FirstOrDefault(c => string.Equals(c.Thumbprint, normalized, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private string CertificateState(CertificateInfo c)
+    {
+        if (!c.HasPrivateKey) return T["Cert_NoKey"];
+        if (c.Expired) return T["Cert_Expired", c.NotAfter.ToString("d", CultureInfo.CurrentCulture)];
+        var days = (int)(c.NotAfter - DateTime.Now).TotalDays;
+        return days <= 30 ? T["Cert_ExpiresSoon", days] : T["Cert_ValidUntil", c.NotAfter.ToString("d", CultureInfo.CurrentCulture)];
+    }
+
+    /// <summary>The form as options: only the chosen method's fields; empty secrets = keep the saved ones.</summary>
+    private D365ConnectionOptions Build() => new()
+    {
+        Name = _name?.Trim() ?? "",
+        AosUri = Uri.TryCreate(_aos?.Trim(), UriKind.Absolute, out var aos) ? aos : null,
+        Tenant = _tenant?.Trim() ?? "",
+        ClientId = _clientId?.Trim() ?? "",
+        Authority = Uri.TryCreate(_authority?.Trim(), UriKind.Absolute, out var authority) ? authority : new Uri("https://login.microsoftonline.com"),
+        AuthMode = _mode,
+        ClientSecret = _mode == D365AuthMode.ClientSecret && !string.IsNullOrEmpty(_clientSecret) ? _clientSecret : null,
+        CertificateThumbprint = _mode == D365AuthMode.Certificate ? _thumbprint?.Replace(" ", "").Replace("‎", "").Trim() : null,
+        UserName = _mode == Legacy ? _userName?.Trim() : null,
+        UserPassword = _mode == Legacy && !string.IsNullOrEmpty(_userPassword) ? _userPassword : null
+    };
+
+    private Task<TestResult> TestAsync() => Tests.D365Async(Build(), IsNew ? null : Item.Name);
+
+    private async Task SaveAsync()
+    {
+        _attempted = true;
+        var missing = new[] { _name, _aos, _tenant, _clientId }.Any(string.IsNullOrWhiteSpace)
+                      || _mode == D365AuthMode.Certificate && string.IsNullOrWhiteSpace(_thumbprint)
+                      || _mode == Legacy && string.IsNullOrWhiteSpace(_userName)
+                      || SecretMissing;
+        if (missing) return;
+
+        _saving = true;
+        _errors = await Save(Build());
+        _saving = false;
+        if (_errors.Count == 0) Dialog.Close(DialogResult.Ok(true));
+    }
+}

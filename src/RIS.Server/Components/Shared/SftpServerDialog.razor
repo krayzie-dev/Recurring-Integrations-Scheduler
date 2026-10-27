@@ -1,0 +1,146 @@
+@* SFTP server: password OR private key (the other method's fields are hidden and removed on save). The test uses the
+   values of the form, so a server can be checked before it is saved. *@
+@using RIS.Core.Options
+@using RIS.Server.Components.JobEditor
+@inject ConnectionTestService Tests
+
+<MudDialog>
+    <TitleContent>@Title</TitleContent>
+    <DialogContent>
+        @if (_errors.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@foreach (var error in _errors) { <div class="ris-mono">@error</div> }</MudAlert>
+        }
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_name" Label="@T["Field_Name"]" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!IsNew"
+                              HelperText="@(IsNew ? null : T["Conn_NameLocked"].Value)" Error="Missing(_name)" />
+            </MudItem>
+            <MudItem xs="8" md="6">
+                <MudTextField @bind-Value="_host" Label="@T["Field_Host"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="sftp.contoso.com" HelperText="@T["Sftp_HostHint"]" Error="Missing(_host)" />
+            </MudItem>
+            <MudItem xs="4" md="2">
+                <MudNumericField @bind-Value="_port" Label="@T["Field_Port"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="65535" HideSpinButtons="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_userName" Label="@T["Field_UserName"]" Variant="Variant.Outlined" Margin="Margin.Dense" Error="Missing(_userName)" />
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-5 mb-2">@T["Conn_Method"]</MudText>
+        <MudToggleGroup T="bool" @bind-Value="_useKey" Color="Color.Primary" Outlined="true" CheckMark="true" Style="max-width: 420px">
+            <MudToggleItem Value="false" Text="@T["Sftp_AuthPassword"]" />
+            <MudToggleItem Value="true" Text="@T["Sftp_AuthKey"]" />
+        </MudToggleGroup>
+
+        <div class="mt-3" style="max-width: 900px">
+            @if (!_useKey)
+            {
+                <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">@T["Sftp_PasswordHelp"]</MudText>
+                <SecretField Label="@T["Secret_Password"]" @bind-Value="_password" Stored="StoredPassword" Error="_attempted && PasswordMissing" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">@T["Sftp_KeyHelp"]</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="7">
+                        <MudTextField @bind-Value="_keyPath" Label="@T["Field_KeyPath"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      HelperText="@T["Sftp_KeyPathHint"]" Error="Missing(_keyPath)" />
+                    </MudItem>
+                    <MudItem xs="12" md="5">
+                        <SecretField Label="@T["Secret_KeyPassphrase"]" @bind-Value="_keyPassphrase" Stored="StoredKeyPassphrase" Required="false" />
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
+
+        <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
+            <MudExpansionPanel Text="@T["Auth_Advanced"]">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Sftp_TimeoutsHint"]</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="4"><Duration Label="@T["Field_ConnectTimeout"]" @bind-Value="_connectTimeout" /></MudItem>
+                    <MudItem xs="12" md="4"><Duration Label="@T["Field_OperationTimeout"]" @bind-Value="_operationTimeout" /></MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        <MudPaper Outlined="true" Class="pa-3 mt-4">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@T["Test_ConnectionHint"]</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="3" Class="mt-1">
+                <MudTextField @bind-Value="_remoteFolder" Label="@T["Sftp_RemoteFolderTest"]" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 320px" />
+                <TestButton Label="@T["Test_Connection"]" Test="TestAsync" />
+            </MudStack>
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "";
+    /// <summary>The server without secrets.</summary>
+    [Parameter] public SftpServerOptions Item { get; set; } = null!;
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool StoredPassword { get; set; }
+    [Parameter] public bool StoredKeyPassphrase { get; set; }
+    /// <summary>Saves the server (secrets null = keep the saved ones); returns validation errors.</summary>
+    [Parameter] public Func<SftpServerOptions, Task<IReadOnlyList<string>>> Save { get; set; } = null!;
+
+    private string? _name, _host, _userName, _keyPath, _password, _keyPassphrase, _remoteFolder = "/";
+    private int _port;
+    private bool _useKey, _attempted, _saving;
+    private TimeSpan? _connectTimeout, _operationTimeout;
+    private IReadOnlyList<string> _errors = [];
+
+    protected override void OnInitialized()
+    {
+        _name = Item.Name;
+        _host = Item.Host;
+        _port = Item.Port;
+        _userName = Item.UserName;
+        _useKey = Item.UseKey;
+        _keyPath = Item.KeyPath;
+        _connectTimeout = Item.ConnectTimeout;
+        _operationTimeout = Item.OperationTimeout;
+    }
+
+    private bool Missing(string? value) => _attempted && string.IsNullOrWhiteSpace(value);
+
+    private bool PasswordMissing => !_useKey && !StoredPassword && string.IsNullOrEmpty(_password);
+
+    /// <summary>The form as options: only the chosen method's fields; empty secrets = keep the saved ones.</summary>
+    private SftpServerOptions Build() => new()
+    {
+        Name = _name?.Trim() ?? "",
+        Host = _host?.Trim() ?? "",
+        Port = _port,
+        UserName = _userName?.Trim() ?? "",
+        UseKey = _useKey,
+        KeyPath = _useKey ? _keyPath?.Trim() : null,
+        Password = !_useKey && !string.IsNullOrEmpty(_password) ? _password : null,
+        KeyPassphrase = _useKey && !string.IsNullOrEmpty(_keyPassphrase) ? _keyPassphrase : null,
+        ConnectTimeout = _connectTimeout ?? TimeSpan.FromSeconds(30),
+        OperationTimeout = _operationTimeout ?? TimeSpan.FromMinutes(10)
+    };
+
+    private Task<TestResult> TestAsync() => Tests.SftpAsync(Build(), IsNew ? null : Item.Name, _remoteFolder);
+
+    private async Task SaveAsync()
+    {
+        _attempted = true;
+        var missing = new[] { _name, _host, _userName }.Any(string.IsNullOrWhiteSpace)
+                      || _useKey && string.IsNullOrWhiteSpace(_keyPath)
+                      || PasswordMissing;
+        if (missing) return;
+
+        _saving = true;
+        _errors = await Save(Build());
+        _saving = false;
+        if (_errors.Count == 0) Dialog.Close(DialogResult.Ok(true));
+    }
+}

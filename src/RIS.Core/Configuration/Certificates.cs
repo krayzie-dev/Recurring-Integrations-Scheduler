@@ -33,4 +33,30 @@ public static class Certificates
         throw new RisException(ErrorCodes.ConfigurationInvalid,
             $"Certificate with thumbprint {normalized} was not found in {string.Join(" or ", locations.Select(l => l + "\\My"))}.");
     }
+
+    /// <summary>Certificates in the "My" store of the given locations (default LocalMachine and CurrentUser), newest first.</summary>
+    public static IReadOnlyList<CertificateInfo> List(params StoreLocation[] locations)
+    {
+        if (locations.Length == 0) locations = [StoreLocation.LocalMachine, StoreLocation.CurrentUser];
+        var result = new List<CertificateInfo>();
+        foreach (var location in locations)
+        {
+            using var store = new X509Store(StoreName.My, location);
+            try { store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly); }
+            catch (System.Security.Cryptography.CryptographicException) { continue; }
+            foreach (var certificate in store.Certificates)
+            {
+                using (certificate)
+                {
+                    result.Add(new CertificateInfo(certificate.Thumbprint, certificate.Subject, certificate.NotAfter, certificate.HasPrivateKey, location));
+                }
+            }
+        }
+        return result.OrderByDescending(c => c.NotAfter).ToList();
+    }
+}
+
+public sealed record CertificateInfo(string Thumbprint, string Subject, DateTime NotAfter, bool HasPrivateKey, StoreLocation Location)
+{
+    public bool Expired => NotAfter < DateTime.Now;
 }

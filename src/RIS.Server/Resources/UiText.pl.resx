@@ -304,10 +304,6 @@
   <data name="Secret" xml:space="preserve"><value>Sekret</value></data>
   <data name="Secret_Set" xml:space="preserve"><value>Ustawiony</value></data>
   <data name="Secret_Missing" xml:space="preserve"><value>Brak</value></data>
-  <data name="Secret_Connection" xml:space="preserve"><value>Client secret / hasło</value></data>
-  <data name="Secret_Sftp" xml:space="preserve"><value>Hasło / hasło klucza</value></data>
-  <data name="Secret_HintNew" xml:space="preserve"><value>Zapisany w postaci zaszyfrowanej; nie będzie więcej wyświetlany.</value></data>
-  <data name="Secret_HintKeep" xml:space="preserve"><value>Pozostaw puste, aby zachować zapisaną wartość.</value></data>
   <data name="Connections_Add" xml:space="preserve"><value>Nowe połączenie</value></data>
   <data name="Sftp_Add" xml:space="preserve"><value>Nowy serwer SFTP</value></data>
   <data name="Usage_Jobs" xml:space="preserve"><value>Używane przez zadania</value></data>
@@ -591,4 +587,46 @@
   <data name="FieldHint_JobDescription" xml:space="preserve"><value>Opcjonalnie: cel, właściciel, powiązane systemy</value></data>
   <data name="Action_Duplicate" xml:space="preserve"><value>Duplikuj</value></data>
   <data name="Wizard_RequiredField" xml:space="preserve"><value>Wymagane: {0}</value></data>
+  <data name="Conn_SectionEnvironment" xml:space="preserve"><value>Środowisko D365</value></data>
+  <data name="Conn_SectionAuth" xml:space="preserve"><value>Logowanie do Entra ID</value></data>
+  <data name="Conn_AosHint" xml:space="preserve"><value>Adres środowiska, np. https://contoso.operations.dynamics.com</value></data>
+  <data name="Conn_TenantHint" xml:space="preserve"><value>Domena lub identyfikator tenanta, np. contoso.onmicrosoft.com</value></data>
+  <data name="Conn_ClientIdHint" xml:space="preserve"><value>Application (client) ID z rejestracji aplikacji. Aplikacja musi być dodana w D365: Administrowanie systemem &gt; Aplikacje Microsoft Entra ID.</value></data>
+  <data name="Conn_AuthorityHint" xml:space="preserve"><value>Zmieniaj tylko dla chmur narodowych.</value></data>
+  <data name="Conn_NameLocked" xml:space="preserve"><value>Nazwy nie można zmienić: odwołują się do niej zadania.</value></data>
+  <data name="Conn_Method" xml:space="preserve"><value>Logowanie</value></data>
+  <data name="Auth_ClientSecret_Help" xml:space="preserve"><value>Aplikacja loguje się sekretem utworzonym w rejestracji aplikacji (Certificates &amp; secrets). Sekrety wygasają: zanotuj datę i wymień sekret tutaj na czas.</value></data>
+  <data name="Auth_Certificate_Help" xml:space="preserve"><value>Aplikacja loguje się certyfikatem, którego klucz publiczny jest wgrany do rejestracji aplikacji. Certyfikat z kluczem prywatnym musi być w magazynie certyfikatów tego serwera, a konto usługi musi mieć dostęp do klucza.</value></data>
+  <data name="Auth_UsernamePassword_Help" xml:space="preserve"><value>Przestarzałe (z 4.x): nazwa użytkownika i hasło. Nie działa z MFA; przejdź na client secret lub certyfikat.</value></data>
+  <data name="Auth_Advanced" xml:space="preserve"><value>Zaawansowane</value></data>
+  <data name="Secret_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
+  <data name="Secret_Password" xml:space="preserve"><value>Hasło</value></data>
+  <data name="Secret_KeyPassphrase" xml:space="preserve"><value>Hasło klucza</value></data>
+  <data name="Secret_StoredKeep" xml:space="preserve"><value>Zapisany (zaszyfrowany). Zostaw puste, aby go zachować; wpisz nową wartość, aby go zmienić.</value></data>
+  <data name="Secret_NoneRequired" xml:space="preserve"><value>Jeszcze nie zapisany: wymagany.</value></data>
+  <data name="Secret_NoneOptional" xml:space="preserve"><value>Nie zapisane: potrzebne tylko dla zaszyfrowanego klucza.</value></data>
+  <data name="Secret_Required" xml:space="preserve"><value>{0}: wpisz wartość (nic nie jest jeszcze zapisane).</value></data>
+  <data name="Cert_FromStore" xml:space="preserve"><value>Certyfikat z magazynu tego serwera</value></data>
+  <data name="Cert_ThumbprintHint" xml:space="preserve"><value>Wybierz certyfikat powyżej albo wklej odcisk (spacje są pomijane).</value></data>
+  <data name="Cert_ValidUntil" xml:space="preserve"><value>ważny do {0}</value></data>
+  <data name="Cert_Expired" xml:space="preserve"><value>wygasł {0}</value></data>
+  <data name="Cert_ExpiresSoon" xml:space="preserve"><value>wygasa za {0} dni</value></data>
+  <data name="Cert_NoKey" xml:space="preserve"><value>bez klucza prywatnego</value></data>
+  <data name="Cert_NotFound" xml:space="preserve"><value>Nie znaleziono w magazynie certyfikatów tego serwera.</value></data>
+  <data name="Test_Connection" xml:space="preserve"><value>Testuj połączenie</value></data>
+  <data name="Test_ConnectionHint" xml:space="preserve"><value>Wykonywany na serwerze kontem usługi, z wartościami z formularza; nic nie jest zapisywane.</value></data>
+  <data name="Test_All" xml:space="preserve"><value>Testuj wszystkie</value></data>
+  <data name="Test_Last" xml:space="preserve"><value>Ostatni test</value></data>
+  <data name="Test_Never" xml:space="preserve"><value>nie testowano</value></data>
+  <data name="Test_Ago" xml:space="preserve"><value>{0} temu</value></data>
+  <data name="Test_JustNow" xml:space="preserve"><value>przed chwilą</value></data>
+  <data name="Sftp_HostHint" xml:space="preserve"><value>Nazwa hosta lub adres IP</value></data>
+  <data name="Sftp_AuthPassword" xml:space="preserve"><value>Hasło</value></data>
+  <data name="Sftp_AuthKey" xml:space="preserve"><value>Klucz prywatny</value></data>
+  <data name="Sftp_PasswordHelp" xml:space="preserve"><value>Użytkownik loguje się hasłem.</value></data>
+  <data name="Sftp_KeyHelp" xml:space="preserve"><value>Użytkownik loguje się plikiem klucza prywatnego (format OpenSSH) zapisanym na tym serwerze. Konto usługi musi mieć dostęp do pliku.</value></data>
+  <data name="Sftp_KeyPathHint" xml:space="preserve"><value>Ścieżka na serwerze RIS, np. C:\ProgramData\RIS5\sftp\id_ed25519</value></data>
+  <data name="Sftp_RemoteFolderTest" xml:space="preserve"><value>Folder zdalny do sprawdzenia</value></data>
+  <data name="Sftp_TimeoutsHint" xml:space="preserve"><value>Limity nawiązania połączenia oraz pojedynczej wysyłki lub pobrania (hh:mm:ss).</value></data>
+  <data name="Enum_D365AuthMode_UsernamePassword" xml:space="preserve"><value>Użytkownik i hasło (przestarzałe)</value></data>
 </root>
