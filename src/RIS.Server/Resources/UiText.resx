@@ -21,7 +21,7 @@
   <data name="TimeZone_Utc" xml:space="preserve"><value>UTC</value></data>
   <data name="Role_None" xml:space="preserve"><value>No RIS role</value></data>
   <data name="NoAccess_Title" xml:space="preserve"><value>No access</value></data>
-  <data name="NoAccess_Text" xml:space="preserve"><value>Your account has no RIS role. Ask an administrator to add you to a group configured in Ris:Security:Roles.</value></data>
+  <data name="NoAccess_Text" xml:space="preserve"><value>Your account has no RIS role. Ask an administrator to add you to a group configured in Ris:Security:Roles. On the server itself the local Administrators group does not count (UAC gives the browser a filtered token): add your account by name to Ris:Security:Roles:Admin in %ProgramData%\RIS5\appsettings.json and restart the RIS5 service.</value></data>
   <data name="NotFound" xml:space="preserve"><value>Page not found.</value></data>
   <data name="Loading" xml:space="preserve"><value>Loading…</value></data>
   <data name="Common_Refresh" xml:space="preserve"><value>Refresh</value></data>

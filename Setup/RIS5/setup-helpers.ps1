@@ -28,7 +28,7 @@ try {
             if (-not $certificate) { Write-Output "Certificate not found in LocalMachine\My."; exit 2 }
             if (-not $certificate.HasPrivateKey) { Write-Output "Certificate has no private key."; exit 3 }
             if ($certificate.NotAfter -lt (Get-Date)) { Write-Output "Certificate expired on $($certificate.NotAfter)."; exit 4 }
-            Write-Output "OK: $($certificate.Subject), valid until $($certificate.NotAfter:d)"
+            Write-Output "OK: $($certificate.Subject), valid until $($certificate.NotAfter.ToString("d"))"
             exit 0
         }
         "GrantCertificateKey" {

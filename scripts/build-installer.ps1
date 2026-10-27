@@ -26,6 +26,16 @@ $build = if ($Version -match '\.(\d+)$' -and $Version -ne $base) { $Matches[1] }
 $numeric = "$base.$build"
 
 Write-Host "RIS 5 installer $Version ($numeric)"
+
+# The installer runs its helper with Windows PowerShell 5.1: a syntax error there breaks every helper action silently.
+foreach ($script in @("Setup\RIS5\setup-helpers.ps1")) {
+    $errors = $null
+    [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root $script), [ref]$null, [ref]$errors) | Out-Null
+    if ($errors) { throw "$script has syntax errors: $($errors | ForEach-Object { "line $($_.Extent.StartLineNumber): $($_.Message)" })" }
+    $legacy = & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -Command `
+        "`$e = `$null; [System.Management.Automation.Language.Parser]::ParseFile('$(Join-Path $root $script)', [ref]`$null, [ref]`$e) | Out-Null; `$e.Count"
+    if ("$legacy".Trim() -ne "0") { throw "$script has syntax errors in Windows PowerShell 5.1." }
+}
 Remove-Item $publish -Recurse -Force -ErrorAction SilentlyContinue
 
 foreach ($project in @(

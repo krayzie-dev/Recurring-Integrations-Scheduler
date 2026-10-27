@@ -9,7 +9,9 @@ Run `RIS5-Setup-<version>.exe` as Administrator (from the GitHub release or the 
 2. **Access:** local HTTP port (default 5080, localhost only); optional HTTPS port for remote access (e.g. 5443) with the
    thumbprint of a certificate in `LocalMachine\My` (checked: exists, private key, not expired; the service account gets
    read access to the key; a firewall rule "RIS5 HTTPS" is added); administrators and operators (groups/users separated by
-   `;`, SIDs allowed; default `S-1-5-32-544` = local Administrators on any Windows language).
+   `;`, SIDs allowed; default `S-1-5-32-544` = local Administrators on any Windows language, plus the installing user).
+   On the server itself the Administrators group does not count: UAC gives the browser a filtered token, so local admins
+   need their account listed by name (the installer adds the installing user).
 3. **Import from 4.x** (only when `Program Files (x86)\Recurring Integrations Scheduler\Schedule.xml` exists): converts the
    4.x schedule and imports all jobs **paused**. Secrets are not imported – set them in the UI (Connections) or with
    `ris db set-secret`. Report: `%ProgramData%\RIS5\import-4x\import.log`.

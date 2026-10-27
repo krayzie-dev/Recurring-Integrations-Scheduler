@@ -162,6 +162,16 @@ begin
   Result := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Path) + ';') = 0;
 end;
 
+{ DOMAIN\user of the person running the setup (the elevated user keeps the original name). }
+function InstallingUser(): String;
+var
+  Domain: String;
+begin
+  Domain := GetEnv('USERDOMAIN');
+  if Domain = '' then Domain := GetComputerNameString();
+  Result := Domain + '\' + GetUserNameString();
+end;
+
 function Param(Name, Default: String): String;
 begin
   Result := ExpandConstant('{param:' + Name + '|' + Default + '}');
@@ -294,8 +304,9 @@ begin
   NetworkPage.Values[0] := Param('HTTPPORT', '5080');
   NetworkPage.Values[1] := Param('HTTPSPORT', '');
   NetworkPage.Values[2] := Param('CERT', '');
-  { S-1-5-32-544 = BUILTIN\Administrators on every Windows language }
-  NetworkPage.Values[3] := Param('ADMINS', 'S-1-5-32-544');
+  { S-1-5-32-544 = BUILTIN\Administrators on every Windows language. On the server itself UAC hands the browser a token in
+    which Administrators is "deny only", so the installing user is added by name: otherwise nobody can log in locally. }
+  NetworkPage.Values[3] := Param('ADMINS', 'S-1-5-32-544;' + InstallingUser());
   NetworkPage.Values[4] := Param('OPERATORS', '');
 
   Schedule4x := ExpandConstant('{commonpf32}\Recurring Integrations Scheduler\Schedule.xml');
