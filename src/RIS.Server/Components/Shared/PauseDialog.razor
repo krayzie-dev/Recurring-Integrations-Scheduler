@@ -2,7 +2,12 @@
 <MudDialog>
     <TitleContent>@T["Pause_Title", Jobs.Count]</TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-2">@string.Join(", ", Jobs.Take(10))@(Jobs.Count > 10 ? " …" : "")</MudText>
+        <MudList T="string" Dense="true" Class="mb-2" Style="max-height: 30vh; overflow: auto">
+            @foreach (var job in Jobs)
+            {
+                <MudListItem T="string" Icon="@Icons.Material.Filled.ChevronRight">@job</MudListItem>
+            }
+        </MudList>
         <MudTextField @bind-Value="_reason" Label="@T["Pause_Reason"]" Placeholder="@T["Pause_ReasonHint"]" AutoFocus="true" Immediate="true" />
     </DialogContent>
     <DialogActions>

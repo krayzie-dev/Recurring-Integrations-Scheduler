@@ -63,7 +63,7 @@ else
                         <tbody>
                             <tr><td style="width: 40%">@T["Job_Group"]</td><td>@job.Group</td></tr>
                             <tr><td>@T["Job_Connection"]</td><td>@job.Connection</td></tr>
-                            <tr><td>@T["Job_Schedule"]</td><td class="ris-mono">@job.Schedule</td></tr>
+                            <tr><td>@T["Job_Schedule"]</td><td title="@job.Schedule">@ScheduleBuilder.Describe(_details.Definition.Schedule, T)</td></tr>
                             <tr><td>@T["Job_MissedRuns"]</td><td>@T["MissedRuns_" + _details.Definition.Schedule.MissedRuns]</td></tr>
                             <tr><td>@T["Job_PairedJob"]</td><td>@(_details.Definition.PairedJob ?? "–")</td></tr>
                             <tr><td>@T["Job_LastRun"]</td><td><ResultChip Result="@job.LastResult" /> @Prefs.Format(job.LastRunUtc)</td></tr>
@@ -78,16 +78,7 @@ else
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudText Typo="Typo.subtitle2" Class="mb-1">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
-                    @if (_details.UpcomingRunsUtc.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary">–</MudText>
-                    }
-                    <MudList T="string" Dense="true">
-                        @foreach (var run in _details.UpcomingRunsUtc)
-                        {
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">@(Prefs.Format(run, "dddd") + ", " + Prefs.Format(run, "g"))</MudListItem>
-                        }
-                    </MudList>
+                    <RunTimesTable Runs="_details.UpcomingRunsUtc" />
                 </MudItem>
             </MudGrid>
         </MudTabPanel>

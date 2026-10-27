@@ -26,7 +26,7 @@ public sealed class ScheduleModel
     /// <summary>Daily and Monthly: time of day.</summary>
     public TimeSpan At { get; set; } = new(2, 0, 0);
 
-    /// <summary>Daily: days of the week; empty = every day.</summary>
+    /// <summary>Daily and Every: days of the week; empty = every day.</summary>
     public HashSet<DayOfWeek> Days { get; set; } = [];
 
     /// <summary>Monthly: day 1–31, 0 = last day of the month.</summary>
@@ -35,6 +35,9 @@ public sealed class ScheduleModel
     /// <summary>Every: interval and the time of day the rhythm starts from.</summary>
     public TimeSpan Every { get; set; } = TimeSpan.FromHours(1);
     public TimeSpan From { get; set; } = TimeSpan.Zero;
+    /// <summary>Every: only between <see cref="From"/> and <see cref="WindowTo"/> each day (both included).</summary>
+    public bool Window { get; set; }
+    public TimeSpan WindowTo { get; set; } = new(16, 0, 0);
     /// <summary>Every: date of the reference point (kept when editing; only matters when the interval does not divide a day).</summary>
     public DateTime? FromDate { get; set; }
 
@@ -77,6 +80,12 @@ public static partial class ScheduleBuilder
                 while (zone.IsInvalidTime(local)) local = local.AddMinutes(30);
                 schedule.Interval = model.Every;
                 schedule.StartAt = new DateTimeOffset(local, zone.GetUtcOffset(local));
+                if (model.Window)
+                {
+                    schedule.ActiveFrom = TimeOnly.FromTimeSpan(model.From);
+                    schedule.ActiveTo = TimeOnly.FromTimeSpan(model.WindowTo);
+                }
+                if (model.Days.Count is > 0 and < 7) schedule.Days = WeekOrder.Where(model.Days.Contains).ToList();
                 break;
             default:
                 schedule.Cron = model.Cron?.Trim();
@@ -99,6 +108,13 @@ public static partial class ScheduleBuilder
                 model.From = local.TimeOfDay;
                 model.FromDate = local.Date;
             }
+            if (schedule.ActiveFrom is { } from && schedule.ActiveTo is { } to)
+            {
+                model.Window = true;
+                model.From = from.ToTimeSpan();
+                model.WindowTo = to.ToTimeSpan();
+            }
+            model.Days = schedule.Days is { Count: > 0 } scheduleDays ? [.. scheduleDays] : [];
             return model;
         }
 
@@ -130,15 +146,19 @@ public static partial class ScheduleBuilder
     public static string Describe(ScheduleOptions schedule, IStringLocalizer<UiText> text)
     {
         var model = Parse(schedule);
-        var culture = CultureInfo.CurrentCulture;
         var description = model.Mode switch
         {
             ScheduleMode.Daily when model.Days.Count is 0 or 7 => text["Sched_Daily", Time(model.At)].Value,
             ScheduleMode.Daily when model.Days.SetEquals(Workdays) => text["Sched_Workdays", Time(model.At)].Value,
-            ScheduleMode.Daily => text["Sched_Days", string.Join(", ", WeekOrder.Where(model.Days.Contains).Select(d => culture.DateTimeFormat.GetAbbreviatedDayName(d))), Time(model.At)].Value,
+            ScheduleMode.Daily => text["Sched_Days", DayNames(model.Days), Time(model.At)].Value,
             ScheduleMode.Monthly when model.DayOfMonth <= 0 => text["Sched_MonthlyLast", Time(model.At)].Value,
             ScheduleMode.Monthly => text["Sched_Monthly", model.DayOfMonth, Time(model.At)].Value,
-            ScheduleMode.Every => text["Sched_Every", Period(model.Every), Time(model.From)].Value,
+            ScheduleMode.Every => (model.Window
+                    ? text["Sched_EveryWindow", Period(model.Every), Time(model.From), Time(model.WindowTo)].Value
+                    : text["Sched_Every", Period(model.Every), Time(model.From)].Value)
+                + (model.Days.Count is 0 or 7 ? ""
+                    : model.Days.SetEquals(Workdays) ? ", " + text["Sched_OnWorkdays"].Value
+                    : ", " + text["Sched_OnDays", DayNames(model.Days)].Value),
             _ => text["Sched_Cron", model.Cron ?? ""].Value
         };
         return schedule.TimeZone is null ? description : $"{description} ({ZoneName(schedule.TimeZone)})";
@@ -165,6 +185,9 @@ public static partial class ScheduleBuilder
             return zoneId!;
         }
     }
+
+    private static string DayNames(IEnumerable<DayOfWeek> days) =>
+        string.Join(", ", WeekOrder.Where(days.Contains).Select(d => CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(d)));
 
     private static string Time(TimeSpan value) => $"{value.Hours:00}:{value.Minutes:00}";
 

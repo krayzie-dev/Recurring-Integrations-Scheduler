@@ -349,7 +349,7 @@ else
                             <MudText Typo="Typo.subtitle1"><b>@T["JobType_" + t]</b></MudText>
                         </MudStack>
                         <MudText Typo="Typo.body2" Class="mt-1">@T["JobTypeHelp_" + t]</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary ris-mono d-block mt-1">@T["JobTypeFlow_" + t]</MudText>
+                        <FlowSteps Flow="@T["JobTypeFlow_" + t]" Class="mt-1" />
                     </MudPaper>
                 </MudItem>
             }
@@ -454,7 +454,7 @@ else
         <MudSimpleTable Dense="true" Elevation="0">
             <tbody>
                 <tr><td style="width: 30%">@T["Job_Name"]</td><td><b>@_job.Key</b></td></tr>
-                <tr><td>@T["Job_Type"]</td><td>@T["JobType_" + _type] <span class="mud-text-secondary ris-mono" style="font-size: .75rem">@T["JobTypeFlow_" + _type]</span></td></tr>
+                <tr><td>@T["Job_Type"]</td><td><b>@T["JobType_" + _type]</b><FlowSteps Flow="@T["JobTypeFlow_" + _type]" Class="mt-1" /></td></tr>
                 <tr><td>@T["Job_Connection"]</td><td>@options.Connection</td></tr>
                 @foreach (var property in Fields(JobStep.D365).Concat(Fields(JobStep.Files)))
                 {
@@ -481,7 +481,7 @@ else
             </tbody>
         </MudSimpleTable>
         <MudText Typo="Typo.subtitle2" Class="mt-3">@T["Job_UpcomingRuns"] (@Prefs.ZoneLabel)</MudText>
-        <MudText Typo="Typo.body2">@string.Join(" · ", NextRuns().Select(r => Prefs.Format(r, "ddd") + " " + Prefs.Format(r, "g")))</MudText>
+        <RunTimesTable Runs="NextRuns().ToList()" />
     };
 
     private string Label(string property)

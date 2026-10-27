@@ -10,7 +10,7 @@
     {
         <MudText Typo="Typo.subtitle2">@T["JobType_" + JobType]</MudText>
         <MudText Typo="Typo.body2" Class="mb-1">@T["JobTypeHelp_" + JobType]</MudText>
-        <MudText Typo="Typo.caption" Class="mud-text-secondary ris-mono d-block mb-3">@T["JobTypeFlow_" + JobType]</MudText>
+        <FlowSteps Flow="@T["JobTypeFlow_" + JobType]" Class="mb-3" />
     }
 
     @if (Field is not null)

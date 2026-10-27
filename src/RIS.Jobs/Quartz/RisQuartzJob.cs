@@ -145,6 +145,24 @@ public static class RisJobScheduling
         var (count, unit) = ToIntervalUnit(interval);
         var anchorTimeOfDay = TimeZoneInfo.ConvertTime(anchor, timeZone).TimeOfDay;
 
+        if (schedule.HasWindow)
+        {
+            // Daily window and/or days of the week, e.g. 08:00–16:00 every 10 min on workdays: the rhythm starts at the
+            // window start every day (without a window: at the first time of the day of the rhythm); the end is included.
+            var from = schedule.ActiveFrom ?? TimeOnly.FromTimeSpan(TimeSpan.FromTicks(anchorTimeOfDay.Ticks % Math.Min(interval.Ticks, TimeSpan.TicksPerDay)));
+            var to = schedule.ActiveTo ?? new TimeOnly(23, 59, 59);
+            var days = schedule.Days is { Count: > 0 } selected ? selected.Distinct().ToArray() : Enum.GetValues<DayOfWeek>();
+            return builder.WithDailyTimeIntervalSchedule(daily => daily
+                    .OnDaysOfTheWeek(days)
+                    .StartingDailyAt(from)
+                    .EndingDailyAt(to)
+                    .WithInterval(count, unit)
+                    .InTimeZone(timeZone)
+                    .WithMisfireInstruction(runMissedOnce ? DailyTimeIntervalTriggerMisfireInstruction.FireAndProceed : DailyTimeIntervalTriggerMisfireInstruction.DoNothing))
+                .StartAt(now.ToUniversalTime())
+                .Build();
+        }
+
         if (IntervalAsCron(interval, anchorTimeOfDay) is { } cronExpression)
         {
             // Most intervals (5/15/30 min, 1/2/3/4/6/8/12 h): equivalent cron in the time zone keeps wall-clock times,

@@ -103,4 +103,41 @@ public sealed class ScheduleBuilderTests
     [DataRow(90, "1 h 30 min")]
     [DataRow(1440, "1 d")]
     public void Period_IsCompact(int minutes, string expected) => Assert.AreEqual(expected, ScheduleBuilder.Period(TimeSpan.FromMinutes(minutes)));
+
+    [TestMethod]
+    public void Every_WithWindowAndDays_RoundTripsAndDescribes()
+    {
+        var model = new ScheduleModel
+        {
+            Mode = ScheduleMode.Every, Every = TimeSpan.FromMinutes(10), From = new TimeSpan(8, 0, 0), Window = true, WindowTo = new TimeSpan(16, 0, 0),
+            Days = [.. ScheduleBuilder.Workdays], TimeZone = Warsaw
+        };
+        var schedule = ScheduleBuilder.Build(model);
+        Assert.AreEqual(new TimeOnly(8, 0), schedule.ActiveFrom);
+        Assert.AreEqual(new TimeOnly(16, 0), schedule.ActiveTo);
+        CollectionAssert.AreEqual(new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday }, schedule.Days);
+
+        var parsed = ScheduleBuilder.Parse(schedule);
+        Assert.AreEqual(ScheduleMode.Every, parsed.Mode);
+        Assert.IsTrue(parsed.Window);
+        Assert.AreEqual(new TimeSpan(16, 0, 0), parsed.WindowTo);
+        Assert.IsTrue(parsed.Days.SetEquals(ScheduleBuilder.Workdays));
+
+        using var services = new ServiceCollection().AddLogging().AddLocalization().BuildServiceProvider();
+        var text = services.GetRequiredService<IStringLocalizer<UiText>>();
+        var (c, ui) = (CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture);
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = new CultureInfo("pl-PL");
+        try
+        {
+            StringAssert.StartsWith(ScheduleBuilder.Describe(schedule, text), "Co 10 min od 08:00 do 16:00, od poniedziałku do piątku");
+            schedule.TimeZone = null;
+            schedule.Days = [DayOfWeek.Saturday];
+            Assert.AreEqual("Co 10 min od 08:00 do 16:00, w dni: sob.", ScheduleBuilder.Describe(schedule, text));
+        }
+        finally { (CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture) = (c, ui); }
+
+        // Without the window the days alone still limit the interval schedule.
+        model.Window = false;
+        Assert.IsNull(ScheduleBuilder.Build(model).ActiveFrom);
+    }
 }

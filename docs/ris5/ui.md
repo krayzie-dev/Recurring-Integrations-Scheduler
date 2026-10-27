@@ -66,10 +66,14 @@ Select jobs (checkboxes; "select all" takes the filtered rows) and use the bar a
 
 ## Job editor
 
-`/jobs/new`, `/jobs/{group}/{name}/edit` (Admin). The form is generated from the job type, so every 5.0 setting is
-available; connection, SFTP server and time zone are pickers. Cron or interval with a start point; the panel shows the next
-5 runs and validation problems while typing. The JSON tab edits the whole definition. Saving validates the complete
-configuration (e.g. unknown connection) and lists the problems. Changing group or name moves the job.
+`/jobs/new` (wizard, step by step) and `/jobs/{group}/{name}/edit` (same steps as tabs), Admin. Steps: job type (with its
+flow), Dynamics 365, files and folders, schedule, advanced, summary; a help panel explains the step and the selected field and
+lists the problems of the step. Server-side tests (D365, folder, SFTP) run with the service account.
+
+Schedule builder: daily / on selected days at a time, **every N minutes or hours** (from a time, optionally **only between two
+times** and/or on selected days, e.g. 08:00–16:00 every 10 min Monday to Friday = 08:00, 08:10 … 16:00), monthly, or cron.
+The description in words and the next runs (table: day, date, time, time left) update while editing. Saving validates the
+complete configuration (e.g. unknown connection) and lists the problems. Changing group or name moves the job.
 
 ## Exports
 

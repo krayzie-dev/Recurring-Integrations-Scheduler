@@ -629,4 +629,18 @@
   <data name="Sftp_RemoteFolderTest" xml:space="preserve"><value>Folder zdalny do sprawdzenia</value></data>
   <data name="Sftp_TimeoutsHint" xml:space="preserve"><value>Limity nawiązania połączenia oraz pojedynczej wysyłki lub pobrania (hh:mm:ss).</value></data>
   <data name="Enum_D365AuthMode_UsernamePassword" xml:space="preserve"><value>Użytkownik i hasło (przestarzałe)</value></data>
+  <data name="Sched_EveryWindow" xml:space="preserve"><value>Co {0} od {1} do {2}</value></data>
+  <data name="Sched_OnWorkdays" xml:space="preserve"><value>od poniedziałku do piątku</value></data>
+  <data name="Sched_OnDays" xml:space="preserve"><value>w dni: {0}</value></data>
+  <data name="Sched_Window" xml:space="preserve"><value>Tylko w godzinach</value></data>
+  <data name="Sched_WindowFrom" xml:space="preserve"><value>od</value></data>
+  <data name="Sched_WindowTo" xml:space="preserve"><value>do</value></data>
+  <data name="Sched_WindowHint" xml:space="preserve"><value>Uruchamia w każdy wybrany dzień od pierwszej do ostatniej godziny (obie włącznie), np. 08:00–16:00 co 10 min = 08:00, 08:10 … 15:50, 16:00. Poza oknem nic się nie uruchamia.</value></data>
+  <data name="Sched_WindowInvalid" xml:space="preserve"><value>Koniec okna musi być późniejszy niż jego początek.</value></data>
+  <data name="Runs_Day" xml:space="preserve"><value>Dzień</value></data>
+  <data name="Runs_Date" xml:space="preserve"><value>Data</value></data>
+  <data name="Runs_Time" xml:space="preserve"><value>Godzina</value></data>
+  <data name="Runs_In" xml:space="preserve"><value>Za</value></data>
+  <data name="Runs_None" xml:space="preserve"><value>Brak zaplanowanych uruchomień</value></data>
+  <data name="Flow_Optional" xml:space="preserve"><value>Krok opcjonalny</value></data>
 </root>

@@ -152,4 +152,35 @@ public sealed class ScheduleTests
         Assert.AreEqual(0, local.Minute);
         Assert.IsTrue(next - DateTimeOffset.UtcNow <= TimeSpan.FromHours(2));
     }
+
+    [TestMethod]
+    public void Window_EveryTenMinutesFromEightToSixteen_OnWorkdays()
+    {
+        var job = Every(TimeSpan.FromMinutes(10), Local(2026, 10, 1, 8, 0));
+        job.Schedule.ActiveFrom = new TimeOnly(8, 0);
+        job.Schedule.ActiveTo = new TimeOnly(16, 0);
+        job.Schedule.Days = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
+        Assert.AreEqual(0, ConfigurationValidator.ValidateObject(job.Schedule, "schedule").Count);
+
+        // Friday 30.10 15:45: 15:50, 16:00 (end included), then Monday 08:00 – nothing in the evening or at the weekend.
+        var trigger = RisJobScheduling.BuildTrigger(job, Local(2026, 10, 30, 15, 45));
+        var fires = new[] { FirstFire(trigger) }.Concat(Fires(trigger, FirstFire(trigger), 3)).Select(f => TimeZoneInfo.ConvertTime(f, Warsaw).DateTime).ToArray();
+        CollectionAssert.AreEqual(new[]
+        {
+            new DateTime(2026, 10, 30, 15, 50, 0), new DateTime(2026, 10, 30, 16, 0, 0),
+            new DateTime(2026, 11, 2, 8, 0, 0), new DateTime(2026, 11, 2, 8, 10, 0)
+        }, fires);
+    }
+
+    [TestMethod]
+    public void Window_Validation()
+    {
+        static IReadOnlyList<string> Problems(ScheduleOptions s) => ConfigurationValidator.ValidateObject(s, "schedule");
+        var start = Local(2026, 10, 1, 8, 0);
+
+        Assert.AreEqual(1, Problems(new ScheduleOptions { Interval = TimeSpan.FromMinutes(10), StartAt = start, ActiveFrom = new TimeOnly(8, 0) }).Count, "Both ends needed.");
+        Assert.AreEqual(1, Problems(new ScheduleOptions { Interval = TimeSpan.FromMinutes(10), StartAt = start, ActiveFrom = new TimeOnly(16, 0), ActiveTo = new TimeOnly(8, 0) }).Count);
+        Assert.AreEqual(1, Problems(new ScheduleOptions { Cron = "0 0 2 * * ?", Days = [DayOfWeek.Monday] }).Count, "Cron has its own days.");
+        Assert.AreEqual(1, Problems(new ScheduleOptions { Interval = TimeSpan.FromMinutes(10), StartAt = start, Days = [] }).Count);
+    }
 }

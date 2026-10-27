@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using RIS.Core.Configuration;
 using RIS.Core.Options;
@@ -111,6 +111,24 @@ public sealed class PersistenceTests
         saved = (await _repository.LoadAsync()).FindSftpServer("PARTNER")!;
         Assert.AreEqual("pw", saved.Password);
         Assert.IsNull(saved.KeyPath);
+    }
+
+    [TestMethod]
+    public async Task IntervalWindow_IsSavedAndLoaded()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+        var job = Job();
+        job.Schedule = new ScheduleOptions
+        {
+            Interval = TimeSpan.FromMinutes(10), StartAt = new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.FromHours(2)),
+            ActiveFrom = new TimeOnly(8, 0), ActiveTo = new TimeOnly(16, 0), Days = [DayOfWeek.Monday, DayOfWeek.Friday]
+        };
+        await _repository.SaveJobAsync(job, "tester");
+
+        var schedule = (await _repository.LoadAsync()).Jobs.Single().Schedule;
+        Assert.AreEqual(new TimeOnly(8, 0), schedule.ActiveFrom);
+        Assert.AreEqual(new TimeOnly(16, 0), schedule.ActiveTo);
+        CollectionAssert.AreEqual(new[] { DayOfWeek.Monday, DayOfWeek.Friday }, schedule.Days);
     }
 
     [TestMethod]

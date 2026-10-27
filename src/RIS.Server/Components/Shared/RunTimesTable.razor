@@ -1,0 +1,50 @@
+@* Compact table of run times (next runs): day, date, time and how long until then. *@
+@if (Runs.Count == 0)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["Runs_None"]</MudText>
+}
+else
+{
+    <MudSimpleTable Dense="true" Bordered="true" Hover="true" Elevation="0" Class="ris-runs" Style="@($"max-width: {MaxWidth}")">
+        <thead>
+            <tr>
+                <th>@T["Runs_Day"]</th>
+                <th>@T["Runs_Date"]</th>
+                <th>@T["Runs_Time"]</th>
+                <th>@T["Runs_In"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var run in Runs)
+            {
+                var local = TimeZoneInfo.ConvertTime(run, Zone ?? Prefs.Zone);
+                <tr>
+                    <td>@local.ToString("dddd", CultureInfo.CurrentCulture)</td>
+                    <td>@local.ToString("d", CultureInfo.CurrentCulture)</td>
+                    <td><b>@local.ToString("HH:mm", CultureInfo.CurrentCulture)</b></td>
+                    <td class="mud-text-secondary">@Until(run)</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<DateTimeOffset> Runs { get; set; } = [];
+    /// <summary>Time zone of the times (e.g. the job's); null = the display time zone of the user.</summary>
+    [Parameter] public TimeZoneInfo? Zone { get; set; }
+    [Parameter] public string MaxWidth { get; set; } = "560px";
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+
+    private static string Until(DateTimeOffset run)
+    {
+        var left = TimeSpan.FromMinutes(Math.Ceiling((run - DateTimeOffset.Now).TotalMinutes));
+        return left switch
+        {
+            { TotalMinutes: <= 0 } => "–",
+            { TotalDays: >= 1 } => $"{(int)left.TotalDays} d {left.Hours} h",
+            { TotalHours: >= 1 } => $"{(int)left.TotalHours} h {left.Minutes:00} min",
+            _ => $"{(int)left.TotalMinutes} min"
+        };
+    }
+}

@@ -555,4 +555,18 @@
   <data name="Sftp_RemoteFolderTest" xml:space="preserve"><value>Remote folder to check</value></data>
   <data name="Sftp_TimeoutsHint" xml:space="preserve"><value>Limits for connecting and for a single upload or download (hh:mm:ss).</value></data>
   <data name="Enum_D365AuthMode_UsernamePassword" xml:space="preserve"><value>User name and password (obsolete)</value></data>
+  <data name="Sched_EveryWindow" xml:space="preserve"><value>Every {0} from {1} to {2}</value></data>
+  <data name="Sched_OnWorkdays" xml:space="preserve"><value>Monday to Friday</value></data>
+  <data name="Sched_OnDays" xml:space="preserve"><value>on {0}</value></data>
+  <data name="Sched_Window" xml:space="preserve"><value>Only between</value></data>
+  <data name="Sched_WindowFrom" xml:space="preserve"><value>from</value></data>
+  <data name="Sched_WindowTo" xml:space="preserve"><value>to</value></data>
+  <data name="Sched_WindowHint" xml:space="preserve"><value>Runs every selected day from the first to the last time (both included), e.g. 08:00–16:00 every 10 min = 08:00, 08:10 … 15:50, 16:00. Outside the window nothing runs.</value></data>
+  <data name="Sched_WindowInvalid" xml:space="preserve"><value>The end of the window must be later than its start.</value></data>
+  <data name="Runs_Day" xml:space="preserve"><value>Day</value></data>
+  <data name="Runs_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Runs_Time" xml:space="preserve"><value>Time</value></data>
+  <data name="Runs_In" xml:space="preserve"><value>In</value></data>
+  <data name="Runs_None" xml:space="preserve"><value>No runs planned</value></data>
+  <data name="Flow_Optional" xml:space="preserve"><value>Optional step</value></data>
 </root>

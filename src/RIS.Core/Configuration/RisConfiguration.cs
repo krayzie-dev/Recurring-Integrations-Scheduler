@@ -49,6 +49,22 @@ public sealed class ScheduleOptions : IValidatableObject
     /// </summary>
     public DateTimeOffset? StartAt { get; set; }
 
+    /// <summary>
+    /// Interval schedules: daily window, e.g. 08:00–16:00 every 10 min = 08:00, 08:10 … 16:00 (both ends included).
+    /// The rhythm starts at <see cref="ActiveFrom"/> every day. Both or none.
+    /// </summary>
+    public TimeOnly? ActiveFrom { get; set; }
+
+    /// <inheritdoc cref="ActiveFrom"/>
+    public TimeOnly? ActiveTo { get; set; }
+
+    /// <summary>Interval schedules: only on these days of the week (null = every day).</summary>
+    public List<DayOfWeek>? Days { get; set; }
+
+    /// <summary>Interval schedule restricted to a daily window and/or days of the week.</summary>
+    [JsonIgnore]
+    public bool HasWindow => ActiveFrom is not null || Days is { Count: > 0 and < 7 };
+
     /// <summary>Windows or IANA time zone id (cron and interval). Null means time zone of the server.</summary>
     public string? TimeZone { get; set; }
 
@@ -77,6 +93,32 @@ public sealed class ScheduleOptions : IValidatableObject
                 yield return new ValidationResult(
                     "StartAt is required for interval schedules: it is the reference time of the rhythm (e.g. 12:00 for 'every 2 hours from 12:00').",
                     [nameof(StartAt)]);
+            }
+        }
+
+        if ((ActiveFrom is null) != (ActiveTo is null))
+        {
+            yield return new ValidationResult("ActiveFrom and ActiveTo must be set together.", [nameof(ActiveFrom), nameof(ActiveTo)]);
+        }
+        else if (ActiveFrom is { } from && ActiveTo is { } to && from >= to)
+        {
+            yield return new ValidationResult("ActiveFrom must be earlier than ActiveTo.", [nameof(ActiveFrom), nameof(ActiveTo)]);
+        }
+
+        if ((ActiveFrom is not null || Days is not null) && Interval is null)
+        {
+            yield return new ValidationResult("ActiveFrom/ActiveTo and Days apply to interval schedules only (use the cron for other schedules).",
+                [nameof(ActiveFrom), nameof(Days)]);
+        }
+        else if (ActiveFrom is not null || Days is not null)
+        {
+            if (Interval >= TimeSpan.FromDays(1) || Interval!.Value.Ticks % TimeSpan.TicksPerMinute != 0)
+            {
+                yield return new ValidationResult("With a daily window or days of the week the interval must be whole minutes, shorter than a day.", [nameof(Interval)]);
+            }
+            if (Days is { Count: 0 })
+            {
+                yield return new ValidationResult("Days must contain at least one day (or be omitted for every day).", [nameof(Days)]);
             }
         }
 

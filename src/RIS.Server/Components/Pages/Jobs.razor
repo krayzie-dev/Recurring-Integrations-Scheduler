@@ -4,6 +4,7 @@
 @inject ExportService Exports
 @inject RIS.Persistence.ConfigurationRepository Repository
 @inject IJSRuntime JS
+@inject IRisConfigurationStore Store
 
 <PageTitle>RIS 5 – @T["Nav_Jobs"]</PageTitle>
 
@@ -109,7 +110,9 @@
             <CellTemplate>@T["JobType_" + context.Item.Type]</CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Connection" Title="@T["Job_Connection"]" />
-        <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]" CellClass="ris-mono" />
+        <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]">
+            <CellTemplate><span title="@context.Item.Schedule">@ScheduleText(context.Item)</span></CellTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="j => j.State" Title="@T["Job_State"]">
             <CellTemplate><StateChip Job="context.Item" /></CellTemplate>
         </PropertyColumn>
@@ -194,7 +197,7 @@
         IEnumerable<JobSummary> jobs = _all;
         if (!string.IsNullOrWhiteSpace(_search))
         {
-            jobs = jobs.Where(j => Contains(j.Key) || Contains(j.Description) || Contains(j.Connection) || Contains(j.LastSummary) || Contains(j.Schedule));
+            jobs = jobs.Where(j => Contains(j.Key) || Contains(j.Description) || Contains(j.Connection) || Contains(j.LastSummary) || Contains(j.Schedule) || Contains(ScheduleText(j)));
         }
         if (_groups.Any()) jobs = jobs.Where(j => _groups.Contains(j.Group));
         if (_types.Any()) jobs = jobs.Where(j => _types.Contains(j.Type));
@@ -206,6 +209,10 @@
         // Selection follows the filter: hidden rows are not acted upon.
         _selected = _selected.Where(s => _filtered.Contains(s, _comparer)).ToHashSet(_comparer);
     }
+
+    /// <summary>Schedule in words in the user's language (the technical form is in the tooltip).</summary>
+    private string ScheduleText(JobSummary job) =>
+        Store.Current.FindJob(job.Key) is { } definition ? ScheduleBuilder.Describe(definition.Schedule, T) : job.Schedule;
 
     private bool Contains(string? value) => value?.Contains(_search!, StringComparison.OrdinalIgnoreCase) == true;
 

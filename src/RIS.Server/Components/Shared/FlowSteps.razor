@@ -1,0 +1,45 @@
+@* Flow of a job type ("D365 export → package → folder [→ unzip]") as steps; optional steps (in brackets) are outlined. *@
+<div class="d-flex flex-wrap align-center @Class" style="gap: 2px 4px">
+    @foreach (var (step, index) in Steps.Select((s, i) => (s, i)))
+    {
+        @if (index > 0)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="mud-text-secondary" Style="font-size: 14px" />
+        }
+        <MudChip T="string" Size="Size.Small" Variant="@(step.Optional ? Variant.Outlined : Variant.Text)" Class="ma-0"
+                 title="@(step.Optional ? T["Flow_Optional"] : null)">@step.Text</MudChip>
+    }
+</div>
+
+@code {
+    [Parameter] public string Flow { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Text between arrows; a step is optional when written inside [ ], e.g. "[SFTP →] folder" or "folder [→ unzip]".</summary>
+    private IEnumerable<(string Text, bool Optional)> Steps
+    {
+        get
+        {
+            var depth = 0;
+            var optional = false;
+            var text = new System.Text.StringBuilder();
+            foreach (var c in Flow + "→")
+            {
+                switch (c)
+                {
+                    case '[': depth++; break;
+                    case ']': depth = Math.Max(0, depth - 1); break;
+                    case '→':
+                        if (text.ToString().Trim() is { Length: > 0 } step) yield return (step, optional);
+                        text.Clear();
+                        optional = false;
+                        break;
+                    default:
+                        text.Append(c);
+                        if (depth > 0 && !char.IsWhiteSpace(c)) optional = true;
+                        break;
+                }
+            }
+        }
+    }
+}
