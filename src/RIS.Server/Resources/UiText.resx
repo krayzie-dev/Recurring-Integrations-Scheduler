@@ -332,4 +332,11 @@
   <data name="Export_Selected" xml:space="preserve"><value>Selected jobs ({0})</value></data>
   <data name="Export_Filtered" xml:space="preserve"><value>Jobs in the list ({0})</value></data>
   <data name="Export_Configuration" xml:space="preserve"><value>Whole configuration (JSON)</value></data>
+  <data name="Sched_Daily" xml:space="preserve"><value>Every day at {0}</value></data>
+  <data name="Sched_Workdays" xml:space="preserve"><value>Monday to Friday at {0}</value></data>
+  <data name="Sched_Days" xml:space="preserve"><value>{0} at {1}</value></data>
+  <data name="Sched_Monthly" xml:space="preserve"><value>Day {0} of every month at {1}</value></data>
+  <data name="Sched_MonthlyLast" xml:space="preserve"><value>Last day of every month at {0}</value></data>
+  <data name="Sched_Every" xml:space="preserve"><value>Every {0} from {1}</value></data>
+  <data name="Sched_Cron" xml:space="preserve"><value>Cron: {0}</value></data>
 </root>

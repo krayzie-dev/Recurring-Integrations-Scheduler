@@ -406,4 +406,11 @@
   <data name="Export_Selected" xml:space="preserve"><value>Zaznaczone zadania ({0})</value></data>
   <data name="Export_Filtered" xml:space="preserve"><value>Zadania z listy ({0})</value></data>
   <data name="Export_Configuration" xml:space="preserve"><value>Cała konfiguracja (JSON)</value></data>
+  <data name="Sched_Daily" xml:space="preserve"><value>Codziennie o {0}</value></data>
+  <data name="Sched_Workdays" xml:space="preserve"><value>Od poniedziałku do piątku o {0}</value></data>
+  <data name="Sched_Days" xml:space="preserve"><value>{0} o {1}</value></data>
+  <data name="Sched_Monthly" xml:space="preserve"><value>{0}. dnia każdego miesiąca o {1}</value></data>
+  <data name="Sched_MonthlyLast" xml:space="preserve"><value>Ostatniego dnia każdego miesiąca o {0}</value></data>
+  <data name="Sched_Every" xml:space="preserve"><value>Co {0} od {1}</value></data>
+  <data name="Sched_Cron" xml:space="preserve"><value>Cron: {0}</value></data>
 </root>
