@@ -13,5 +13,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="ClosedXML" />
   </ItemGroup>
 </Project>

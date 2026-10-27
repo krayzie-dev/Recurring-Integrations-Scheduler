@@ -1,0 +1,14 @@
+<MudNavMenu>
+    <AuthorizeView Policy="@RisRoles.CanView">
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">@T["Nav_Dashboard"]</MudNavLink>
+        <MudNavLink Href="/jobs" Icon="@Icons.Material.Filled.ListAlt">@T["Nav_Jobs"]</MudNavLink>
+        <MudNavLink Href="/plan" Icon="@Icons.Material.Filled.CalendarViewWeek">@T["Nav_Plan"]</MudNavLink>
+        <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">@T["Nav_History"]</MudNavLink>
+    </AuthorizeView>
+    <AuthorizeView Policy="@RisRoles.CanAdminister">
+        <MudDivider Class="my-2" />
+        <MudNavLink Href="/connections" Icon="@Icons.Material.Filled.Cable">@T["Nav_Connections"]</MudNavLink>
+        <MudNavLink Href="/sftp-servers" Icon="@Icons.Material.Filled.Dns">@T["Nav_SftpServers"]</MudNavLink>
+        <MudNavLink Href="/audit" Icon="@Icons.Material.Filled.FactCheck">@T["Nav_Audit"]</MudNavLink>
+    </AuthorizeView>
+</MudNavMenu>

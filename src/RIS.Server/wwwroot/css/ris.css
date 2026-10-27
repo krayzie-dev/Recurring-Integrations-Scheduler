@@ -1,0 +1,35 @@
+/* RIS 5 UI */
+.ris-mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
+.ris-tile { min-height: 104px; }
+.ris-clickable { cursor: pointer; }
+.ris-log { max-height: 60vh; overflow: auto; padding: 8px; border-radius: 4px; background: var(--mud-palette-background-gray); }
+
+/* Gantt (SVG): colours follow the MudBlazor theme, so light and dark mode need no extra code. */
+.gantt-scroll { overflow-x: auto; }
+.gantt text { font-family: var(--mud-typography-default-family); font-size: 11px; fill: var(--mud-palette-text-primary); }
+.gantt .axis { fill: var(--mud-palette-text-secondary); }
+.gantt .grid { stroke: var(--mud-palette-lines-default); stroke-width: 1; }
+.gantt .grid-day { stroke: var(--mud-palette-text-secondary); stroke-width: 1; opacity: .6; }
+.gantt .row-alt { fill: var(--mud-palette-table-striped); }
+.gantt .group { fill: var(--mud-palette-background-gray); }
+.gantt .group-label { font-weight: 600; }
+.gantt .now { stroke: var(--mud-palette-error); stroke-width: 2; }
+.gantt .bar { stroke-width: 1; }
+.gantt .bar.planned { fill: var(--mud-palette-primary); fill-opacity: .85; }
+.gantt .bar.paused { fill: var(--mud-palette-text-disabled); fill-opacity: .5; stroke: var(--mud-palette-text-secondary); stroke-dasharray: 3 2; }
+.gantt .bar.band { fill: var(--mud-palette-primary); fill-opacity: .22; }
+.gantt .bar.band.paused { fill: var(--mud-palette-text-disabled); fill-opacity: .25; }
+.gantt .bar.succeeded { fill: var(--mud-palette-success); }
+.gantt .bar.partial { fill: var(--mud-palette-warning); }
+.gantt .bar.failed { fill: var(--mud-palette-error); }
+.gantt .bar.cancelled, .gantt .bar.skipped, .gantt .bar.vetoed { fill: var(--mud-palette-text-disabled); }
+.gantt .bar.running { fill: var(--mud-palette-info); }
+.gantt .misfire { fill: var(--mud-palette-warning); stroke: var(--mud-palette-surface); stroke-width: 1; }
+.gantt .bar:hover, .gantt .misfire:hover { stroke: var(--mud-palette-text-primary); stroke-width: 1.5; cursor: pointer; }
+
+@media print {
+    .mud-appbar, .mud-drawer, .ris-no-print { display: none !important; }
+    .mud-main-content { padding: 0 !important; margin: 0 !important; }
+    .gantt-scroll { overflow: visible; }
+    @page { size: landscape; margin: 8mm; }
+}

@@ -1,0 +1,117 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<MudThemeProvider @ref="_themeProvider" Theme="_theme" IsDarkMode="_isDarkMode" ObserveSystemDarkModeChange="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="() => _drawerOpen = !_drawerOpen" />
+        <MudText Typo="Typo.h6" Class="ml-2">RIS 5</MudText>
+        <MudText Typo="Typo.body2" Class="ml-3 d-none d-md-flex" Style="opacity: .75">@T["App_Title"]</MudText>
+        <MudSpacer />
+
+        <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit" Dense="true" title="@T["Language"]">
+            <MudMenuItem OnClick="@(() => SetCulture("pl-PL"))">Polski</MudMenuItem>
+            <MudMenuItem OnClick="@(() => SetCulture("en-US"))">English</MudMenuItem>
+        </MudMenu>
+        <MudMenu Icon="@ThemeIcon" Color="Color.Inherit" Dense="true">
+            <MudMenuItem Icon="@Icons.Material.Filled.BrightnessAuto" OnClick="() => SetThemeAsync(ThemeMode.System)">@T["Theme_System"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.LightMode" OnClick="() => SetThemeAsync(ThemeMode.Light)">@T["Theme_Light"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="() => SetThemeAsync(ThemeMode.Dark)">@T["Theme_Dark"]</MudMenuItem>
+        </MudMenu>
+        <MudMenu Icon="@Icons.Material.Filled.Schedule" Color="Color.Inherit" Dense="true">
+            <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Server)">@T["TimeZone_Server", TimeZoneInfo.Local.StandardName]</MudMenuItem>
+            <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Utc)">@T["TimeZone_Utc"]</MudMenuItem>
+        </MudMenu>
+        <AuthorizeView>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit" Class="ml-2" Icon="@Icons.Material.Filled.Person">
+                @context.User.Identity?.Name · @RoleLabel(context.User)
+            </MudChip>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="1" Variant="DrawerVariant.Responsive">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <CascadingValue Value="Preferences">
+            <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-4">
+                @Body
+            </MudContainer>
+        </CascadingValue>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [CascadingParameter] public UiPreferences Preferences { get; set; } = new();
+
+    private readonly MudTheme _theme = RisTheme.Create();
+    private MudThemeProvider? _themeProvider;
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private bool _systemDark;
+
+    private string ThemeIcon => Preferences.Theme switch
+    {
+        ThemeMode.Light => Icons.Material.Filled.LightMode,
+        ThemeMode.Dark => Icons.Material.Filled.DarkMode,
+        _ => Icons.Material.Filled.BrightnessAuto
+    };
+
+    protected override void OnParametersSet() => ApplyTheme();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _themeProvider is not null)
+        {
+            _systemDark = await _themeProvider.GetSystemDarkModeAsync();
+            await _themeProvider.WatchSystemDarkModeAsync(OnSystemDarkModeChanged);
+            ApplyTheme();
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSystemDarkModeChanged(bool dark)
+    {
+        _systemDark = dark;
+        ApplyTheme();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ApplyTheme() =>
+        _isDarkMode = Preferences.Theme switch { ThemeMode.Dark => true, ThemeMode.Light => false, _ => _systemDark };
+
+    private async Task SetThemeAsync(ThemeMode mode)
+    {
+        Preferences = Preferences with { Theme = mode };
+        ApplyTheme();
+        await SavePreferencesAsync();
+    }
+
+    private async Task SetTimeZoneAsync(DisplayTimeZone zone)
+    {
+        Preferences = Preferences with { TimeZone = zone };
+        await SavePreferencesAsync();
+    }
+
+    private async Task SavePreferencesAsync() =>
+        await JS.InvokeVoidAsync("ris.setCookie", UiPreferences.CookieName, Preferences.ToCookie(), 365);
+
+    private void SetCulture(string culture)
+    {
+        var redirect = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        Navigation.NavigateTo($"/culture/set?culture={culture}&redirect={Uri.EscapeDataString(redirect)}", forceLoad: true);
+    }
+
+    private string RoleLabel(System.Security.Claims.ClaimsPrincipal user) =>
+        user.IsInRole(RisRoles.Admin) ? RisRoles.Admin
+        : user.IsInRole(RisRoles.Operator) ? RisRoles.Operator
+        : user.IsInRole(RisRoles.Viewer) ? RisRoles.Viewer
+        : T["Role_None"];
+}

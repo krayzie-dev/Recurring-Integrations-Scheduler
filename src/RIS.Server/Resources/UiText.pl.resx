@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Title" xml:space="preserve"><value>Recurring Integrations Scheduler</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Pulpit</value></data>
+  <data name="Nav_Jobs" xml:space="preserve"><value>Zadania</value></data>
+  <data name="Nav_Plan" xml:space="preserve"><value>Harmonogram</value></data>
+  <data name="Nav_History" xml:space="preserve"><value>Historia</value></data>
+  <data name="Nav_Connections" xml:space="preserve"><value>Połączenia</value></data>
+  <data name="Nav_SftpServers" xml:space="preserve"><value>Serwery SFTP</value></data>
+  <data name="Nav_Audit" xml:space="preserve"><value>Audyt</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Ustawienia</value></data>
+  <data name="Theme_System" xml:space="preserve"><value>Motyw systemowy</value></data>
+  <data name="Theme_Light" xml:space="preserve"><value>Jasny</value></data>
+  <data name="Theme_Dark" xml:space="preserve"><value>Ciemny</value></data>
+  <data name="Language" xml:space="preserve"><value>Język</value></data>
+  <data name="TimeZone_Server" xml:space="preserve"><value>Czas serwera ({0})</value></data>
+  <data name="TimeZone_Utc" xml:space="preserve"><value>UTC</value></data>
+  <data name="Role_None" xml:space="preserve"><value>Brak roli RIS</value></data>
+  <data name="NoAccess_Title" xml:space="preserve"><value>Brak dostępu</value></data>
+  <data name="NoAccess_Text" xml:space="preserve"><value>Twoje konto nie ma roli RIS. Poproś administratora o dodanie do grupy skonfigurowanej w Ris:Security:Roles.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>Nie znaleziono strony.</value></data>
+  <data name="Loading" xml:space="preserve"><value>Wczytywanie…</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>Odśwież</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Anuluj</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Zapisz</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Usuń</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Zamknij</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Potwierdź</value></data>
+  <data name="Common_Search" xml:space="preserve"><value>Szukaj</value></data>
+  <data name="Common_Export" xml:space="preserve"><value>Eksport</value></data>
+  <data name="Common_All" xml:space="preserve"><value>Wszystkie</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>Tak</value></data>
+  <data name="Common_No" xml:space="preserve"><value>Nie</value></data>
+  <data name="Common_Apply" xml:space="preserve"><value>Zastosuj</value></data>
+  <data name="Common_Preview" xml:space="preserve"><value>Podgląd</value></data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve"><value>Wszystkie</value></data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve"><value>Pierwsza strona</value></data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve"><value>{first_item}-{last_item} z {all_items}</value></data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve"><value>Ostatnia strona</value></data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve"><value>Następna strona</value></data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve"><value>Poprzednia strona</value></data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve"><value>Wierszy na stronę:</value></data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve"><value>Dodaj filtr</value></data>
+  <data name="MudDataGrid_Apply" xml:space="preserve"><value>Zastosuj</value></data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve"><value>Anuluj</value></data>
+  <data name="MudDataGrid_Clear" xml:space="preserve"><value>Wyczyść</value></data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve"><value>Wyczyść filtr</value></data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve"><value>Zwiń wszystkie grupy</value></data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve"><value>Zwiń grupę</value></data>
+  <data name="MudDataGrid_Column" xml:space="preserve"><value>Kolumna</value></data>
+  <data name="MudDataGrid_Columns" xml:space="preserve"><value>Kolumny</value></data>
+  <data name="MudDataGrid_Contains" xml:space="preserve"><value>zawiera</value></data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve"><value>kończy się na</value></data>
+  <data name="MudDataGrid_Equals" xml:space="preserve"><value>równa się</value></data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve"><value>Rozwiń wszystkie grupy</value></data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve"><value>Rozwiń grupę</value></data>
+  <data name="MudDataGrid_False" xml:space="preserve"><value>fałsz</value></data>
+  <data name="MudDataGrid_Filter" xml:space="preserve"><value>Filtr</value></data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve"><value>Wartość filtra</value></data>
+  <data name="MudDataGrid_Group" xml:space="preserve"><value>Grupuj</value></data>
+  <data name="MudDataGrid_Hide" xml:space="preserve"><value>Ukryj</value></data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve"><value>Ukryj wszystkie</value></data>
+  <data name="MudDataGrid_Is" xml:space="preserve"><value>jest</value></data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve"><value>jest po</value></data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve"><value>jest przed</value></data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve"><value>jest puste</value></data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve"><value>nie jest</value></data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve"><value>nie jest puste</value></data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve"><value>jest w dniu lub po</value></data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve"><value>jest w dniu lub przed</value></data>
+  <data name="MudDataGrid_Loading" xml:space="preserve"><value>Wczytywanie…</value></data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve"><value>Przesuń w dół</value></data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve"><value>Przesuń w górę</value></data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve"><value>nie zawiera</value></data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve"><value>nie równa się</value></data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve"><value>Otwórz filtry</value></data>
+  <data name="MudDataGrid_Operator" xml:space="preserve"><value>Operator</value></data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve"><value>Odśwież dane</value></data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve"><value>Usuń filtr</value></data>
+  <data name="MudDataGrid_Save" xml:space="preserve"><value>Zapisz</value></data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve"><value>Zaznacz wszystkie wiersze</value></data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve"><value>Zaznacz wiersz</value></data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve"><value>Pokaż wszystkie</value></data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve"><value>Opcje kolumny</value></data>
+  <data name="MudDataGrid_Sort" xml:space="preserve"><value>Sortuj</value></data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve"><value>zaczyna się od</value></data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve"><value>Zwiń/rozwiń grupę</value></data>
+  <data name="MudDataGrid_True" xml:space="preserve"><value>prawda</value></data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve"><value>Rozgrupuj</value></data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve"><value>Bez sortowania</value></data>
+  <data name="MudDataGrid_Value" xml:space="preserve"><value>Wartość</value></data>
+  <data name="MudDialog_Close" xml:space="preserve"><value>Zamknij</value></data>
+  <data name="MudSnackbar_Close" xml:space="preserve"><value>Zamknij</value></data>
+  <data name="MudChip_Close" xml:space="preserve"><value>Zamknij</value></data>
+  <data name="MudAlert_Close" xml:space="preserve"><value>Zamknij</value></data>
+  <data name="MudInput_Clear" xml:space="preserve"><value>Wyczyść</value></data>
+  <data name="MudSelect_SelectAll" xml:space="preserve"><value>Zaznacz wszystkie</value></data>
+  <data name="MudFormComponent_Required" xml:space="preserve"><value>Pole wymagane</value></data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve"><value>Następny miesiąc</value></data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve"><value>Poprzedni miesiąc</value></data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve"><value>Następny rok</value></data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve"><value>Poprzedni rok</value></data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve"><value>Otwórz kalendarz</value></data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve"><value>Od</value></data>
+  <data name="MudDateRangePicker_End" xml:space="preserve"><value>Do</value></data>
+  <data name="MudTimePicker_Open" xml:space="preserve"><value>Wybierz godzinę</value></data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve"><value>Przewiń w lewo</value></data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve"><value>Przewiń w prawo</value></data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve"><value>Zwiń/rozwiń</value></data>
+</root>

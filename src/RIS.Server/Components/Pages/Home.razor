@@ -1,0 +1,5 @@
+@page "/"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+
+<PageTitle>RIS 5 – @T["Nav_Dashboard"]</PageTitle>
+<MudText Typo="Typo.h5" GutterBottom="true">@T["Nav_Dashboard"]</MudText>

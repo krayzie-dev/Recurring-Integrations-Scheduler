@@ -6,7 +6,10 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Quartz;
 using RIS.Hosting;
 using RIS.Server;
+using MudBlazor;
+using MudBlazor.Services;
 using RIS.Server.Api;
+using RIS.Server.Ui;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -30,6 +33,7 @@ builder.Services.AddRisServer(builder.Configuration, configureHost: host =>
 var security = builder.Configuration.GetSection("Ris:Security").Get<SecurityOptions>() ?? new SecurityOptions();
 builder.Services.AddSingleton(security);
 builder.Services.AddSingleton<IClaimsTransformation, WindowsRoleClaimsTransformation>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, RisAuthorizationResultHandler>();
 var authentication = builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme);
 if (security.WindowsAuthentication) authentication.AddNegotiate();
 builder.Services.AddAuthorizationBuilder()
@@ -43,6 +47,13 @@ builder.Services.ConfigureHttpJsonOptions(json =>
     json.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     json.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
+// Web UI (Blazor, interactive server rendering) with MudBlazor; PL/EN texts in Resources/UiText*.resx.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddLocalization();
+builder.Services.AddMudServices();
+builder.Services.AddTransient<MudLocalizer, RisMudLocalizer>();
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<RisExceptionHandler>();
 builder.Services.AddOpenApi();
@@ -64,8 +75,16 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseRequestLocalization(RisCultures.Options());
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapCultureEndpoint();
+app.MapRazorComponents<RIS.Server.Components.App>()
+    .AddInteractiveServerRenderMode()
+    .RequireAuthorization();
 
 app.MapOpenApi().RequireAuthorization(RisRoles.CanView);
 var healthEndpoint = app.MapHealthChecks("/health");

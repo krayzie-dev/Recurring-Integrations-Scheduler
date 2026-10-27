@@ -1,0 +1,25 @@
+<CascadingValue Value="Preferences">
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                <NotAuthorized>
+                    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            <MudText Typo="Typo.h6">@T["NoAccess_Title"]</MudText>
+                            <MudText>@T["NoAccess_Text"]</MudText>
+                        </MudAlert>
+                    </MudContainer>
+                </NotAuthorized>
+                <Authorizing><MudProgressLinear Indeterminate="true" /></Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(MainLayout)"><MudText Class="ma-8">@T["NotFound"]</MudText></LayoutView>
+        </NotFound>
+    </Router>
+</CascadingValue>
+
+@code {
+    [Parameter] public UiPreferences Preferences { get; set; } = new();
+}

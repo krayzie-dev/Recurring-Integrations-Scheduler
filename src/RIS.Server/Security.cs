@@ -77,3 +77,21 @@ public sealed class WindowsRoleClaimsTransformation : IClaimsTransformation
         return Task.FromResult(principal);
     }
 }
+
+/// <summary>Browser pages a user may not see redirect to a friendly "no access" page; the API keeps plain 403.</summary>
+public sealed class RisAuthorizationResultHandler : Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler
+{
+    private readonly Microsoft.AspNetCore.Authorization.Policy.AuthorizationMiddlewareResultHandler _default = new();
+
+    public Task HandleAsync(RequestDelegate next, HttpContext context, Microsoft.AspNetCore.Authorization.AuthorizationPolicy policy,
+        Microsoft.AspNetCore.Authorization.Policy.PolicyAuthorizationResult authorizeResult)
+    {
+        if (authorizeResult.Forbidden && HttpMethods.IsGet(context.Request.Method)
+            && !context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/health"))
+        {
+            context.Response.Redirect("/no-access");
+            return Task.CompletedTask;
+        }
+        return _default.HandleAsync(next, context, policy, authorizeResult);
+    }
+}

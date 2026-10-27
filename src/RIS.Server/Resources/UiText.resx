@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Title" xml:space="preserve"><value>Recurring Integrations Scheduler</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Jobs" xml:space="preserve"><value>Jobs</value></data>
+  <data name="Nav_Plan" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Nav_History" xml:space="preserve"><value>History</value></data>
+  <data name="Nav_Connections" xml:space="preserve"><value>Connections</value></data>
+  <data name="Nav_SftpServers" xml:space="preserve"><value>SFTP servers</value></data>
+  <data name="Nav_Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Theme_System" xml:space="preserve"><value>System theme</value></data>
+  <data name="Theme_Light" xml:space="preserve"><value>Light</value></data>
+  <data name="Theme_Dark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="TimeZone_Server" xml:space="preserve"><value>Server time ({0})</value></data>
+  <data name="TimeZone_Utc" xml:space="preserve"><value>UTC</value></data>
+  <data name="Role_None" xml:space="preserve"><value>No RIS role</value></data>
+  <data name="NoAccess_Title" xml:space="preserve"><value>No access</value></data>
+  <data name="NoAccess_Text" xml:space="preserve"><value>Your account has no RIS role. Ask an administrator to add you to a group configured in Ris:Security:Roles.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>Page not found.</value></data>
+  <data name="Loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Common_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="Common_All" xml:space="preserve"><value>All</value></data>
+  <data name="Common_Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common_No" xml:space="preserve"><value>No</value></data>
+  <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Common_Preview" xml:space="preserve"><value>Preview</value></data>
+</root>
