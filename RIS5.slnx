@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RIS.Cli/RIS.Cli.csproj" />
+    <Project Path="src/RIS.Core/RIS.Core.csproj" />
+    <Project Path="src/RIS.D365/RIS.D365.csproj" />
+    <Project Path="src/RIS.Hosting/RIS.Hosting.csproj" />
+    <Project Path="src/RIS.Jobs/RIS.Jobs.csproj" />
+    <Project Path="src/RIS.Migration/RIS.Migration.csproj" />
+    <Project Path="src/RIS.Transfer/RIS.Transfer.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/RIS.Core.Tests/RIS.Core.Tests.csproj" />
+    <Project Path="test/RIS.D365.Tests/RIS.D365.Tests.csproj" />
+    <Project Path="test/RIS.Jobs.Tests/RIS.Jobs.Tests.csproj" />
+    <Project Path="test/RIS.Migration.Tests/RIS.Migration.Tests.csproj" />
+    <Project Path="test/RIS.Transfer.Tests/RIS.Transfer.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,15 @@
+<Project>
+  <!-- Shared settings for RIS 5.0 projects (src/ and tests/). Legacy 4.x projects are not affected. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <Version>5.0.0</Version>
+    <Company>Recurring Integrations Scheduler</Company>
+    <Product>Recurring Integrations Scheduler 5</Product>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

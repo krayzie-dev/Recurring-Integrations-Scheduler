@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="RIS.Jobs.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RIS.Core\RIS.Core.csproj" />
+    <ProjectReference Include="..\RIS.D365\RIS.D365.csproj" />
+    <ProjectReference Include="..\RIS.Transfer\RIS.Transfer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Quartz" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RIS.Migration\RIS.Migration.csproj" />
+    <ProjectReference Include="..\..\src\RIS.Cli\RIS.Cli.csproj" />
+  </ItemGroup>
+</Project>
