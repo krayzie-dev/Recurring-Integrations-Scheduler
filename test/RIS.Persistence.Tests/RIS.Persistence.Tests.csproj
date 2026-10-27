@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RIS.Persistence\RIS.Persistence.csproj" />
+  </ItemGroup>
+</Project>

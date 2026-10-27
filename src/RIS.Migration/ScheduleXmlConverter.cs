@@ -23,7 +23,7 @@ public sealed class ConversionOptions
     public bool DecryptSecrets { get; set; }
 
     /// <summary>Value used for secrets that are not decrypted.</summary>
-    public string SecretPlaceholder { get; set; } = "<SET-SECRET>";
+    public string SecretPlaceholder { get; set; } = RIS.Core.Configuration.SecretPlaceholder.Value;
 }
 
 /// <summary>

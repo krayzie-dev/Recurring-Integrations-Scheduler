@@ -5,20 +5,6 @@ using RIS.Core.Options;
 namespace RIS.Jobs;
 
 /// <summary>
-/// Source of the current RIS configuration (connections, SFTP servers, jobs).
-/// Stage 2: JSON file; stage 3: database.
-/// </summary>
-public interface IRisConfigurationStore
-{
-    RisConfiguration Current { get; }
-}
-
-public sealed class StaticConfigurationStore(RisConfiguration configuration) : IRisConfigurationStore
-{
-    public RisConfiguration Current { get; } = configuration;
-}
-
-/// <summary>
 /// Everything a job handler needs to know about the current run.
 /// </summary>
 public sealed class JobRunContext
