@@ -74,3 +74,16 @@ Job/monitor pairs (4.x naming convention `"<name>-Execution monitor"`, `"<name>-
 | Secrets | DPAPI LocalMachine, copied into every job | Stored once per connection / SFTP server, encrypted with ASP.NET Core Data Protection (keys in the data directory, protected by DPAPI machine key or a certificate); write-only in the API. A required secret that is not set yet makes the job fail with `RIS-AUTH-001` / `RIS-SFTP-001` |
 | Remote access | Unauthenticated .NET Remoting on TCP 555 | REST API with Windows authentication and roles; localhost only by default |
 | Operator pause | Lost on restart (RAM store) | Kept in quartz.db, also when the job definition changes |
+
+## Client (4.x WinForms) → web UI (5.0)
+
+| 4.x | 5.0 |
+|---|---|
+| WinForms client connecting over unauthenticated Remoting (TCP 555) | Browser UI hosted by the service, Windows login, roles Viewer/Operator/Admin |
+| One grid of jobs, actions on one job at a time | Filters, multi-select, bulk run/pause (with reason)/resume/delete, bulk edit with preview |
+| Changes active only until "Save schedule" | Every change saved to ris.db at once, validated and audited |
+| No history, no logs | Run history (table and Gantt), run details with captured log and error code description |
+| No overview of the week | Gantt chart of planned runs (week/day), dashboard with alerts |
+| English only | Polish and English, light/dark theme |
+| Instance, application, user, data job forms per job | Connections and SFTP servers defined once, referenced by jobs; write-only secrets |
+| No export | xlsx/CSV/PNG/PDF/JSON exports, REST exports |

@@ -1,10 +1,11 @@
-# Recurring Integrations Scheduler 5 (preview: stages 1–3)
+# Recurring Integrations Scheduler 5 (preview: stages 1–4)
 
 RIS 5 is the .NET 10 rewrite of RIS 4.x. It lives next to the 4.x code (`src/`, `test/`, `RIS5.slnx`); 4.x still builds from
 `Recurring Integrations Scheduler.sln`.
 
-Current state: job engine, command line, Windows service with REST API, SQLite storage. Not yet available: web UI
-(MudBlazor + Quartz dashboard, stage 4), installer (stage 5).
+Current state: job engine, command line, Windows service with REST API and web UI (Polish/English, light/dark, bulk
+operations, Gantt charts of schedule and history, exports – see [ui.md](ui.md)), SQLite storage. Not yet available:
+installer (stage 5).
 
 ## Projects
 
@@ -16,7 +17,7 @@ Current state: job engine, command line, Windows service with REST API, SQLite s
 | RIS.Jobs | Job pipeline (logging scope, single error log, summary), 6 job handlers, Quartz 4 job adapter |
 | RIS.Persistence | ris.db (EF Core SQLite): connections, SFTP servers, jobs, audit; encrypted secrets; backups |
 | RIS.Hosting | DI setup, Serilog (console, daily file, file per job, Event Log), Quartz (in-memory for the CLI, quartz.db for the server), schedule synchronization |
-| RIS.Server | Windows service: REST API `/api/v1`, Windows authentication and roles, `/health` |
+| RIS.Server | Windows service: web UI (Blazor + MudBlazor), REST API `/api/v1`, Windows authentication and roles, `/health` |
 | RIS.Migration | Converter of 4.x `Schedule.xml` |
 | RIS.Cli | `ris` command line |
 
@@ -60,6 +61,10 @@ Run from a console: `dotnet run --project src/RIS.Server` (or `RIS.Server.exe`).
 | PUT | `/connections/{name}/secret`, `/sftp-servers/{name}/secret` (`{"value": "…"}`) | Admin |
 | POST | `/config/validate`, `/config/import`; GET `/config/export`, `/audit` | Admin |
 | GET | `/me` – current user and roles | any user |
+| GET | `/history?from&to&result&job` – runs of all jobs | Viewer |
+| POST | `/jobs/bulk/run`, `/jobs/bulk/pause`, `/jobs/bulk/resume` (`{"jobs": ["Group.Name", …], "reason": "…"}`) – result per job | Operator |
+| POST | `/jobs/bulk/delete`; `/jobs/bulk/edit[?preview=true]` (`{"jobs": […], "edit": {"shiftMinutes": 30, "pathFind": "…", …}}`) | Admin |
+| GET | `/export/{jobs,history,plan}.{xlsx,csv}`; `/export/audit.{xlsx,csv}` (Admin) | Viewer |
 
 Invalid changes return 400 with the validator's messages (`errors.configuration`) and `errorCode`. Example:
 
@@ -97,6 +102,7 @@ server as an account with access to the data directory.
 
 ## Documents
 
+- [ui.md](ui.md) – web UI: roles, language/theme, dashboard, Gantt charts, bulk edit, exports
 - [operations.md](operations.md) – installation, backup and restore, moving to another server, restarts and missed runs
 - [parity-4x.md](parity-4x.md) – mapping of 4.x settings and changed behaviour
 - [error-codes.md](error-codes.md)
