@@ -1,11 +1,11 @@
-# Recurring Integrations Scheduler 5 (preview: stages 1–4)
+# Recurring Integrations Scheduler 5 (preview: stages 1–5)
 
 RIS 5 is the .NET 10 rewrite of RIS 4.x. It lives next to the 4.x code (`src/`, `test/`, `RIS5.slnx`); 4.x still builds from
 `Recurring Integrations Scheduler.sln`.
 
 Current state: job engine, command line, Windows service with REST API and web UI (Polish/English, light/dark, bulk
-operations, Gantt charts of schedule and history, exports – see [ui.md](ui.md)), SQLite storage. Not yet available:
-installer (stage 5).
+operations, Gantt charts of schedule and history, exports – see [ui.md](ui.md)), SQLite storage, installer and CI
+(see [operations.md](operations.md#install) and [ci.md](ci.md)). Next: parallel run with 4.x and switch-over (stage 6).
 
 ## Projects
 
@@ -33,14 +33,17 @@ Data directory `%ProgramData%\RIS5` (`Ris:Data:DataDirectory`):
 | `logs\` | `ris-YYYYMMDD.clef`, `jobs\<Group.Name>\job-YYYYMMDD.clef` |
 | `backup\` | Database copies before schema changes (10 kept) |
 
-Run from a console: `dotnet run --project src/RIS.Server` (or `RIS.Server.exe`). As a service: [scripts/install-service.ps1](../../scripts/install-service.ps1).
+Install: `RIS5-Setup-<version>.exe` (GitHub release or CI artefact), see [operations.md](operations.md#install).
+Run from a console: `dotnet run --project src/RIS.Server` (or `RIS.Server.exe`). Machine settings written by the installer
+are in `%ProgramData%\RIS5\appsettings.json` (loaded after the program's `appsettings.json`).
 
 `appsettings.json` (next to the executable):
 
 | Setting | Default | |
 |---|---|---|
-| `Urls` | `http://localhost:5080` | Local only. Remote access: e.g. `https://*:5443` with a certificate (Kestrel `Certificates` section) |
-| `Ris:Security:Roles` | `Admin` = `BUILTIN\Administrators` | Windows groups or users per role `Viewer`, `Operator`, `Admin` |
+| `Urls` | `http://localhost:5080` | Local HTTP (localhost only) |
+| `Ris:Https:Port`, `Ris:Https:CertificateThumbprint` | – | Remote access over HTTPS on all interfaces with a certificate from `LocalMachine\My` (set by the installer) |
+| `Ris:Security:Roles` | `Admin` = `S-1-5-32-544` (local Administrators) | Windows groups or users per role `Viewer`, `Operator`, `Admin`; SIDs or names |
 | `Ris:Health:AllowAnonymous` | `true` | `/health` without login (monitoring agents) |
 | `Ris:Health:RequiredJobs` | – | `{ "Export jobs.CustInvoicejour interface D365_AX2012": "1.02:00:00" }` – `/health` is Unhealthy when the job has not succeeded within 26 h |
 | `Ris:ConfigurationPollInterval` | `00:00:30` | How quickly changes made by `ris db …` reach a running service |
@@ -103,7 +106,8 @@ server as an account with access to the data directory.
 ## Documents
 
 - [ui.md](ui.md) – web UI: roles, language/theme, dashboard, Gantt charts, bulk edit, exports
-- [operations.md](operations.md) – installation, backup and restore, moving to another server, restarts and missed runs
+- [ci.md](ci.md) – installer build, GitHub Actions, releases
+- [operations.md](operations.md) – installation (installer, silent install, upgrade), backup and restore, moving to another server, restarts and missed runs
 - [parity-4x.md](parity-4x.md) – mapping of 4.x settings and changed behaviour
 - [error-codes.md](error-codes.md)
 - [quartz4-notes.md](quartz4-notes.md) – Quartz.NET 4.6.2 API and pitfalls

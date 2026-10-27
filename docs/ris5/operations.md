@@ -1,20 +1,60 @@
 # RIS 5 server – operations
 
-## Install (test installation, before the installer of stage 5)
+## Install
 
-```powershell
-# as Administrator, from the repository
-.\scripts\install-service.ps1 -Account "CONTOSO\svc-ris$"          # gMSA, or -Account … -Password (Read-Host -AsSecureString)
-ris db import jobs.json                                             # e.g. output of ris convert-schedule
-ris db set-secret connection CONTOSO-PROD
-curl http://localhost:5080/health
+Run `RIS5-Setup-<version>.exe` as Administrator (from the GitHub release or the CI artefact). The wizard (English/Polish):
+
+1. **Service account:** LocalSystem, LocalService (default), NetworkService, or a domain account / gMSA (`DOMAIN\svc-ris$`).
+   Network shares (UNC paths) need a domain account or gMSA. The password is checked; the account gets "Log on as a service".
+2. **Access:** local HTTP port (default 5080, localhost only); optional HTTPS port for remote access (e.g. 5443) with the
+   thumbprint of a certificate in `LocalMachine\My` (checked: exists, private key, not expired; the service account gets
+   read access to the key; a firewall rule "RIS5 HTTPS" is added); administrators and operators (groups/users separated by
+   `;`, SIDs allowed; default `S-1-5-32-544` = local Administrators on any Windows language).
+3. **Import from 4.x** (only when `Program Files (x86)\Recurring Integrations Scheduler\Schedule.xml` exists): converts the
+   4.x schedule and imports all jobs **paused**. Secrets are not imported – set them in the UI (Connections) or with
+   `ris db set-secret`. Report: `%ProgramData%\RIS5\import-4x\import.log`.
+
+The installer then writes the machine settings to `%ProgramData%\RIS5\appsettings.json`, grants the service account Modify
+on `%ProgramData%\RIS5`, creates the Event Log source, installs the service `RIS5` (delayed automatic start, restarts after
+failures), starts it and checks `/health`; the last page shows the result and the UI address.
+
+| Location | Content |
+|---|---|
+| `%ProgramFiles%\RIS5` | Program (self-contained, no .NET install needed), `cli\ris.exe` (optionally in PATH) |
+| `%ProgramData%\RIS5\appsettings.json` | Machine settings from the wizard (kept on upgrade; edit and restart the service to change) |
+| `%ProgramData%\RIS5` | Databases, keys, logs, backups (see below) |
+
+### Silent install
+
+```
+RIS5-Setup-5.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /LOG=C:\Temp\ris5-setup.log ^
+  /ACCOUNT="CONTOSO\svc-ris$" /HTTPPORT=5080 /HTTPSPORT=5443 /CERT=<thumbprint> ^
+  /ADMINS="CONTOSO\RIS-Admins" /OPERATORS="CONTOSO\RIS-Operators" /IMPORT4X=0 /TASKS="cliPath"
 ```
 
-The service account needs: Modify on the data directory (the script grants it), access to the exchange folders (UNC shares
-need a domain account or gMSA – `LocalService` cannot reach them), outbound HTTPS to D365 and Entra ID.
+`/ACCOUNT`: `LocalSystem`, `LocalService`, `NetworkService`, `DOMAIN\user` (+ `/PASSWORD=`), `DOMAIN\gmsa$`.
 
-Migration from 4.x in parallel: import the converted schedule with the jobs paused (`"paused": true` in `schedule`), compare
-results on a test environment, then pause 4.x jobs and resume 5.0 jobs (`POST /api/v1/jobs/{group}/{name}/resume`).
+### Upgrade
+
+Run the new setup. It stops the service (running jobs are interrupted within seconds; their D365 execution ids are logged),
+copies `ris.db` and `quartz.db` to `backup\before-upgrade-<time>`, replaces the program, keeps the settings and the service
+account and starts the service again (database schema updates run on start, with their own backup). To change settings
+during an upgrade use `/RECONFIGURE=1` (wizard pages are shown again; the previous `appsettings.json` is kept as `.bak`).
+
+### Uninstall
+
+Apps & features → Recurring Integrations Scheduler 5. The service and the firewall rule are removed. Data in
+`%ProgramData%\RIS5` stays unless you confirm its removal (silent uninstall never removes data).
+
+### Development / test installation without the installer
+
+`scripts\install-service.ps1` publishes from the repository and installs the service (see the script help).
+
+### Parallel run with 4.x
+
+Import the 4.x jobs paused (installer option or `ris db import jobs.json --paused`), set the secrets, run single jobs with
+"Run now" against a test environment and compare the results, then pause the 4.x jobs and resume the RIS 5 jobs (bulk
+resume in the Jobs page).
 
 ## Restart and missed runs
 
