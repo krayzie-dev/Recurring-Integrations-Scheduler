@@ -18,9 +18,15 @@ public sealed class RisJobInput
 /// Quartz job running any RIS job type through <see cref="JobPipeline"/>.
 /// Result is stored as <see cref="JobRunReport"/> in Quartz execution history.
 /// </summary>
-public sealed class RisQuartzJob(JobPipeline pipeline, ILogger<RisQuartzJob> logger) : IJob<RisJobInput>
+public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, ILogger<RisQuartzJob> logger) : IJob<RisJobInput>
 {
     public async ValueTask Execute(IJobExecutionContext context, RisJobInput input, CancellationToken cancellationToken)
+    {
+        using var registration = runningJobs.Register(context.JobDetail.Key, context.FireInstanceId);
+        await ExecuteCoreAsync(context, input, cancellationToken);
+    }
+
+    private async ValueTask ExecuteCoreAsync(IJobExecutionContext context, RisJobInput input, CancellationToken cancellationToken)
     {
         var key = context.JobDetail.Key;
         var jobKey = $"{key.Group}.{key.Name}";
@@ -57,18 +63,50 @@ public sealed class RisQuartzJob(JobPipeline pipeline, ILogger<RisQuartzJob> log
 }
 
 /// <summary>
+/// Jobs currently running in this process. Quartz 4 has no API listing executing jobs, and its shutdown does not cancel
+/// them, so the service uses this registry to interrupt running jobs on stop.
+/// </summary>
+public sealed class RunningJobs
+{
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (JobKey Key, DateTimeOffset StartedUtc)> _running = new();
+
+    public IReadOnlyCollection<(string RunId, JobKey Key, DateTimeOffset StartedUtc)> Current =>
+        _running.Select(r => (r.Key, r.Value.Key, r.Value.StartedUtc)).ToList();
+
+    public IDisposable Register(JobKey key, string runId)
+    {
+        _running[runId] = (key, DateTimeOffset.UtcNow);
+        return new Registration(() => _running.TryRemove(runId, out _));
+    }
+
+    private sealed class Registration(Action dispose) : IDisposable
+    {
+        public void Dispose() => dispose();
+    }
+}
+
+/// <summary>
 /// Creates Quartz jobs and triggers from RIS job definitions.
 /// </summary>
 public static class RisJobScheduling
 {
-    public static IJobDetail BuildJob(JobDefinition definition) =>
-        JobBuilder.Create<RisQuartzJob>()
+    /// <summary>JobDataMap key with hash of the definition the Quartz job was created from.</summary>
+    public const string DefinitionHashKey = "ris.definitionHash";
+
+    public static IJobDetail BuildJob(JobDefinition definition, string? definitionHash = null)
+    {
+        var builder = JobBuilder.Create<RisQuartzJob>()
             .WithIdentity(definition.Name, definition.Group)
             .WithDescription(definition.Description)
             .DisallowConcurrentExecution()
             .StoreDurably()
-            .UsingInput(new RisJobInput { Options = definition.Options })
-            .Build();
+            .UsingInput(new RisJobInput { Options = definition.Options });
+        if (definitionHash is not null)
+        {
+            builder = builder.UsingJobData(DefinitionHashKey, definitionHash);
+        }
+        return builder.Build();
+    }
 
     /// <summary>
     /// Builds the trigger. The rhythm comes only from configuration (cron, or StartAt + Interval, in the time zone),
@@ -197,16 +235,23 @@ public static class RisJobScheduling
         : interval.Ticks % TimeSpan.TicksPerMinute == 0 ? ((int)interval.TotalMinutes, IntervalUnit.Minute)
         : ((int)interval.TotalSeconds, IntervalUnit.Second);
 
-    /// <summary>Adds or replaces the job and its trigger; pauses it when configured.</summary>
-    public static async Task ScheduleAsync(IScheduler scheduler, JobDefinition definition, CancellationToken cancellationToken)
+    /// <summary>
+    /// Adds or replaces the job and its trigger; pauses it when configured or when <paramref name="keepPaused"/> (operational pause).
+    /// </summary>
+    public static async Task ScheduleAsync(IScheduler scheduler, JobDefinition definition, CancellationToken cancellationToken,
+        string? definitionHash = null, bool keepPaused = false)
     {
-        var paused = definition.Schedule.Paused || definition.Options?.IndefinitePause == true;
+        var configPaused = definition.Schedule.Paused || definition.Options?.IndefinitePause == true;
+        var paused = configPaused || keepPaused;
         var options = new ScheduleJobOptions
         {
             Replace = true,
             Paused = paused,
-            PauseReason = paused ? (definition.Options?.IndefinitePause == true ? "IndefinitePause" : "Paused in configuration") : null
+            PauseReason = !paused ? null
+                : definition.Options?.IndefinitePause == true ? "IndefinitePause"
+                : configPaused ? "Paused in configuration"
+                : "Paused by operator (kept after configuration change)"
         };
-        await scheduler.ScheduleJob(BuildJob(definition), [BuildTrigger(definition, DateTimeOffset.UtcNow)], options, cancellationToken);
+        await scheduler.ScheduleJob(BuildJob(definition, definitionHash), [BuildTrigger(definition, DateTimeOffset.UtcNow)], options, cancellationToken);
     }
 }

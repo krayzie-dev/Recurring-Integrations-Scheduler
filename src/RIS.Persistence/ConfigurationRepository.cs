@@ -15,6 +15,10 @@ public sealed class ConfigurationValidationException(IReadOnlyList<string> error
     public IReadOnlyList<string> Errors { get; } = errors;
 }
 
+/// <summary>Configuration item (connection, SFTP server, job) does not exist.</summary>
+public sealed class ConfigurationNotFoundException(string what, string name)
+    : RisException(ErrorCodes.ConfigurationInvalid, $"{what} '{name}' does not exist.", new Dictionary<string, object?> { ["Name"] = name });
+
 public enum SecretOwner
 {
     Connection,
@@ -364,6 +368,5 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         else list.Add(item);
     }
 
-    private static RisException NotFound(string what, string name) =>
-        new(ErrorCodes.ConfigurationInvalid, $"{what} '{name}' does not exist.", new Dictionary<string, object?> { ["Name"] = name });
+    private static ConfigurationNotFoundException NotFound(string what, string name) => new(what, name);
 }

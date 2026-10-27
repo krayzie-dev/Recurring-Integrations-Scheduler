@@ -12,6 +12,7 @@
   <Folder Name="/test/">
     <Project Path="test/RIS.Core.Tests/RIS.Core.Tests.csproj" />
     <Project Path="test/RIS.D365.Tests/RIS.D365.Tests.csproj" />
+    <Project Path="test/RIS.Hosting.Tests/RIS.Hosting.Tests.csproj" />
     <Project Path="test/RIS.Jobs.Tests/RIS.Jobs.Tests.csproj" />
     <Project Path="test/RIS.Migration.Tests/RIS.Migration.Tests.csproj" />
     <Project Path="test/RIS.Persistence.Tests/RIS.Persistence.Tests.csproj" />

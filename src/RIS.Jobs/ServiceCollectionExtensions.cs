@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<IJobHandler<ProcessingMonitorJobOptions>, ProcessingMonitorHandler>();
 
         services.TryAddSingleton<JobPipeline>();
+        services.TryAddSingleton<RunningJobs>();
         services.TryAddTransient<RisQuartzJob>();
         return services;
     }

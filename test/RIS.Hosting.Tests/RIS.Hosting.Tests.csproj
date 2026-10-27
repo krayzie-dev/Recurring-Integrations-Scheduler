@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RIS.Hosting\RIS.Hosting.csproj" />
+  </ItemGroup>
+</Project>
