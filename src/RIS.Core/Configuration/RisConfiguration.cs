@@ -18,21 +18,42 @@ public enum JobType
 }
 
 /// <summary>
+/// What happens with a run that was due while the service was not running.
+/// </summary>
+public enum MissedRunPolicy
+{
+    /// <summary>Run once after the service starts, then continue with the regular rhythm.</summary>
+    RunOnce,
+
+    /// <summary>Skip missed runs and wait for the next regular time.</summary>
+    Skip
+}
+
+/// <summary>
 /// When a job runs. Exactly one of <see cref="Cron"/> or <see cref="Interval"/> must be set.
+/// The rhythm depends only on configuration (start time, interval, time zone), never on the moment the service started.
 /// </summary>
 public sealed class ScheduleOptions : IValidatableObject
 {
+    public static readonly TimeSpan MinimumInterval = TimeSpan.FromMinutes(1);
+
     /// <summary>Quartz cron expression (seconds first), e.g. "0 0 2 * * ?".</summary>
     public string? Cron { get; set; }
 
-    /// <summary>Fixed interval between runs.</summary>
+    /// <summary>Fixed interval between runs, aligned to <see cref="StartAt"/>.</summary>
     public TimeSpan? Interval { get; set; }
 
-    /// <summary>Windows or IANA time zone id for cron. Null means scheduler default.</summary>
+    /// <summary>
+    /// Reference point of an interval schedule, e.g. 2026-10-01T12:00 with interval 2 h means 12:00, 14:00, 16:00 ...
+    /// Required for interval schedules.
+    /// </summary>
+    public DateTimeOffset? StartAt { get; set; }
+
+    /// <summary>Windows or IANA time zone id (cron and interval). Null means time zone of the server.</summary>
     public string? TimeZone { get; set; }
 
-    /// <summary>First run time for interval schedules.</summary>
-    public DateTimeOffset? StartAt { get; set; }
+    /// <summary>What happens with a run missed while the service was not running.</summary>
+    public MissedRunPolicy MissedRuns { get; set; } = MissedRunPolicy.RunOnce;
 
     /// <summary>Job is scheduled but paused.</summary>
     public bool Paused { get; set; }
@@ -44,9 +65,24 @@ public sealed class ScheduleOptions : IValidatableObject
             yield return new ValidationResult("Exactly one of Cron or Interval must be set.", [nameof(Cron), nameof(Interval)]);
         }
 
-        if (Interval is { } interval && interval <= TimeSpan.Zero)
+        if (Interval is { } interval)
         {
-            yield return new ValidationResult("Interval must be positive.", [nameof(Interval)]);
+            if (interval < MinimumInterval || interval.Ticks % TimeSpan.TicksPerSecond != 0)
+            {
+                yield return new ValidationResult("Interval must be at least 1 minute and in whole seconds.", [nameof(Interval)]);
+            }
+
+            if (StartAt is null)
+            {
+                yield return new ValidationResult(
+                    "StartAt is required for interval schedules: it is the reference time of the rhythm (e.g. 12:00 for 'every 2 hours from 12:00').",
+                    [nameof(StartAt)]);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(TimeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(TimeZone, out _))
+        {
+            yield return new ValidationResult($"Time zone '{TimeZone}' is not known on this machine.", [nameof(TimeZone)]);
         }
     }
 }

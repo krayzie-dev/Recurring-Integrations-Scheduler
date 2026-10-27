@@ -135,6 +135,17 @@ public class ConfigurationTests
     }
 
     [TestMethod]
+    public void IntervalSchedule_WithoutStartAt_IsInvalid()
+    {
+        var configuration = ValidConfiguration();
+        configuration.Jobs[0].Schedule = new ScheduleOptions { Interval = TimeSpan.FromHours(2) };
+
+        var errors = string.Join("|", ConfigurationValidator.Validate(configuration));
+
+        StringAssert.Contains(errors, "StartAt is required for interval schedules");
+    }
+
+    [TestMethod]
     public void Configuration_RoundTripsThroughJson_WithJobTypeDiscriminator()
     {
         var json = JsonSerializer.Serialize(ValidConfiguration(), RisJson.Options);

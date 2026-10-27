@@ -402,7 +402,7 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
                 return new ScheduleOptions
                 {
                     Interval = long.TryParse(interval, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? TimeSpan.FromMilliseconds(ms) : TimeSpan.Parse(interval, CultureInfo.InvariantCulture),
-                    StartAt = DateTimeOffset.TryParse(Value(trigger, "start-time"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var start) ? start : null
+                    StartAt = StartTime(trigger, key, result)
                 };
             case "calendar-interval":
                 var count = int.Parse(Value(trigger, "repeat-interval") ?? "1", CultureInfo.InvariantCulture);
@@ -417,12 +417,30 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
                         "Day" => TimeSpan.FromDays(count),
                         "Week" => TimeSpan.FromDays(7 * count),
                         _ => throw new InvalidDataException($"Unsupported interval unit '{unit}'.")
-                    }
+                    },
+                    StartAt = StartTime(trigger, key, result)
                 };
             default:
                 result.Warnings.Add($"{key}: no trigger found; job is converted as paused with a daily schedule.");
                 return new ScheduleOptions { Cron = "0 0 0 * * ?", Paused = true };
         }
+    }
+
+    /// <summary>
+    /// Reference time of an interval schedule. 4.x before 4.2.5 did not save start-time, so the rhythm restarted at every
+    /// service restart; in that case midnight (server time) is used and the job is reported for review.
+    /// </summary>
+    private static DateTimeOffset StartTime(XElement trigger, string key, ConversionResult result)
+    {
+        if (DateTimeOffset.TryParse(Value(trigger, "start-time"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
+        {
+            return start;
+        }
+
+        var midnight = new DateTimeOffset(DateTime.Today, TimeZoneInfo.Local.GetUtcOffset(DateTime.Today));
+        result.Warnings.Add($"{key}: 4.x did not save the start time of the interval schedule; StartAt set to {midnight:HH:mm} (server time). " +
+                            "Set the intended start (e.g. 12:00 for 'every 2 hours from 12:00') if runs should not be aligned to midnight.");
+        return midnight;
     }
 
     /// <summary>Links import/upload jobs with their monitors (4.x: naming convention "name-Execution monitor").</summary>

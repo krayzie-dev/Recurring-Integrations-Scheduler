@@ -42,7 +42,7 @@ public sealed class QuartzIntegrationTests
         {
             Name = "CustInvoiceJour",
             Group = "Export jobs",
-            Schedule = new ScheduleOptions { Interval = TimeSpan.FromHours(1) },
+            Schedule = new ScheduleOptions { Cron = "0 0 2 * * ?" },
             Options = new ExportJobOptions
             {
                 Connection = "PROD",
@@ -54,6 +54,7 @@ public sealed class QuartzIntegrationTests
         };
 
         await RisJobScheduling.ScheduleAsync(scheduler, definition, default);
+        await RisJobScheduling.TriggerOnceAsync(scheduler, definition, default);
         var entry = await WaitForHistoryAsync(host.Services, scheduler, "CustInvoiceJour");
         await scheduler.Shutdown(true);
 
@@ -77,11 +78,12 @@ public sealed class QuartzIntegrationTests
         {
             Name = "Vendors",
             Group = "Export jobs",
-            Schedule = new ScheduleOptions { Interval = TimeSpan.FromHours(1) },
+            Schedule = new ScheduleOptions { Cron = "0 0 2 * * ?" },
             Options = new ExportJobOptions { Connection = "PROD", DataProject = "Vendors", Company = "USMF", DownloadSuccessDir = @"C:\ris\export", PauseOnError = true }
         };
 
         await RisJobScheduling.ScheduleAsync(scheduler, definition, default);
+        await RisJobScheduling.TriggerOnceAsync(scheduler, definition, default);
         var entry = await WaitForHistoryAsync(host.Services, scheduler, "Vendors");
         var triggerState = await scheduler.GetTriggerState(new TriggerKey("Vendors trigger", "Export jobs"), default);
         await scheduler.Shutdown(true);

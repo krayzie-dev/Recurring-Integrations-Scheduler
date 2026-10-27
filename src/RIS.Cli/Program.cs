@@ -149,16 +149,8 @@ public static class Program
         await scheduler.Start(cancellationToken);
         try
         {
-            var once = new JobDefinition
-            {
-                Name = definition.Name,
-                Group = definition.Group,
-                Description = definition.Description,
-                Options = definition.Options,
-                Schedule = new ScheduleOptions { Interval = TimeSpan.FromDays(3650) }
-            };
-            once.Options!.IndefinitePause = false; // explicit manual run
-            await RisJobScheduling.ScheduleAsync(scheduler, once, cancellationToken);
+            definition.Options!.IndefinitePause = false; // explicit manual run
+            await RisJobScheduling.TriggerOnceAsync(scheduler, definition, cancellationToken);
 
             var history = host.Services.GetRequiredService<IExecutionHistoryStore>();
             while (true)

@@ -172,10 +172,26 @@ public sealed partial class ConverterTests
         Assert.AreEqual(TimeSpan.FromSeconds(2), monitor.Options!.DelayBetweenFiles, "Monitors used DelayBetweenStatusCheck between files.");
         Assert.AreEqual("Pending vendor invoice", monitor.PairedJob);
 
+        Assert.AreEqual(TimeSpan.Zero, import.Schedule.StartAt!.Value.TimeOfDay, "4.x without start-time: rhythm anchored at midnight.");
+        Assert.IsTrue(result.Warnings.Any(w => w.Contains("Import jobs.Pending vendor invoice: 4.x did not save the start time")));
         Assert.IsTrue(result.Warnings.Any(w => w.Contains("'SomethingNew'")), "Unknown keys are reported.");
         Assert.IsTrue(result.Warnings.Any(w => w.Contains("was not decrypted")));
         Assert.AreEqual(0, ConfigurationValidator.Validate(configuration).Count(e => !e.Contains("path")),
             string.Join(Environment.NewLine, ConfigurationValidator.Validate(configuration)));
+    }
+
+    [TestMethod]
+    public void StartTimeSavedBy4x_IsUsedAsReferenceOfTheRhythm()
+    {
+        var xml = Production4xSchedule
+            .Replace("</job>\r\n  </schedule>", "</job>" + Triggers + "</schedule>")
+            .Replace("</job>\n  </schedule>", "</job>" + Triggers + "</schedule>")
+            .Replace("<repeat-interval>15</repeat-interval>", "<start-time>2026-10-01T12:00:00+02:00</start-time><repeat-interval>15</repeat-interval>");
+
+        var result = new ScheduleXmlConverter().Convert(XDocument.Parse(xml));
+
+        Assert.AreEqual(DateTimeOffset.Parse("2026-10-01T12:00:00+02:00"), result.Configuration.FindJob("Pending vendor invoice")!.Schedule.StartAt);
+        Assert.IsFalse(result.Warnings.Any(w => w.Contains("Import jobs.Pending vendor invoice: 4.x did not save the start time")));
     }
 
     [TestMethod]
