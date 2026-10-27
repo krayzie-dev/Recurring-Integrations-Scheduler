@@ -57,6 +57,8 @@ builder.Services.AddTransient<MudLocalizer, RisMudLocalizer>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<RisExceptionHandler>();
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<RIS.Server.Services.JobQueryService>();
+builder.Services.AddScoped<RIS.Server.Services.JobOperationsService>();
 
 var health = builder.Configuration.GetSection("Ris:Health").Get<HealthOptions>() ?? new HealthOptions();
 builder.Services.AddHealthChecks()

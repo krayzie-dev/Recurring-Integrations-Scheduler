@@ -164,4 +164,43 @@ public sealed class PersistenceTests
         command.CommandText = "SELECT COUNT(*) FROM Connections";
         Assert.AreEqual(1L, command.ExecuteScalar());
     }
+
+    [TestMethod]
+    public async Task SaveJobs_IsAllOrNothing_WithAuditPerJob()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+        var first = Job();
+        var second = Job();
+        second.Name = "Vendors";
+        await _repository.SaveJobAsync(first, "tester");
+        await _repository.SaveJobAsync(second, "tester");
+        var changed = 0;
+        _repository.Changed += () => changed++;
+
+        // One invalid job: nothing is saved.
+        var valid = Job("0 30 3 * * ?");
+        var invalid = Job();
+        invalid.Name = "Vendors";
+        invalid.Options!.Connection = "MISSING";
+        await Assert.ThrowsExactlyAsync<ConfigurationValidationException>(() => _repository.SaveJobsAsync(
+            [new JobChange("Export jobs", "CustInvoiceJour", valid), new JobChange("Export jobs", "Vendors", invalid)], "bulk"));
+        Assert.AreEqual("0 0 2 * * ?", (await _repository.LoadAsync()).FindJob("CustInvoiceJour")!.Schedule.Cron);
+        Assert.AreEqual(0, changed);
+
+        // Valid changes, one of them moves the job to another group.
+        var moved = Job("0 0 4 * * ?");
+        moved.Name = "Vendors";
+        moved.Group = "Master data";
+        await _repository.SaveJobsAsync([new JobChange("Export jobs", "CustInvoiceJour", valid), new JobChange("Export jobs", "Vendors", moved)], "bulk");
+
+        var configuration = await _repository.LoadAsync();
+        Assert.AreEqual("0 30 3 * * ?", configuration.FindJob("Export jobs.CustInvoiceJour")!.Schedule.Cron);
+        Assert.IsNotNull(configuration.FindJob("Master data.Vendors"));
+        Assert.IsNull(configuration.FindJob("Export jobs.Vendors"));
+        Assert.AreEqual(1, changed, "One change event for the whole bulk edit.");
+        var audit = await _repository.GetAuditAsync();
+        Assert.AreEqual(1, audit.Count(a => a.Action == "BulkUpdated"));
+        Assert.AreEqual(2, audit.Count(a => a.Action == "Updated" && a.User == "bulk"));
+        Assert.AreEqual(1, audit.Count(a => a.Action == "Moved"));
+    }
 }

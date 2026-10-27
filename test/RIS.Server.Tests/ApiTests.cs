@@ -157,6 +157,44 @@ public sealed class ApiTests
         Assert.AreEqual("Admin", me.GetProperty("roles")[0].GetString());
     }
 
+    [TestMethod]
+    public async Task BulkOperations_PerJobResults_AndRoles()
+    {
+        var admin = _factory.Client("Admin");
+        await ConfigureDailyJobAsync(admin);
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Second",
+            RisTestHost.Export("Second", ExportDirectory, new ScheduleOptions { Cron = "0 0 3 * * ?" }))).EnsureSuccessStatusCode();
+        var operatorClient = _factory.Client("Operator", @"TEST\operator");
+        await WaitForAsync(async () =>
+        {
+            var jobs = await operatorClient.GetFromJsonAsync<JsonElement>("/api/v1/jobs");
+            return jobs.EnumerateArray().All(j => j.GetProperty("state").GetString() == "Normal") ? jobs : (JsonElement?)null;
+        });
+
+        var request = new { jobs = new[] { "Tests.Daily", "Tests.Second", "Tests.Missing" }, reason = "D365 upgrade" };
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await _factory.Client("Viewer").PostAsJsonAsync("/api/v1/jobs/bulk/pause", request)).StatusCode);
+        var results = await (await operatorClient.PostAsJsonAsync("/api/v1/jobs/bulk/pause", request)).Content.ReadFromJsonAsync<JsonElement>();
+        CollectionAssert.AreEqual(new[] { true, true, false }, results.EnumerateArray().Select(r => r.GetProperty("succeeded").GetBoolean()).ToArray());
+
+        var jobs = (await operatorClient.GetFromJsonAsync<JsonElement>("/api/v1/jobs")).EnumerateArray().ToList();
+        Assert.IsTrue(jobs.All(j => j.GetProperty("state").GetString() == "Paused"));
+        Assert.IsTrue(jobs.All(j => j.GetProperty("pauseReason").GetString() == "D365 upgrade" && j.GetProperty("pausedBy").GetString() == @"TEST\operator"));
+
+        Assert.AreEqual(HttpStatusCode.OK, (await operatorClient.PostAsJsonAsync("/api/v1/jobs/bulk/resume", request)).StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, (await operatorClient.PostAsJsonAsync("/api/v1/jobs/bulk/delete", request)).StatusCode);
+        var deleted = await (await admin.PostAsJsonAsync("/api/v1/jobs/bulk/delete", new { jobs = new[] { "Tests.Second" } })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.IsTrue(deleted[0].GetProperty("succeeded").GetBoolean());
+
+        Assert.AreEqual(HttpStatusCode.Accepted, (await operatorClient.PostAsync("/api/v1/jobs/Tests/Daily/run", null)).StatusCode);
+        var history = await WaitForAsync(async () =>
+        {
+            var runs = await operatorClient.GetFromJsonAsync<JsonElement>($"/api/v1/history?from={Uri.EscapeDataString(DateTimeOffset.UtcNow.AddHours(-1).ToString("O"))}&result=Succeeded");
+            return runs.GetArrayLength() == 1 ? runs : (JsonElement?)null;
+        });
+        Assert.AreEqual("Tests.Daily", history[0].GetProperty("job").GetString());
+    }
+
+
     private static async Task<JsonElement> WaitForAsync(Func<Task<JsonElement?>> probe)
     {
         for (var i = 0; i < 100; i++)

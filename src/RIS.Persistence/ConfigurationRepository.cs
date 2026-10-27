@@ -19,6 +19,9 @@ public sealed class ConfigurationValidationException(IReadOnlyList<string> error
 public sealed class ConfigurationNotFoundException(string what, string name)
     : RisException(ErrorCodes.ConfigurationInvalid, $"{what} '{name}' does not exist.", new Dictionary<string, object?> { ["Name"] = name });
 
+/// <summary>New definition of an existing job identified by its current group and name.</summary>
+public sealed record JobChange(string OriginalGroup, string OriginalName, JobDefinition Job);
+
 public enum SecretOwner
 {
     Connection,
@@ -107,6 +110,33 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             Apply(entity, job);
             Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
             audit("Job", job.Key, before is null ? "Created" : "Updated", before, JobJson(job));
+        });
+
+    /// <summary>
+    /// Saves changes of many jobs at once (bulk edit): one validation of the whole result, one transaction, one audit entry
+    /// per job plus a summary entry, one <see cref="Changed"/> event. Nothing is saved when any job is invalid.
+    /// A change of group or name moves the job (the old key is removed).
+    /// </summary>
+    public Task SaveJobsAsync(IReadOnlyList<JobChange> changes, string? user, CancellationToken cancellationToken = default) =>
+        ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            foreach (var change in changes)
+            {
+                var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == change.OriginalGroup && j.Name == change.OriginalName, cancellationToken)
+                             ?? throw NotFound("Job", $"{change.OriginalGroup}.{change.OriginalName}");
+                var before = JobJson(ToDefinition(entity));
+                var originalKey = $"{change.OriginalGroup}.{change.OriginalName}";
+                if (!string.Equals(originalKey, change.Job.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    configuration.Jobs.RemoveAll(j => string.Equals(j.Key, originalKey, StringComparison.OrdinalIgnoreCase));
+                    audit("Job", originalKey, "Moved", before, change.Job.Key);
+                }
+
+                Apply(entity, change.Job);
+                Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
+                audit("Job", change.Job.Key, "Updated", before, JobJson(change.Job));
+            }
+            audit("Job", "*", "BulkUpdated", null, $"{changes.Count} job(s): {string.Join(", ", changes.Select(c => c.Job.Key))}");
         });
 
     public Task DeleteConnectionAsync(string name, string? user, CancellationToken cancellationToken = default) =>

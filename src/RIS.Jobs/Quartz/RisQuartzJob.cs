@@ -70,13 +70,21 @@ public sealed class RunningJobs
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (JobKey Key, DateTimeOffset StartedUtc)> _running = new();
 
+    /// <summary>Raised when a job starts or finishes (UI live refresh). The history row is written shortly after "finished".</summary>
+    public event Action? Changed;
+
     public IReadOnlyCollection<(string RunId, JobKey Key, DateTimeOffset StartedUtc)> Current =>
         _running.Select(r => (r.Key, r.Value.Key, r.Value.StartedUtc)).ToList();
 
     public IDisposable Register(JobKey key, string runId)
     {
         _running[runId] = (key, DateTimeOffset.UtcNow);
-        return new Registration(() => _running.TryRemove(runId, out _));
+        Changed?.Invoke();
+        return new Registration(() =>
+        {
+            _running.TryRemove(runId, out _);
+            Changed?.Invoke();
+        });
     }
 
     private sealed class Registration(Action dispose) : IDisposable
