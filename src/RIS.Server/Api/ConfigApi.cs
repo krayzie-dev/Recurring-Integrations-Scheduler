@@ -2,10 +2,17 @@ using System.Security.Claims;
 using RIS.Core.Configuration;
 using RIS.Core.Options;
 using RIS.Persistence;
+using RIS.Server.Services;
 
 namespace RIS.Server.Api;
 
 public sealed record SecretRequest(string Value);
+
+public sealed record D365TestRequest(string Connection);
+
+public sealed record FolderTestRequest(string? Path);
+
+public sealed record SftpTestRequest(string Server, string? RemoteFolder);
 
 public sealed record ValidationResult(bool IsValid, IReadOnlyList<string> Errors);
 
@@ -82,6 +89,14 @@ public static class ConfigApi
         });
         api.MapGet("/audit", async (int? take, ConfigurationRepository repository, CancellationToken ct) =>
             Results.Ok(await repository.GetAuditAsync(Math.Clamp(take ?? 200, 1, 5000), ct)));
+
+        // Checks run by the service account (what jobs will use).
+        api.MapPost("/test/d365", async (D365TestRequest request, ConnectionTestService tests, CancellationToken ct) =>
+            Results.Ok(await tests.D365Async(request.Connection, ct)));
+        api.MapPost("/test/folder", async (FolderTestRequest request, ConnectionTestService tests, CancellationToken ct) =>
+            Results.Ok(await tests.FolderAsync(request.Path, ct)));
+        api.MapPost("/test/sftp", async (SftpTestRequest request, ConnectionTestService tests, CancellationToken ct) =>
+            Results.Ok(await tests.SftpAsync(request.Server, request.RemoteFolder, ct)));
     }
 
     private static async Task<IResult> SetSecretAsync(SecretOwner owner, string name, SecretRequest request, ConfigurationRepository repository,

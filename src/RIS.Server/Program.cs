@@ -69,6 +69,7 @@ builder.Services.AddScoped<RIS.Server.Services.SchedulePlanService>();
 builder.Services.AddScoped<RIS.Server.Services.HistoryTimelineService>();
 builder.Services.AddScoped<RIS.Server.Services.ExportService>();
 builder.Services.AddScoped<RIS.Server.Services.BulkEditService>();
+builder.Services.AddScoped<RIS.Server.Services.ConnectionTestService>();
 
 var health = builder.Configuration.GetSection("Ris:Health").Get<HealthOptions>() ?? new HealthOptions();
 builder.Services.AddSingleton(health);

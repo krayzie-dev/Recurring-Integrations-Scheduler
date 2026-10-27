@@ -4,6 +4,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="WireMock.Net" />
   </ItemGroup>
   <ItemGroup>
     <!-- Shared D365 stand-in -->

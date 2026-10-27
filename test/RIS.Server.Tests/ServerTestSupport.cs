@@ -46,6 +46,9 @@ public sealed class RisServerFactory : WebApplicationFactory<Program>
     public string DataDirectory { get; }
     public FakeD365 D365 { get; } = new();
 
+    /// <summary>Extra service overrides (set before the first client is created).</summary>
+    public Action<IServiceCollection>? OverrideServices { get; set; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("Ris:Data:DataDirectory", DataDirectory);
@@ -55,6 +58,7 @@ public sealed class RisServerFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<ID365ClientFactory>(D365);
+            OverrideServices?.Invoke(services);
             services.AddAuthentication(TestAuthHandler.SchemeName).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, null);
             services.PostConfigure<AuthenticationOptions>(o =>
             {

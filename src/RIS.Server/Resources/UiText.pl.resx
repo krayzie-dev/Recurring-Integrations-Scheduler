@@ -573,4 +573,17 @@
   <data name="FieldHint_Timeout" xml:space="preserve"><value>Zakończ błędem po (domyślnie 12 h)</value></data>
   <data name="FieldHint_Count" xml:space="preserve"><value>Liczba ponowień</value></data>
   <data name="FieldHint_Delay" xml:space="preserve"><value>Odstęp między ponowieniami</value></data>
+  <data name="Test_D365Ok" xml:space="preserve"><value>Zalogowano do Entra ID i odczytano Zarządzanie danymi (projekty danych).</value></data>
+  <data name="Test_D365Http" xml:space="preserve"><value>D365 odpowiedział HTTP {0}: {1}</value></data>
+  <data name="Test_FolderOk" xml:space="preserve"><value>Konto usługi {0} może tu czytać i zapisywać.</value></data>
+  <data name="Test_FolderEmpty" xml:space="preserve"><value>Podaj folder.</value></data>
+  <data name="Test_FolderNotAbsolute" xml:space="preserve"><value>Podaj pełną ścieżkę, np. D:\RIS\Export lub \\serwer\udział\RIS.</value></data>
+  <data name="Test_FolderMissing" xml:space="preserve"><value>Folder nie istnieje albo konto usługi {0} go nie widzi.</value></data>
+  <data name="Test_UncHint" xml:space="preserve"><value>Udziały sieciowe wymagają konta domenowego lub gMSA jako konta usługi.</value></data>
+  <data name="Test_FolderNoWrite" xml:space="preserve"><value>Konto usługi {0} nie może tu zapisywać: {1}</value></data>
+  <data name="Test_SftpOk" xml:space="preserve"><value>Zalogowano i odczytano folder zdalny.</value></data>
+  <data name="Test_Run" xml:space="preserve"><value>Testuj połączenie</value></data>
+  <data name="Test_Folder" xml:space="preserve"><value>Sprawdź dostęp</value></data>
+  <data name="Test_Sftp" xml:space="preserve"><value>Testuj SFTP</value></data>
+  <data name="Test_Running" xml:space="preserve"><value>Sprawdzanie…</value></data>
 </root>

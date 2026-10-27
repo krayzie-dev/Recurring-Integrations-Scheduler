@@ -499,4 +499,17 @@
   <data name="FieldHint_Timeout" xml:space="preserve"><value>Give up after (default 12 h)</value></data>
   <data name="FieldHint_Count" xml:space="preserve"><value>Number of retries</value></data>
   <data name="FieldHint_Delay" xml:space="preserve"><value>Wait between retries</value></data>
+  <data name="Test_D365Ok" xml:space="preserve"><value>Signed in to Entra ID and read Data management (data projects).</value></data>
+  <data name="Test_D365Http" xml:space="preserve"><value>D365 answered HTTP {0}: {1}</value></data>
+  <data name="Test_FolderOk" xml:space="preserve"><value>The service account {0} can read and write here.</value></data>
+  <data name="Test_FolderEmpty" xml:space="preserve"><value>Enter a folder.</value></data>
+  <data name="Test_FolderNotAbsolute" xml:space="preserve"><value>Use a full path, e.g. D:\RIS\Export or \\server\share\RIS.</value></data>
+  <data name="Test_FolderMissing" xml:space="preserve"><value>The folder does not exist or the service account {0} cannot see it.</value></data>
+  <data name="Test_UncHint" xml:space="preserve"><value>Network shares need a domain account or gMSA as the service account.</value></data>
+  <data name="Test_FolderNoWrite" xml:space="preserve"><value>The service account {0} cannot write here: {1}</value></data>
+  <data name="Test_SftpOk" xml:space="preserve"><value>Logged in and listed the remote folder.</value></data>
+  <data name="Test_Run" xml:space="preserve"><value>Test connection</value></data>
+  <data name="Test_Folder" xml:space="preserve"><value>Check access</value></data>
+  <data name="Test_Sftp" xml:space="preserve"><value>Test SFTP</value></data>
+  <data name="Test_Running" xml:space="preserve"><value>Checking…</value></data>
 </root>
