@@ -35,6 +35,50 @@ RIS5-Setup-5.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /LOG=C:\Temp\ris5-setup.log ^
 ```
 
 `/ACCOUNT`: `LocalSystem`, `LocalService`, `NetworkService`, `DOMAIN\user` (+ `/PASSWORD=`), `DOMAIN\gmsa$`.
+Validation errors (account, port, certificate) end a silent install with an error; the message is in the `/LOG` file.
+From PowerShell run the setup with `& .\RIS5-Setup-….exe …` on its own line and quote arguments containing `;`
+(`"/ADMINS=S-1-5-32-544;CONTOSO\user"`).
+
+### HTTPS (remote access)
+
+Use a certificate from the company CA with the server name (and its FQDN) in the subject alternative names, imported with
+its private key into `LocalMachine\My`. For a test a self-signed certificate is enough (browsers will warn):
+
+```powershell
+$c = New-SelfSignedCertificate -DnsName $env:COMPUTERNAME, localhost -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(1)
+& .\RIS5-Setup-5.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /RECONFIGURE=1 /LOG=C:\Temp\ris5-https.log /HTTPPORT=5080 /HTTPSPORT=5443 "/CERT=$($c.Thumbprint)"
+```
+
+`/RECONFIGURE=1` on an existing installation rewrites the machine settings, so pass the other settings again (`/ADMINS`, …).
+Check: `https://<server>:5443/health` answers `Healthy`, `netsh advfirewall firewall show rule name="RIS5 HTTPS"` shows the
+rule, and the UI at `https://<server>:5443/` signs you in with Windows authentication. HTTP stays on localhost only. When the
+certificate is renewed run the setup again with `/RECONFIGURE=1` and the new thumbprint (the service needs read access to the
+new key).
+
+### Domain account / gMSA
+
+Needed when jobs read or write network shares (UNC): the built-in accounts access the network as the computer account or
+anonymously. The installer grants "Log on as a service" and Modify on `%ProgramData%\RIS5`; access to the shares themselves
+(share and NTFS permissions) must be granted by the file server admins.
+
+- **gMSA** (recommended, no password to manage): the AD admins create it and allow this server to retrieve the password;
+  on the server `Install-ADServiceAccount svc-ris$` and `Test-ADServiceAccount svc-ris$` (must return `True`), then
+  `/ACCOUNT="CONTOSO\svc-ris$"` (no password; in the wizard leave the password empty).
+- **Domain user:** enter it in the wizard (the password is checked with a network logon). In a silent install
+  `/ACCOUNT="CONTOSO\svc-ris" /PASSWORD=…` – the password ends up in the command history, so prefer the wizard.
+- **After the install:** open a job in the UI and use "Check access" next to its folders – the check runs as the service account
+  and reports the account name.
+
+### Installation tests
+
+| Scenario | Version | Result (27.10.2026) |
+|---|---|---|
+| First install (LocalService, localhost HTTP) | 5.0.0-local.2 | Passed |
+| Upgrade with `/RECONFIGURE=1` (roles, Event Log source) | 5.0.0-local.3 | Passed |
+| Upgrade (service stopped cleanly, databases backed up, settings kept) | 5.0.0-local.4 | Passed |
+| Uninstall and reinstall (jobs, history, settings and roles kept) | 5.0.0-local.5 | Passed |
+| HTTPS with a certificate from `LocalMachine\My` (TLS 1.3, firewall rule, key access for LocalService, Windows sign-in over HTTPS) | 5.0.0-local.6 | Passed |
+| Domain account / gMSA | – | Not tested yet: do it on the target server |
 
 ### Upgrade
 
@@ -118,3 +162,6 @@ Secret keys are protected by DPAPI of the machine by default and cannot be read 
 | 401 in the browser / curl | Windows authentication: use `--negotiate -u :`; the user needs a role in `Ris:Security:Roles` (403 otherwise) |
 | Changes from `ris db import` not visible | Wait `Ris:ConfigurationPollInterval` (30 s) or restart the service |
 | Logs of one run | `GET /api/v1/runs/{runId}` or `logs\jobs\<Group.Name>\` filtered by `RunId` |
+| Setup: "Certificate not found in LocalMachine\My" for an existing certificate | Setup 5.0.0-local.5 and older, started from PowerShell 7 – use a newer setup (or start it from Explorer / Windows PowerShell) |
+| Setup: PowerShell `ParserError` at `/VERYSILENT` | Two commands pasted on one line; run `$c = …` and `& .\RIS5-Setup…` separately |
+| Service does not start after enabling HTTPS, `RIS-CFG-001` in the Event Log | Certificate missing, without private key, or the service account cannot read the key – run the setup with `/RECONFIGURE=1` and a valid thumbprint |
