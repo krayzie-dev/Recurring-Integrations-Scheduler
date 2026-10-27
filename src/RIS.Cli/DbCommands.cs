@@ -43,15 +43,20 @@ internal static class DbCommands
     {
         var file = new Argument<FileInfo>("config") { Description = "jobs.json (e.g. output of convert-schedule)" };
         var data = DataOption();
-        var command = new Command("import", "Add or update connections, SFTP servers and jobs from a file. Placeholder secrets keep stored values.") { file, data };
+        var paused = new Option<bool>("--paused") { Description = "Import all jobs paused (parallel run with 4.x: visible, but not started until resumed)" };
+        var command = new Command("import", "Add or update connections, SFTP servers and jobs from a file. Placeholder secrets keep stored values.") { file, data, paused };
         command.SetAction(async (parse, ct) =>
         {
             var configuration = RisJson.LoadConfiguration(parse.GetValue(file)!.FullName);
+            if (parse.GetValue(paused))
+            {
+                foreach (var job in configuration.Jobs) job.Schedule.Paused = true;
+            }
             await using var services = await OpenAsync(parse.GetValue(data), ct);
             return await ChangeAsync(async () =>
             {
                 await services.GetRequiredService<ConfigurationRepository>().ImportAsync(configuration, CurrentUser(), ct);
-                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s).");
+                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s)." + (parse.GetValue(paused) ? " Jobs are paused." : ""));
                 var missing = configuration.Connections.Where(c => SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(c.UserPassword))
                     .Select(c => c.Name).ToList();
                 if (missing.Count > 0)

@@ -18,6 +18,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : null
 });
 
+builder.AddMachineSettings(args);
+builder.ConfigureHttps();
 builder.Services.AddWindowsService(service => service.ServiceName = "RIS5");
 // Static files of packages (MudBlazor, blazor.web.js) also when started from the build output outside Development;
 // a published app has no runtime manifest and this does nothing.
@@ -107,6 +109,7 @@ app.MapExportApi();
 app.MapGet("/api/v1/me", (System.Security.Claims.ClaimsPrincipal user) => Results.Ok(new
 {
     name = user.Identity?.Name,
+    version = ServerSetup.Version,
     roles = new[] { RisRoles.Viewer, RisRoles.Operator, RisRoles.Admin }.Where(user.IsInRole)
 })).RequireAuthorization();
 

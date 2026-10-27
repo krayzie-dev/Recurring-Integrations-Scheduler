@@ -259,6 +259,7 @@ public sealed partial class ConverterTests
 
         var import = await Cli.Program.BuildCommand().Parse(["db", "import", jobs, "--data", data]).InvokeAsync();
         var export = await Cli.Program.BuildCommand().Parse(["db", "export", "-o", exported, "--data", data]).InvokeAsync();
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "import", jobs, "--data", data, "--paused"]).InvokeAsync());
         var dryRun = await Cli.Program.BuildCommand().Parse(["run", "--db", "--data", data, "--job", "CustInvoicejour interface D365_AX2012", "--dry-run"]).InvokeAsync();
         var noSource = await Cli.Program.BuildCommand().Parse(["run", "--job", "x", "--dry-run"]).InvokeAsync();
 
@@ -270,6 +271,12 @@ public sealed partial class ConverterTests
         Assert.AreEqual(1, configuration.Connections.Count);
         Assert.AreEqual(0, dryRun);
         Assert.AreEqual(2, noSource);
+        Assert.IsFalse(configuration.Jobs.All(j => j.Schedule.Paused));
+
+        // --paused: imported jobs are paused (parallel run with 4.x).
+        var pausedExport = Path.Combine(folder, "paused.json");
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "export", "-o", pausedExport, "--data", data]).InvokeAsync());
+        Assert.IsTrue(RisJson.LoadConfiguration(pausedExport).Jobs.All(j => j.Schedule.Paused));
 
         // Invalid file: nothing is imported, exit code 1.
         configuration.Jobs[0].Options!.Connection = "MISSING";

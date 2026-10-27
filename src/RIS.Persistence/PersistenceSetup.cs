@@ -118,7 +118,7 @@ public static class ServiceCollectionExtensions
             .PersistKeysToFileSystem(new DirectoryInfo(options.KeysDirectory));
         if (!string.IsNullOrWhiteSpace(options.KeyCertificateThumbprint))
         {
-            dataProtection.ProtectKeysWithCertificate(FindCertificate(options.KeyCertificateThumbprint));
+            dataProtection.ProtectKeysWithCertificate(Certificates.FindByThumbprint(options.KeyCertificateThumbprint));
         }
         else if (OperatingSystem.IsWindows())
         {
@@ -133,11 +133,4 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static X509Certificate2 FindCertificate(string thumbprint)
-    {
-        using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-        store.Open(OpenFlags.ReadOnly);
-        var found = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint.Replace(" ", string.Empty), validOnly: false);
-        return found.Count > 0 ? found[0] : throw new InvalidOperationException($"Certificate {thumbprint} for data protection keys not found in LocalMachine\\My.");
-    }
 }

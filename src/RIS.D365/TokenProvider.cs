@@ -94,27 +94,11 @@ public sealed class MsalTokenProvider(ILogger<MsalTokenProvider> logger) : ID365
             D365AuthMode.ClientSecret => ConfidentialClientApplicationBuilder.Create(connection.ClientId)
                 .WithClientSecret(connection.ClientSecret).WithAuthority(authority).Build(),
             D365AuthMode.Certificate => ConfidentialClientApplicationBuilder.Create(connection.ClientId)
-                .WithCertificate(FindCertificate(connection.CertificateThumbprint!)).WithAuthority(authority).Build(),
+                .WithCertificate(Core.Configuration.Certificates.FindByThumbprint(connection.CertificateThumbprint!, StoreLocation.LocalMachine, StoreLocation.CurrentUser)).WithAuthority(authority).Build(),
             D365AuthMode.UsernamePassword => PublicClientApplicationBuilder.Create(connection.ClientId)
                 .WithAuthority(authority).Build(),
             _ => throw new InvalidOperationException($"Unsupported authentication mode {connection.AuthMode}.")
         };
 #pragma warning restore CS0618
-    }
-
-    private static X509Certificate2 FindCertificate(string thumbprint)
-    {
-        foreach (var location in new[] { StoreLocation.LocalMachine, StoreLocation.CurrentUser })
-        {
-            using var store = new X509Store(StoreName.My, location);
-            store.Open(OpenFlags.ReadOnly);
-            var found = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint.Replace(" ", string.Empty), validOnly: false);
-            if (found.Count > 0)
-            {
-                return found[0];
-            }
-        }
-
-        throw new InvalidOperationException($"Certificate with thumbprint {thumbprint} was not found in LocalMachine\\My or CurrentUser\\My.");
     }
 }
