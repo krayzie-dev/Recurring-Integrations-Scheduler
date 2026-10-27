@@ -78,9 +78,20 @@ namespace RecurringIntegrationsScheduler.Job
         }
 
         internal ProcessingMonitor(IHttpClientHelperFactory httpClientHelperFactory)
+            : this(httpClientHelperFactory, SystemPollingClock.Instance)
+        {
+        }
+
+        internal ProcessingMonitor(IHttpClientHelperFactory httpClientHelperFactory, IPollingClock clock)
         {
             _httpClientHelperFactory = httpClientHelperFactory ?? throw new ArgumentNullException(nameof(httpClientHelperFactory));
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
+
+        /// <summary>
+        /// Time source used for timeouts and waiting
+        /// </summary>
+        private readonly IPollingClock _clock;
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -110,6 +121,11 @@ namespace RecurringIntegrationsScheduler.Job
 
                 Log.VerboseFormat(_settings.LogVerbose, CultureInfo.InvariantCulture, Resources.Job_0_ended, _context.JobDetail.Key);
             }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                // Job was interrupted (e.g. service stop). Remaining status files will be checked in the next run.
+                Log.Warn(string.Format(Resources.Job_0_was_interrupted, context.JobDetail.Key));
+            }
             catch (Exception ex)
             {
                 if (_settings.PauseJobOnException)
@@ -117,18 +133,12 @@ namespace RecurringIntegrationsScheduler.Job
                     await context.Scheduler.PauseJob(context.JobDetail.Key);
                     Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_was_paused_because_of_error, _context.JobDetail.Key));
                 }
-                if (_settings.LogVerbose)
-                {
-                    if (!string.IsNullOrEmpty(ex.Message))
-                    {
-                        Log.Error(ex.Message, ex);
-                    }
-                }
                 if (!string.Equals(context.Scheduler.SchedulerName, RecurringIntegrationsScheduler.Common.Contracts.SchedulerConstants.PrivateSchedulerName, StringComparison.Ordinal))
                 {
+                    // Quartz JobRunShell logs the exception (with inner exception and stack trace) - log once only.
                     throw new JobExecutionException(string.Format(Resources.Processing_monitor_job_0_failed, _context.JobDetail.Key), ex, false);
                 }
-                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message));
+                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message), ex);
             }
         }
 
@@ -171,7 +181,7 @@ namespace RecurringIntegrationsScheduler.Job
             {
                 if (fileCount > 0 && _settings.StatusCheckInterval > 0) //Only delay after first file and never after last.
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(_settings.StatusCheckInterval));
+                    await _clock.Delay(TimeSpan.FromSeconds(_settings.StatusCheckInterval), _context.CancellationToken);
                 }
                 fileCount++;
 
@@ -199,6 +209,8 @@ namespace RecurringIntegrationsScheduler.Job
                 return;
             }
             dataMessage.DataJobState = jobStatusDetail.DataJobStatus.DataJobState;
+            // Status file is rewritten below - keep original submission time of status files written by older versions.
+            dataMessage.SubmittedUtc ??= FileOperationsHelper.GetSubmittedUtc(dataMessage, _settings.StatusFileExtension);
 
             _retryPolicyForIo.Execute(() => FileOperationsHelper.WriteStatusFile(dataMessage, _settings.StatusFileExtension));
 
@@ -207,7 +219,7 @@ namespace RecurringIntegrationsScheduler.Job
                 case DataJobState.Processed:
                 {
                     // Move message file and delete processing status file
-                    _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, Path.Combine(_settings.ProcessingSuccessDir, dataMessage.Name), true));
+                    _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, Path.Combine(_settings.ProcessingSuccessDir, dataMessage.Name), true, _settings.StatusFileExtension));
                 }
                 break;
 
@@ -220,7 +232,7 @@ namespace RecurringIntegrationsScheduler.Job
                         FullPath = Path.Combine(_settings.ProcessingErrorsDir, dataMessage.Name),
                         MessageStatus = MessageStatus.Failed
                     };
-                    _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, targetDataMessage.FullPath));
+                    _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, targetDataMessage.FullPath, false, _settings.StatusFileExtension));
                     _retryPolicyForIo.Execute(() => FileOperationsHelper.WriteStatusLogFile(jobStatusDetail, targetDataMessage, null, _settings.StatusFileExtension));
 
                     if (_settings.GetExecutionErrors)
@@ -229,7 +241,7 @@ namespace RecurringIntegrationsScheduler.Job
                         var response = await _httpClientHelper.GetExecutionErrors(dataMessage.MessageId);
                         if (!response.IsSuccessStatusCode)
                         {
-                            throw new JobExecutionException(string.Format(Resources.Job_0_download_of_execution_errors_failed_1, _context.JobDetail.Key, string.Format($"Status: {response.StatusCode}. Message: {response.Content}")));
+                            throw new JobExecutionException(string.Format(Resources.Job_0_download_of_execution_errors_failed_1, _context.JobDetail.Key, $"Status: {response.StatusCode}. Message: {await HttpClientHelper.ReadContentForLogAsync(response)}"));
                         }
                         using Stream downloadedStream = await response.Content.ReadAsStreamAsync();
                         var errorsFileName = $"{Path.GetFileNameWithoutExtension(dataMessage.Name)}-ExecutionErrors-{DateTime.Now:yyyy-MM-dd_HH-mm-ss-ffff}.txt";
@@ -242,6 +254,25 @@ namespace RecurringIntegrationsScheduler.Job
                         };
                         _retryPolicyForIo.Execute(() => FileOperationsHelper.Create(downloadedStream, dataMessageForErrorsFile.FullPath));
                     }
+                }
+                break;
+
+                default: // still in progress (Enqueued, Dequeued, InProcess, ...)
+                {
+                    var submittedUtc = FileOperationsHelper.GetSubmittedUtc(dataMessage, _settings.StatusFileExtension);
+                    if (submittedUtc == null || _clock.UtcNow - submittedUtc.Value < TimeSpan.FromMinutes(_settings.StatusCheckTimeoutMinutes))
+                    {
+                        break; // still waiting - status will be checked in the next run
+                    }
+
+                    Log.Error(string.Format(Resources.Job_0_Processing_did_not_finish_within_1_minutes_File_2_Message_Id_3_State_4_Submitted_5, _context.JobDetail.Key, _settings.StatusCheckTimeoutMinutes, dataMessage.FullPath, dataMessage.MessageId, dataMessage.DataJobState, submittedUtc.Value.ToLocalTime()));
+                    var targetDataMessage = new DataMessage(dataMessage)
+                    {
+                        FullPath = Path.Combine(_settings.ProcessingErrorsDir, dataMessage.Name),
+                        MessageStatus = MessageStatus.Failed
+                    };
+                    _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, targetDataMessage.FullPath, false, _settings.StatusFileExtension));
+                    _retryPolicyForIo.Execute(() => FileOperationsHelper.WriteStatusLogFile(jobStatusDetail, targetDataMessage, null, _settings.StatusFileExtension));
                 }
                 break;
             }
@@ -263,8 +294,7 @@ namespace RecurringIntegrationsScheduler.Job
             if (response.IsSuccessStatusCode)
             {
                 // Deserialize response to the DataJobStatusDetail object
-                if (Log.IsDebugEnabled)
-                    Log.VerboseFormat(_settings.LogVerbose, CultureInfo.InvariantCulture, Resources.Job_0_Successfully_received_job_status_for_message_id_1, _context.JobDetail.Key, message);
+                Log.VerboseFormat(_settings.LogVerbose, CultureInfo.InvariantCulture, Resources.Job_0_Successfully_received_job_status_for_message_id_1, _context.JobDetail.Key, message);
                 var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return JsonConvert.DeserializeObject<DataJobStatusDetail>(payload, new StringEnumConverter());
             }

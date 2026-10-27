@@ -3,6 +3,7 @@
    
 using Quartz;
 using RecurringIntegrationsScheduler.Common.Contracts;
+using RecurringIntegrationsScheduler.Common.Helpers;
 using RecurringIntegrationsScheduler.Common.Properties;
 using System;
 using System.Globalization;
@@ -105,6 +106,8 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
             }
 
             DelayBetweenStatusCheck = GetOptionalInt(dataMap, SettingsConstants.DelayBetweenStatusCheck);
+            MaxDelayBetweenStatusCheck = GetOptionalPositiveInt(dataMap, SettingsConstants.MaxDelayBetweenStatusCheck, StatusCheckBackoff.DefaultMaxDelaySeconds);
+            StatusCheckTimeoutMinutes = GetOptionalPositiveInt(dataMap, SettingsConstants.StatusCheckTimeoutMinutes, StatusCheckBackoff.DefaultStatusCheckTimeoutMinutes);
         }
 
         #region Members
@@ -172,6 +175,16 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
         /// Delay between status checks.
         /// </value>
         public int DelayBetweenStatusCheck { get; private set; }
+
+        /// <summary>
+        /// Gets maximum delay in seconds between status checks.
+        /// </summary>
+        public int MaxDelayBetweenStatusCheck { get; private set; }
+
+        /// <summary>
+        /// Gets time in minutes after which unfinished export is reported as an error.
+        /// </summary>
+        public int StatusCheckTimeoutMinutes { get; private set; }
 
         public bool UseSftpOutbound { get; private set; }
 

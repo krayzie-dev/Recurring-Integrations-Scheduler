@@ -119,18 +119,12 @@ namespace RecurringIntegrationsScheduler.Job
                     Log.WarnFormat(CultureInfo.InvariantCulture,
                         string.Format(Resources.Job_0_was_paused_because_of_error, _context.JobDetail.Key));
                 }
-                if (_settings.LogVerbose)
-                {
-                    if (!string.IsNullOrEmpty(ex.Message))
-                    {
-                        Log.Error(ex.Message, ex);
-                    }
-                }
                 if (!string.Equals(context.Scheduler.SchedulerName, RecurringIntegrationsScheduler.Common.Contracts.SchedulerConstants.PrivateSchedulerName, StringComparison.Ordinal))
                 {
+                    // Quartz JobRunShell logs the exception (with inner exception and stack trace) - log once only.
                     throw new JobExecutionException(string.Format(Resources.Upload_job_0_failed, _context.JobDetail.Key), ex, false);
                 }
-                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message));
+                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message), ex);
             }
         }
 
@@ -209,7 +203,8 @@ namespace RecurringIntegrationsScheduler.Job
                             {
                                 MessageId = messageId,
                                 FullPath = Path.Combine(_settings.UploadSuccessDir, dataMessage.Name),
-                                MessageStatus = MessageStatus.Enqueued
+                                MessageStatus = MessageStatus.Enqueued,
+                                SubmittedUtc = DateTime.UtcNow
                             };
 
                             // Move to success location
@@ -246,7 +241,7 @@ namespace RecurringIntegrationsScheduler.Job
                     }
                     catch (Exception ex)
                     {
-                        Log.ErrorFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Failure_processing_file_1_Exception_2, _context.JobDetail.Key, dataMessage.FullPath.Replace(@"{", @"{{").Replace(@"}", @"}}"), ex.Message), ex);
+                        Log.Error(string.Format(Resources.Job_0_Failure_processing_file_1_Exception_2, _context.JobDetail.Key, dataMessage.FullPath, ex.Message), ex);
                         throw;
                     }
                 }

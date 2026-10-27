@@ -298,7 +298,7 @@ Uri: {requestUri}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
                 throw new HttpRequestException($"HttpClientHelper.GetAzureWriteUrl failed with status code {response.StatusCode}");
             }
             return response;
@@ -333,7 +333,7 @@ executionId: {executionId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -367,7 +367,7 @@ executionId: {executionId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -401,7 +401,7 @@ executionId: {executionId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -428,7 +428,7 @@ Uri: {blobUrl.AbsoluteUri}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -485,7 +485,7 @@ legalEntityId: {legalEntityId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -519,7 +519,7 @@ executionId: {executionId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -572,7 +572,7 @@ legalEntityId: {legalEntityId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -629,7 +629,7 @@ legalEntityId: {legalEntityId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -662,7 +662,7 @@ messageId: {messageId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
 
@@ -704,7 +704,7 @@ entityName: {entityName}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -745,7 +745,7 @@ entityName: {entityName}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -779,7 +779,7 @@ executionId: {executionId}
 
 Response status code: {response.StatusCode}
 Response reason: {response.ReasonPhrase}
-Response message: {response.Content}");
+Response message: {await ReadContentForLogAsync(response)}");
             }
             return response;
         }
@@ -826,6 +826,34 @@ Response message: {response.Content}");
             }
 
             return valueNode.ToString();
+        }
+
+        /// <summary>
+        /// Reads response body for diagnostic logging. Never throws and truncates long payloads.
+        /// </summary>
+        /// <param name="response">Http response</param>
+        /// <param name="maxLength">Maximum number of characters returned</param>
+        /// <returns>Response body or a short description why it could not be read</returns>
+        public static async Task<string> ReadContentForLogAsync(HttpResponseMessage response, int maxLength = 8000)
+        {
+            if (response?.Content == null)
+            {
+                return "<no content>";
+            }
+
+            try
+            {
+                var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(payload))
+                {
+                    return "<empty>";
+                }
+                return payload.Length <= maxLength ? payload : payload.Substring(0, maxLength) + $"... [truncated, total length {payload.Length}]";
+            }
+            catch (Exception ex)
+            {
+                return $"<unable to read response content: {ex.Message}>";
+            }
         }
 
         /// <summary>

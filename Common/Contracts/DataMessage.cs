@@ -3,6 +3,7 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 
 namespace RecurringIntegrationsScheduler.Common.Contracts
 {
@@ -33,6 +34,7 @@ namespace RecurringIntegrationsScheduler.Common.Contracts
             CorrelationId = dataMessage.CorrelationId;
             PopReceipt = dataMessage.PopReceipt;
             DownloadLocation = dataMessage.DownloadLocation;
+            SubmittedUtc = dataMessage.SubmittedUtc;
         }
 
         /// <summary>
@@ -100,5 +102,14 @@ namespace RecurringIntegrationsScheduler.Common.Contracts
         /// The download location.
         /// </value>
         public string DownloadLocation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the time (UTC) when the message was submitted to D365.
+        /// Status files created by older versions do not contain this value.
+        /// </summary>
+        /// <value>
+        /// The submission time.
+        /// </value>
+        public DateTime? SubmittedUtc { get; set; }
     }
 }

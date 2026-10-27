@@ -63,6 +63,8 @@
     <Compile Include="Helpers\IHttpClientHelper.cs" />
     <Compile Include="Helpers\IHttpClientHelperFactory.cs" />
     <Compile Include="Helpers\LogExtensions.cs" />
+    <Compile Include="Helpers\PollingClock.cs" />
+    <Compile Include="Helpers\StatusCheckBackoff.cs" />
     <Compile Include="JobSettings\ExportJobSettings.cs" />
     <Compile Include="JobSettings\ImportJobSettings.cs" />
     <Compile Include="JobSettings\ExecutionJobSettings.cs" />

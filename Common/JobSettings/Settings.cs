@@ -451,6 +451,12 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
             return map.ContainsKey(key) ? map.GetInt(key) : defaultValue;
         }
 
+        protected static int GetOptionalPositiveInt(JobDataMap map, string key, int defaultValue)
+        {
+            var value = GetOptionalInt(map, key, defaultValue);
+            return value > 0 ? value : defaultValue;
+        }
+
         protected SftpConfiguration ReadSftpConfiguration(
             JobDataMap dataMap,
             string hostKey,

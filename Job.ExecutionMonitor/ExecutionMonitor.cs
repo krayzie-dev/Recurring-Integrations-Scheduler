@@ -82,9 +82,20 @@ namespace RecurringIntegrationsScheduler.Job
         }
 
         internal ExecutionMonitor(IHttpClientHelperFactory httpClientHelperFactory)
+            : this(httpClientHelperFactory, SystemPollingClock.Instance)
+        {
+        }
+
+        internal ExecutionMonitor(IHttpClientHelperFactory httpClientHelperFactory, IPollingClock clock)
         {
             _httpClientHelperFactory = httpClientHelperFactory ?? throw new ArgumentNullException(nameof(httpClientHelperFactory));
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
+
+        /// <summary>
+        /// Time source used for timeouts and waiting
+        /// </summary>
+        private readonly IPollingClock _clock;
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -114,6 +125,11 @@ namespace RecurringIntegrationsScheduler.Job
 
                 Log.VerboseFormat(_settings.LogVerbose, CultureInfo.InvariantCulture, Resources.Job_0_ended, _context.JobDetail.Key);
             }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                // Job was interrupted (e.g. service stop). Remaining status files will be checked in the next run.
+                Log.Warn(string.Format(Resources.Job_0_was_interrupted, context.JobDetail.Key));
+            }
             catch (Exception ex)
             {
                 if (_settings.PauseJobOnException)
@@ -121,18 +137,12 @@ namespace RecurringIntegrationsScheduler.Job
                     await context.Scheduler.PauseJob(context.JobDetail.Key);
                     Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_was_paused_because_of_error, _context.JobDetail.Key));
                 }
-                if (_settings.LogVerbose)
-                {
-                    if (!string.IsNullOrEmpty(ex.Message))
-                    {
-                        Log.Error(ex.Message, ex);
-                    }
-                }
                 if (!string.Equals(context.Scheduler.SchedulerName, RecurringIntegrationsScheduler.Common.Contracts.SchedulerConstants.PrivateSchedulerName, StringComparison.Ordinal))
                 {
+                    // Quartz JobRunShell logs the exception (with inner exception and stack trace) - log once only.
                     throw new JobExecutionException(string.Format(Resources.Execution_monitor_job_0_failed, _context.JobDetail.Key), ex, false);
                 }
-                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message));
+                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message), ex);
             }
         }
 
@@ -175,7 +185,7 @@ namespace RecurringIntegrationsScheduler.Job
             {
                 if (fileCount > 0 && _settings.DelayBetweenStatusCheck > 0) //Only delay after first file and never after last.
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(_settings.DelayBetweenStatusCheck));
+                    await _clock.Delay(TimeSpan.FromSeconds(_settings.DelayBetweenStatusCheck), _context.CancellationToken);
                 }
                 fileCount++;
 
@@ -239,30 +249,26 @@ namespace RecurringIntegrationsScheduler.Job
                                 {
                                     var errorFileUrl = string.Empty;
                                     HttpResponseMessage errorFileUrlResponse;
-                                    var errorFileAttempts = 0;
-                                    const int maxErrorFileAttempts = 60;
-                                    do
+                                    var errorFileBackoff = new StatusCheckBackoff(_settings.DelayBetweenStatusCheck, _settings.MaxDelayBetweenStatusCheck);
+                                    var errorFileDeadline = _clock.UtcNow.AddMinutes(_settings.ErrorKeysFileTimeoutMinutes);
+                                    while (true)
                                     {
-                                        errorFileAttempts++;
                                         errorFileUrlResponse = await _httpClientHelper.GetImportTargetErrorKeysFileUrl(dataMessage.MessageId, entity);
-                                        if(errorFileUrlResponse.IsSuccessStatusCode)
-                                        {
-                                            errorFileUrl = await HttpClientHelper.ReadResponseStringAsync(errorFileUrlResponse);
-                                            if (errorFileUrl.Length == 0 && errorFileAttempts < maxErrorFileAttempts)
-                                            {
-                                                await Task.Delay(TimeSpan.FromSeconds(_settings.DelayBetweenStatusCheck));
-                                            }
-                                        }
-                                        else
+                                        if (!errorFileUrlResponse.IsSuccessStatusCode)
                                         {
                                             break;
                                         }
+                                        errorFileUrl = await HttpClientHelper.ReadResponseStringAsync(errorFileUrlResponse);
+                                        if (errorFileUrl.Length > 0 || _clock.UtcNow >= errorFileDeadline)
+                                        {
+                                            break;
+                                        }
+                                        await _clock.Delay(errorFileBackoff.Next(), _context.CancellationToken);
                                     }
-                                    while (string.IsNullOrEmpty(errorFileUrl) && errorFileAttempts < maxErrorFileAttempts);
 
                                     if (string.IsNullOrEmpty(errorFileUrl))
                                     {
-                                        Log.Warn($@"Job: {_settings.JobKey}. Timed out waiting for error keys file for entity '{entity}'. Job will continue.");
+                                        Log.Warn($@"Job: {_settings.JobKey}. Error keys file for entity '{entity}' was not available within {_settings.ErrorKeysFileTimeoutMinutes} minutes. Execution Id: {dataMessage.MessageId}. Job will continue.");
                                         continue;
                                     }
 
@@ -319,6 +325,18 @@ Message Id: {dataMessage.MessageId}");
                     }
                     break;
                 default: //"NotRun", "Executing"
+                    {
+                        var submittedUtc = FileOperationsHelper.GetSubmittedUtc(dataMessage, _settings.StatusFileExtension);
+                        if (submittedUtc == null || _clock.UtcNow - submittedUtc.Value < TimeSpan.FromMinutes(_settings.StatusCheckTimeoutMinutes))
+                        {
+                            break; // still waiting - status will be checked in the next run
+                        }
+
+                        Log.Error(string.Format(Resources.Job_0_Import_did_not_finish_within_1_minutes_File_2_Execution_Id_3_Status_4_Submitted_5, _context.JobDetail.Key, _settings.StatusCheckTimeoutMinutes, dataMessage.FullPath, dataMessage.MessageId, executionStatus, submittedUtc.Value.ToLocalTime()));
+                        var processingErrorDestination = dataMessage.FullPath.Replace(_settings.UploadSuccessDir, _settings.ProcessingErrorsDir);
+                        _retryPolicyForIo.Execute(() => FileOperationsHelper.MoveDataToTarget(dataMessage.FullPath, processingErrorDestination, true, _settings.StatusFileExtension));
+                        await CreateLinkToExecutionSummaryPage(dataMessage.MessageId, processingErrorDestination);
+                    }
                     break;
             }
         }

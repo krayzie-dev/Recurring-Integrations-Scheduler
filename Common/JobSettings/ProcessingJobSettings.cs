@@ -3,6 +3,7 @@
 
 using Quartz;
 using RecurringIntegrationsScheduler.Common.Contracts;
+using RecurringIntegrationsScheduler.Common.Helpers;
 using RecurringIntegrationsScheduler.Common.Properties;
 using System;
 using System.Globalization;
@@ -94,6 +95,7 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
             }
 
             StatusCheckInterval = GetOptionalInt(dataMap, SettingsConstants.DelayBetweenStatusCheck);
+            StatusCheckTimeoutMinutes = GetOptionalPositiveInt(dataMap, SettingsConstants.StatusCheckTimeoutMinutes, StatusCheckBackoff.DefaultStatusCheckTimeoutMinutes);
         }
 
         #region Members
@@ -145,6 +147,11 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
         /// Delay between status checks.
         /// </value>
         public int StatusCheckInterval { get; private set; }
+
+        /// <summary>
+        /// Gets time in minutes after which unfinished processing is moved to errors.
+        /// </summary>
+        public int StatusCheckTimeoutMinutes { get; private set; }
 
         #endregion
     }

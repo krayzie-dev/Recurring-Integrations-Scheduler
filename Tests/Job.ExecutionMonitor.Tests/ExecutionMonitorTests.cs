@@ -62,6 +62,48 @@ namespace RecurringIntegrationsScheduler.JobExecutionMonitor.Tests
             Assert.IsFalse(Directory.EnumerateFileSystemEntries(processingErrorsDir).Any(), "No error files should be produced for succeeded job.");
         }
 
+        [TestMethod]
+        [DataRow(13, true)]
+        [DataRow(1, false)]
+        public async Task Execute_ExecutingImport_MovedToErrorsOnlyAfterTimeout(int submittedHoursAgo, bool expectTimeout)
+        {
+            var testDataRoot = FixtureManager.MaterializeTestData("ExecutionMonitorTests");
+            var uploadSuccessDir = Path.Combine(testDataRoot, "Execution", "UploadSuccess");
+            var processingSuccessDir = Path.Combine(testDataRoot, "Execution", "ProcessingSuccess");
+            var processingErrorsDir = Path.Combine(testDataRoot, "Execution", "ProcessingErrors");
+            Directory.CreateDirectory(uploadSuccessDir);
+            Directory.CreateDirectory(processingSuccessDir);
+            Directory.CreateDirectory(processingErrorsDir);
+
+            var clock = new FakePollingClock();
+            var packagePath = Path.Combine(uploadSuccessDir, "vendors.zip");
+            File.WriteAllText(packagePath, "payload");
+            FileOperationsHelper.WriteStatusFile(new DataMessage
+            {
+                FullPath = packagePath,
+                Name = Path.GetFileName(packagePath),
+                MessageId = "MSG-300",
+                MessageStatus = MessageStatus.Enqueued,
+                SubmittedUtc = clock.UtcNow.AddHours(-submittedHoursAgo)
+            }, ".Status");
+
+            var httpHelper = new StubHttpClientHelper
+            {
+                GetExecutionSummaryStatusHandler = id => Task.FromResult(JsonResponse("Executing")),
+                GetExecutionSummaryPageUrlHandler = id => Task.FromResult(JsonResponse("https://contoso.test/execution"))
+            };
+
+            var job = new ExecutionMonitorJob(new DelegatingHttpClientHelperFactory(_ => httpHelper), clock);
+            var context = TestSchedulerBuilder.CreateContext(job, CreateJobDataMap(uploadSuccessDir, processingSuccessDir, processingErrorsDir));
+
+            await job.Execute(context);
+
+            var errorPath = Path.Combine(processingErrorsDir, "vendors.zip");
+            Assert.AreEqual(expectTimeout, File.Exists(errorPath), "Package should be moved to errors only after 12 hours.");
+            Assert.AreEqual(!expectTimeout, File.Exists(packagePath));
+            Assert.AreEqual(!expectTimeout, File.Exists(Path.ChangeExtension(packagePath, ".Status")), "Status file should stay while waiting and be removed after timeout.");
+        }
+
         private static JobDataMap CreateJobDataMap(string uploadSuccess, string processingSuccess, string processingErrors)
         {
             return new JobDataMap

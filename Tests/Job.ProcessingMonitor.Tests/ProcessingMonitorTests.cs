@@ -73,6 +73,54 @@ namespace RecurringIntegrationsScheduler.JobProcessingMonitor.Tests
             Assert.IsFalse(Directory.EnumerateFileSystemEntries(processingErrorsDir).Any(), "No errors expected for processed job.");
         }
 
+        [TestMethod]
+        [DataRow(13, true)]
+        [DataRow(1, false)]
+        public async Task Execute_InProcessJob_MovedToErrorsOnlyAfterTimeout(int submittedHoursAgo, bool expectTimeout)
+        {
+            var testDataRoot = FixtureManager.MaterializeTestData("ProcessingMonitorTests");
+            var uploadSuccessDir = Path.Combine(testDataRoot, "Processing", "UploadSuccess");
+            var processingSuccessDir = Path.Combine(testDataRoot, "Processing", "ProcessingSuccess");
+            var processingErrorsDir = Path.Combine(testDataRoot, "Processing", "ProcessingErrors");
+            Directory.CreateDirectory(uploadSuccessDir);
+            Directory.CreateDirectory(processingSuccessDir);
+            Directory.CreateDirectory(processingErrorsDir);
+
+            var clock = new FakePollingClock();
+            var packagePath = Path.Combine(uploadSuccessDir, "vendors.zip");
+            File.WriteAllText(packagePath, "payload");
+            FileOperationsHelper.WriteStatusFile(new DataMessage
+            {
+                FullPath = packagePath,
+                Name = Path.GetFileName(packagePath),
+                MessageId = "MSG-400",
+                MessageStatus = MessageStatus.Enqueued,
+                SubmittedUtc = clock.UtcNow.AddHours(-submittedHoursAgo)
+            }, ".Status");
+
+            var jobStatusDetail = new DataJobStatusDetail
+            {
+                DataJobStatus = new DataJobStatus { DataJobState = DataJobState.InProcess }
+            };
+            var httpHelper = new StubHttpClientHelper
+            {
+                GetJobStatusUriHandler = messageId => new Uri("https://test.operations.dynamics.com/jobstatus"),
+                GetRequestAsyncHandler = (uri, addAuth) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(JsonConvert.SerializeObject(jobStatusDetail, new StringEnumConverter()), Encoding.UTF8, "application/json")
+                })
+            };
+
+            var job = new ProcessingMonitorJob(new DelegatingHttpClientHelperFactory(_ => httpHelper), clock);
+            var context = TestSchedulerBuilder.CreateContext(job, CreateJobDataMap(uploadSuccessDir, processingSuccessDir, processingErrorsDir));
+
+            await job.Execute(context);
+
+            var errorPath = Path.Combine(processingErrorsDir, "vendors.zip");
+            Assert.AreEqual(expectTimeout, File.Exists(errorPath), "Package should be moved to errors only after 12 hours.");
+            Assert.AreEqual(!expectTimeout, File.Exists(packagePath));
+        }
+
         private static JobDataMap CreateJobDataMap(string uploadSuccessDir, string processingSuccessDir, string processingErrorsDir)
         {
             return new JobDataMap

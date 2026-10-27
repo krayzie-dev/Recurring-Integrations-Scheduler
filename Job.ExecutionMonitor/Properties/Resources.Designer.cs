@@ -257,5 +257,23 @@ namespace RecurringIntegrationsScheduler.Job.Properties {
                 return ResourceManager.GetString("Job_0_was_paused_indefinitely", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0} was interrupted (e.g. service stop). Remaining status files will be checked in the next run..
+        /// </summary>
+        internal static string Job_0_was_interrupted {
+            get {
+                return ResourceManager.GetString("Job_0_was_interrupted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0}. Import did not finish within {1} minutes. File moved to processing errors: {2}. Execution Id: {3}. Status: {4}. Submitted: {5}.
+        /// </summary>
+        internal static string Job_0_Import_did_not_finish_within_1_minutes_File_2_Execution_Id_3_Status_4_Submitted_5 {
+            get {
+                return ResourceManager.GetString("Job_0_Import_did_not_finish_within_1_minutes_File_2_Execution_Id_3_Status_4_Submitted_5", resourceCulture);
+            }
+        }
     }
 }

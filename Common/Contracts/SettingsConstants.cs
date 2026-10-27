@@ -69,6 +69,21 @@ namespace RecurringIntegrationsScheduler.Common.Contracts
         public const string DelayBetweenStatusCheck = "DelayBetweenStatusCheck";
 
         /// <summary>
+        /// The maximum delay in seconds between status checks. Delay grows from DelayBetweenStatusCheck up to this value.
+        /// </summary>
+        public const string MaxDelayBetweenStatusCheck = "MaxDelayBetweenStatusCheck";
+
+        /// <summary>
+        /// Time in minutes after which unfinished D365 execution is reported as an error
+        /// </summary>
+        public const string StatusCheckTimeoutMinutes = "StatusCheckTimeoutMinutes";
+
+        /// <summary>
+        /// Time in minutes to wait for import target error keys file
+        /// </summary>
+        public const string ErrorKeysFileTimeoutMinutes = "ErrorKeysFileTimeoutMinutes";
+
+        /// <summary>
         /// The retry count
         /// </summary>
         public const string RetryCount = "RetryCount";

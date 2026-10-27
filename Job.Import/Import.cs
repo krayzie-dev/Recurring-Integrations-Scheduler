@@ -123,18 +123,12 @@ namespace RecurringIntegrationsScheduler.Job
                     await context.Scheduler.PauseJob(context.JobDetail.Key);
                     Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_was_paused_because_of_error, _context.JobDetail.Key));
                 }
-                if (_settings.LogVerbose)
-                {
-                    if (!string.IsNullOrEmpty(ex.Message))
-                    {
-                        Log.Error(ex.Message, ex);
-                    }
-                }
                 if (!string.Equals(context.Scheduler.SchedulerName, RecurringIntegrationsScheduler.Common.Contracts.SchedulerConstants.PrivateSchedulerName, StringComparison.Ordinal))
                 {
+                    // Quartz JobRunShell logs the exception (with inner exception and stack trace) - log once only.
                     throw new JobExecutionException(string.Format(Resources.Import_job_0_failed, _context.JobDetail.Key), ex, false);
                 }
-                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message));
+                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message), ex);
             }
         }
 
@@ -375,7 +369,8 @@ namespace RecurringIntegrationsScheduler.Job
                                 {
                                     MessageId = executionId,
                                     FullPath = dataMessage.FullPath.Replace(_settings.InputDir, _settings.UploadSuccessDir),
-                                    MessageStatus = MessageStatus.Enqueued
+                                    MessageStatus = MessageStatus.Enqueued,
+                                    SubmittedUtc = DateTime.UtcNow
                                 };
 
                                 // Move to inprocess/success location
@@ -411,7 +406,7 @@ namespace RecurringIntegrationsScheduler.Job
                         else
                         {
                             // upload failed. Move message to error location.
-                            Log.ErrorFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Upload_failed_for_file_1_Failure_response_Status_2_Reason_3, _context.JobDetail.Key, dataMessage.FullPath.Replace(@"{", @"{{").Replace(@"}", @"}}"), uploadResponse.StatusCode, uploadResponse.ReasonPhrase));
+                            Log.ErrorFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Upload_failed_for_file_1_Failure_response_Status_2_Reason_3, _context.JobDetail.Key, dataMessage.FullPath.Replace(@"{", @"{{").Replace(@"}", @"}}"), uploadResponse.StatusCode, uploadResponse.ReasonPhrase, "n/a (blob upload failed)"));
 
                             var targetDataMessage = new DataMessage(dataMessage)
                             {
@@ -428,7 +423,7 @@ namespace RecurringIntegrationsScheduler.Job
                     }
                     catch (Exception ex)
                     {
-                        Log.ErrorFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Failure_processing_file_1_Exception_2, _context.JobDetail.Key, dataMessage.FullPath.Replace(@"{", @"{{").Replace(@"}", @"}}"), ex.Message), ex);
+                        Log.Error(string.Format(Resources.Job_0_Failure_processing_file_1_Exception_2, _context.JobDetail.Key, dataMessage.FullPath, ex.Message), ex);
                         throw;
                     }
                     finally
@@ -522,7 +517,7 @@ namespace RecurringIntegrationsScheduler.Job
             if (entry != null)
             {
                 entry.Delete();
-                Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Package_template_contains_input_file_1_Please_remove_it_from_the_template, fileNameInPackage));
+                Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_Package_template_contains_input_file_1_Please_remove_it_from_the_template, _context.JobDetail.Key, fileNameInPackage.Replace(@"{", @"{{").Replace(@"}", @"}}")));
             }
 
             return fileNameInPackage;

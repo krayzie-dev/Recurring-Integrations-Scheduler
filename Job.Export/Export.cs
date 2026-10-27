@@ -51,6 +51,25 @@ namespace RecurringIntegrationsScheduler.Job
         private Policy _retryPolicyForIo;
 
         /// <summary>
+        /// Time source used for waiting between status checks
+        /// </summary>
+        private readonly IPollingClock _clock;
+
+        /// <summary>
+        /// Execution id of the export currently processed by this job instance
+        /// </summary>
+        private string _executionId;
+
+        /// <summary>
+        /// Checks whether D365 execution status means that export is still running
+        /// </summary>
+        /// <param name="executionStatus">Execution status returned by GetExecutionSummaryStatus</param>
+        private static bool IsExecutionInProgress(string executionStatus)
+        {
+            return executionStatus == "NotRun" || executionStatus == "Executing" || executionStatus == "Bad request";
+        }
+
+        /// <summary>
         /// Called by the <see cref="T:Quartz.IScheduler" /> when a <see cref="T:Quartz.ITrigger" />
         /// fires that is associated with the <see cref="T:Quartz.IJob" />.
         /// </summary>
@@ -64,14 +83,20 @@ namespace RecurringIntegrationsScheduler.Job
         /// <see cref="T:Quartz.ITriggerListener" />s that are watching the job's
         /// execution.
         /// </remarks>
-        public Export() : this(HttpClientHelperFactory.Default, SftpTransferService.Instance)
+        public Export() : this(HttpClientHelperFactory.Default, SftpTransferService.Instance, SystemPollingClock.Instance)
         {
         }
 
         internal Export(IHttpClientHelperFactory httpClientHelperFactory, ISftpTransferService sftpTransferService)
+            : this(httpClientHelperFactory, sftpTransferService, SystemPollingClock.Instance)
+        {
+        }
+
+        internal Export(IHttpClientHelperFactory httpClientHelperFactory, ISftpTransferService sftpTransferService, IPollingClock clock)
         {
             _httpClientHelperFactory = httpClientHelperFactory ?? throw new ArgumentNullException(nameof(httpClientHelperFactory));
             _sftpTransferService = sftpTransferService ?? throw new ArgumentNullException(nameof(sftpTransferService));
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -101,6 +126,11 @@ namespace RecurringIntegrationsScheduler.Job
 
                 Log.VerboseFormat(_settings.LogVerbose, CultureInfo.InvariantCulture, Resources.Job_0_ended, _context.JobDetail.Key);
             }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                // Job was interrupted (e.g. service stop). Export may still run in D365 - not a job error.
+                Log.Warn(string.Format(Resources.Job_0_was_interrupted_Execution_Id_1_may_still_run_in_D365, context.JobDetail.Key, _executionId ?? "n/a"));
+            }
             catch (Exception ex)
             {
                 if (_settings.PauseJobOnException)
@@ -108,18 +138,12 @@ namespace RecurringIntegrationsScheduler.Job
                     await context.Scheduler.PauseJob(context.JobDetail.Key);
                     Log.WarnFormat(CultureInfo.InvariantCulture, string.Format(Resources.Job_0_was_paused_because_of_error, _context.JobDetail.Key));
                 }
-                if (_settings.LogVerbose)
-                {
-                    if (!string.IsNullOrEmpty(ex.Message))
-                    {
-                        Log.Error(ex.Message, ex);
-                    }
-                }
                 if (!string.Equals(context.Scheduler.SchedulerName, RecurringIntegrationsScheduler.Common.Contracts.SchedulerConstants.PrivateSchedulerName, StringComparison.Ordinal))
                 {
+                    // Quartz JobRunShell logs the exception (with inner exception and stack trace) - log once only.
                     throw new JobExecutionException(string.Format(Resources.Job_0_failed, _context.JobDetail.Key), ex, false);
                 }
-                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message));
+                Log.Error(string.Format(Resources.Job_0_thrown_an_error_1, _context.JobDetail.Key, ex.Message), ex);
             }
         }
 
@@ -132,71 +156,48 @@ namespace RecurringIntegrationsScheduler.Job
             using (_httpClientHelper = _httpClientHelperFactory.Create(_settings))
             {
                 var executionId = $"{_settings.DataProject}-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}-{Guid.NewGuid()}";
-                
+                _executionId = executionId;
+
                 var responseExportToPackage = await _httpClientHelper.ExportToPackage(_settings.DataProject, executionId, executionId, _settings.Company);
 
                 if (!responseExportToPackage.IsSuccessStatusCode)
                 {
-                    throw new JobExecutionException($@"Job: {_settings.JobKey}. ExportToPackage request failed.");
+                    throw new JobExecutionException($@"Job: {_settings.JobKey}. ExportToPackage request failed. Execution Id: {executionId}. Status: {responseExportToPackage.StatusCode}. Message: {await HttpClientHelper.ReadContentForLogAsync(responseExportToPackage)}");
                 }
 
-                string executionStatus;
-                var attempt = 0;
-                do
-                {
-                    if (attempt > 0 && _settings.DelayBetweenStatusCheck > 0) //Only delay after first file and never after last.
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(_settings.DelayBetweenStatusCheck));
-                    }
-                    attempt++;
+                // One deadline for the whole export: waiting for status and for package URL.
+                var exportStartedUtc = _clock.UtcNow;
+                var deadlineUtc = exportStartedUtc.AddMinutes(_settings.StatusCheckTimeoutMinutes);
 
-                    var responseGetExecutionSummaryStatus = await _httpClientHelper.GetExecutionSummaryStatus(executionId);
-                    if (!responseGetExecutionSummaryStatus.IsSuccessStatusCode)
-                    {
-                        throw new JobExecutionException($@"Job: {_settings.JobKey}. GetExecutionSummaryStatus request failed.");
-                    }
-                    executionStatus = await HttpClientHelper.ReadResponseStringAsync(responseGetExecutionSummaryStatus);
+                var statusResult = await PollAsync(
+                    () => _httpClientHelper.GetExecutionSummaryStatus(executionId),
+                    status => !IsExecutionInProgress(status),
+                    new StatusCheckBackoff(_settings.DelayBetweenStatusCheck, _settings.MaxDelayBetweenStatusCheck),
+                    exportStartedUtc,
+                    deadlineUtc,
+                    (check, status, nextDelay) => string.Format(Resources.Job_0_Checking_if_export_is_completed_Try_1_Status_2_Next_check_in_3, _context.JobDetail.Key, check, status, nextDelay),
+                    (checks, status, elapsed, lastError) => string.Format(Resources.Job_0_Export_did_not_finish_within_1_minutes_Status_2_Execution_Id_3_Elapsed_4_Checks_5_Last_error_6, _context.JobDetail.Key, _settings.StatusCheckTimeoutMinutes, status ?? "n/a", executionId, elapsed, checks, lastError ?? "none"));
+                var executionStatus = statusResult.Value;
 
-                    Log.Verbose(_settings.LogVerbose, () => string.Format(Resources.Job_0_Checking_if_export_is_completed_Try_1_Status_2, _context.JobDetail.Key, attempt, executionStatus));
-                    if (attempt == 100)//TODO hardcoded
-                    {
-                        throw new JobExecutionException(string.Format(Resources.Job_0_Checking_for_status_reached_1_attempts_Status_is_2_Exiting, _context.JobDetail.Key, attempt, executionStatus));
-                    }
-                }
-                while (executionStatus == "NotRun" || executionStatus == "Executing" || executionStatus == "Bad request");
+                Log.Info(string.Format(Resources.Job_0_Export_finished_with_status_1_Execution_Id_2_Elapsed_3_Checks_4, _context.JobDetail.Key, executionStatus, executionId, statusResult.Elapsed, statusResult.Checks));
 
                 if (executionStatus == "Succeeded" || executionStatus == "PartiallySucceeded")
                 {
-                    attempt = 0;//Reset for get url request attempts
-                    HttpResponseMessage packageUrlResponse;
-                    string packageUrl;
-                    do
-                    {
-                        if (attempt > 0 && _settings.DelayBetweenFiles > 0) //Only delay after first file and never after last.
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(_settings.DelayBetweenFiles));
-                        }
-                        attempt++;
+                    var urlResult = await PollAsync(
+                        () => _httpClientHelper.GetExportedPackageUrl(executionId),
+                        url => !string.IsNullOrEmpty(url),
+                        new StatusCheckBackoff(_settings.DelayBetweenFiles, _settings.MaxDelayBetweenStatusCheck),
+                        exportStartedUtc,
+                        deadlineUtc,
+                        (check, url, nextDelay) => string.Format(Resources.Job_0_Trying_to_get_exported_package_URL_Try_1, _context.JobDetail.Key, check),
+                        (checks, url, elapsed, lastError) => string.Format(Resources.Job_0_Exported_package_URL_not_available_within_1_minutes_Execution_Id_2_Elapsed_3_Checks_4_Last_error_5, _context.JobDetail.Key, _settings.StatusCheckTimeoutMinutes, executionId, elapsed, checks, lastError ?? "none"));
+                    var packageUrl = urlResult.Value;
 
-                        packageUrlResponse = await _httpClientHelper.GetExportedPackageUrl(executionId);
-                        if (!packageUrlResponse.IsSuccessStatusCode)
-                        {
-                            throw new JobExecutionException($"Job: {_context.JobDetail.Key}. GetExportedPackageUrl request failed.");
-                        }
-                        Log.Verbose(_settings.LogVerbose, () => string.Format(Resources.Job_0_Trying_to_get_exported_package_URL_Try_1, _context.JobDetail.Key, attempt));
-                        if (attempt == 100)//TODO hardcoded
-                        {
-                            throw new JobExecutionException(string.Format(Resources.Job_0_Request_to_download_exported_package_reached_1_attempts_Exiting, _context.JobDetail.Key, attempt));
-                        }
-                        packageUrl = await HttpClientHelper.ReadResponseStringAsync(packageUrlResponse);
-                    }
-                    while (string.IsNullOrEmpty(packageUrl));
-
-                    var packageUri = new Uri(packageUrl);             
+                    var packageUri = new Uri(packageUrl);
                     var response = await _httpClientHelper.GetRequestAsync(packageUri, false);
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new JobExecutionException(string.Format(Resources.Job_0_Download_failure_1, _context.JobDetail.Key, string.Format($"Status: {response.StatusCode}. Message: {response.Content}")));
+                        throw new JobExecutionException(string.Format(Resources.Job_0_Download_failure_1, _context.JobDetail.Key, $"Status: {response.StatusCode}. Execution Id: {executionId}. Message: {await HttpClientHelper.ReadContentForLogAsync(response)}"));
                     }
                     using Stream downloadedStream = await response.Content.ReadAsStreamAsync();
 
@@ -223,13 +224,121 @@ namespace RecurringIntegrationsScheduler.Job
                 }
                 else if (executionStatus == "Unknown" || executionStatus == "Failed" || executionStatus == "Canceled")
                 {
-                    throw new JobExecutionException(string.Format(Resources.Export_execution_failed_for_job_0_Status_1, _context.JobDetail.Key, executionStatus));
+                    throw new JobExecutionException(string.Format(Resources.Export_execution_failed_for_job_0_Status_1, _context.JobDetail.Key, executionStatus, executionId));
                 }
                 else
                 {
                     Log.Error(string.Format(Resources.Job_0_Execution_status_1_Execution_Id_2, _context.JobDetail.Key, executionStatus, executionId));
                 }
             }
+        }
+
+        /// <summary>
+        /// Result of polling D365 for a value
+        /// </summary>
+        private sealed class PollResult
+        {
+            public string Value { get; set; }
+            public int Checks { get; set; }
+            public TimeSpan Elapsed { get; set; }
+        }
+
+        /// <summary>
+        /// Repeats D365 request with growing delays until returned value is final or deadline passes.
+        /// Transient failures (timeouts, throttling, 5xx, network errors) are logged and retried until the deadline.
+        /// </summary>
+        /// <param name="sendRequest">Request returning D365 response with "value" property</param>
+        /// <param name="isFinal">Checks whether returned value ends polling</param>
+        /// <param name="backoff">Delay calculator</param>
+        /// <param name="startedUtc">Start of the whole export (for elapsed time)</param>
+        /// <param name="deadlineUtc">Time after which polling fails</param>
+        /// <param name="verboseMessage">Verbose message for each check (check number, value, next delay)</param>
+        /// <param name="timeoutMessage">Error message when deadline passes (checks, last value, elapsed, last error)</param>
+        /// <returns>Final value with polling statistics</returns>
+        private async Task<PollResult> PollAsync(
+            Func<Task<HttpResponseMessage>> sendRequest,
+            Func<string, bool> isFinal,
+            StatusCheckBackoff backoff,
+            DateTime startedUtc,
+            DateTime deadlineUtc,
+            Func<int, string, TimeSpan, string> verboseMessage,
+            Func<int, string, TimeSpan, string, string> timeoutMessage)
+        {
+            var cancellationToken = _context.CancellationToken;
+            var checks = 0;
+            string lastValue = null;
+            string lastError = null;
+
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                checks++;
+
+                try
+                {
+                    var response = await sendRequest();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        lastValue = await HttpClientHelper.ReadResponseStringAsync(response);
+                        lastError = null;
+                        if (isFinal(lastValue))
+                        {
+                            return new PollResult { Value = lastValue, Checks = checks, Elapsed = Elapsed(startedUtc) };
+                        }
+                    }
+                    else if (HttpRetryHandler.IsTransientStatusCode(response.StatusCode))
+                    {
+                        lastError = $"HTTP {(int)response.StatusCode} {response.StatusCode}: {await HttpClientHelper.ReadContentForLogAsync(response)}";
+                    }
+                    else
+                    {
+                        throw new JobExecutionException($"Job: {_context.JobDetail.Key}. D365 request failed. Execution Id: {_executionId}. Status: {response.StatusCode}. Message: {await HttpClientHelper.ReadContentForLogAsync(response)}");
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Network problem, e.g. DNS name cannot be resolved
+                    lastError = ex.InnerException != null ? $"{ex.Message} {ex.InnerException.Message}" : ex.Message;
+                }
+                catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // HttpClient timeout
+                    lastError = $"Request timed out: {ex.Message}";
+                }
+
+                var now = _clock.UtcNow;
+                if (now >= deadlineUtc)
+                {
+                    throw new JobExecutionException(timeoutMessage(checks, lastValue, Elapsed(startedUtc), lastError));
+                }
+
+                var delay = backoff.Next();
+                if (now + delay > deadlineUtc)
+                {
+                    delay = deadlineUtc - now; // make the last check exactly at the deadline
+                }
+
+                if (lastError != null)
+                {
+                    Log.Warn(string.Format(Resources.Job_0_Temporary_error_while_waiting_for_D365_Execution_Id_1_Error_2_Next_check_in_3, _context.JobDetail.Key, _executionId, lastError, Round(delay)));
+                }
+                else
+                {
+                    Log.Verbose(_settings.LogVerbose, () => verboseMessage(checks, lastValue, Round(delay)));
+                }
+
+                await _clock.Delay(delay, cancellationToken);
+            }
+        }
+
+        private TimeSpan Elapsed(DateTime startedUtc)
+        {
+            return Round(_clock.UtcNow - startedUtc);
+        }
+
+        private static TimeSpan Round(TimeSpan value)
+        {
+            return TimeSpan.FromSeconds(Math.Round(value.TotalSeconds));
         }
 
         private bool UploadFileToSftp(string filePath)

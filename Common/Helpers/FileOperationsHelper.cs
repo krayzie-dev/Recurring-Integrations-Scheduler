@@ -285,6 +285,30 @@ namespace RecurringIntegrationsScheduler.Common.Helpers
         }
 
         /// <summary>
+        /// Gets time (UTC) when the message was submitted to D365.
+        /// Uses value stored in status file or, for status files written by older versions, status file creation time.
+        /// </summary>
+        /// <param name="dataMessage">Data message read from status file</param>
+        /// <param name="statusFileExtension">Status file extension</param>
+        /// <returns>Submission time or null when it cannot be determined</returns>
+        public static DateTime? GetSubmittedUtc(DataMessage dataMessage, string statusFileExtension = ".Status")
+        {
+            if (dataMessage?.SubmittedUtc != null)
+            {
+                return dataMessage.SubmittedUtc.Value.ToUniversalTime();
+            }
+
+            var directory = Path.GetDirectoryName(dataMessage?.FullPath ?? string.Empty);
+            if (string.IsNullOrEmpty(directory))
+            {
+                return null;
+            }
+
+            var statusFile = Path.Combine(directory, Path.GetFileNameWithoutExtension(dataMessage.FullPath) + statusFileExtension);
+            return File.Exists(statusFile) ? File.GetCreationTimeUtc(statusFile) : (DateTime?)null;
+        }
+
+        /// <summary>
         /// Moves source file between folders and deletes status files when needed
         /// </summary>
         /// <param name="sourceFilePath">Source file path</param>

@@ -3,6 +3,7 @@
 
 using Quartz;
 using RecurringIntegrationsScheduler.Common.Contracts;
+using RecurringIntegrationsScheduler.Common.Helpers;
 using RecurringIntegrationsScheduler.Common.Properties;
 using System;
 using System.Globalization;
@@ -90,6 +91,9 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
             PackageTemplate = GetOptionalString(dataMap, SettingsConstants.PackageTemplate);
 
             DelayBetweenStatusCheck = GetOptionalInt(dataMap, SettingsConstants.DelayBetweenStatusCheck);
+            MaxDelayBetweenStatusCheck = GetOptionalPositiveInt(dataMap, SettingsConstants.MaxDelayBetweenStatusCheck, StatusCheckBackoff.DefaultMaxDelaySeconds);
+            StatusCheckTimeoutMinutes = GetOptionalPositiveInt(dataMap, SettingsConstants.StatusCheckTimeoutMinutes, StatusCheckBackoff.DefaultStatusCheckTimeoutMinutes);
+            ErrorKeysFileTimeoutMinutes = GetOptionalPositiveInt(dataMap, SettingsConstants.ErrorKeysFileTimeoutMinutes, StatusCheckBackoff.DefaultErrorKeysFileTimeoutMinutes);
         }
 
         #region Members
@@ -149,6 +153,21 @@ namespace RecurringIntegrationsScheduler.Common.JobSettings
         /// Delay between status checks.
         /// </value>
         public int DelayBetweenStatusCheck { get; private set; }
+
+        /// <summary>
+        /// Gets maximum delay in seconds between checks for error keys file.
+        /// </summary>
+        public int MaxDelayBetweenStatusCheck { get; private set; }
+
+        /// <summary>
+        /// Gets time in minutes after which unfinished import execution is moved to errors.
+        /// </summary>
+        public int StatusCheckTimeoutMinutes { get; private set; }
+
+        /// <summary>
+        /// Gets time in minutes to wait for import target error keys file.
+        /// </summary>
+        public int ErrorKeysFileTimeoutMinutes { get; private set; }
 
         #endregion
     }

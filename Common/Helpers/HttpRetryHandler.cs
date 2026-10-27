@@ -92,14 +92,24 @@ namespace RecurringIntegrationsScheduler.Common.Helpers
                 return false;
             }
 
-            if (TransientStatusCodes.Contains(response.StatusCode))
+            return IsTransientStatusCode(response.StatusCode);
+        }
+
+        /// <summary>
+        /// Checks whether HTTP status code means a temporary problem worth retrying later
+        /// </summary>
+        /// <param name="statusCode">Http status code</param>
+        /// <returns>True for timeouts, throttling and temporary server errors</returns>
+        public static bool IsTransientStatusCode(HttpStatusCode statusCode)
+        {
+            if (TransientStatusCodes.Contains(statusCode))
             {
                 return true;
             }
 
-            var statusCode = (int)response.StatusCode;
             // Retry on custom throttling codes as well
-            return statusCode == 429 || statusCode == 599;
+            var code = (int)statusCode;
+            return code == 429 || code == 599;
         }
 
         private async Task DelayAsync(int attempt, HttpResponseMessage response, CancellationToken cancellationToken)

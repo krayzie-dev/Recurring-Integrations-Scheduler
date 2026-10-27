@@ -163,10 +163,7 @@
     <value>Job: {0} was paused because of an error.</value>
   </data>
   <data name="Export_execution_failed_for_job_0_Status_1" xml:space="preserve">
-    <value>Export execution failed for job: {0}. Execution status: {1}</value>
-  </data>
-  <data name="Job_0_Checking_if_export_is_completed_Try_1_Status_2" xml:space="preserve">
-    <value>Job: {0} Checking if export is completed. Try: {1}. Status: {2}</value>
+    <value>Export execution failed for job: {0}. Execution status: {1}. Execution Id: {2}</value>
   </data>
   <data name="Job_0_Execution_status_1_Execution_Id_2" xml:space="preserve">
     <value>Job: {0} Execution status: {1} Execution Id {2}</value>
@@ -186,13 +183,25 @@
   <data name="Job_0_was_paused_indefinitely" xml:space="preserve">
     <value>Job: {0} was paused indefinitely.</value>
   </data>
-  <data name="Job_0_Checking_for_status_reached_1_attempts_Status_is_2_Exiting" xml:space="preserve">
-    <value>Job: {0}. Checking for status reached {1} attempts. Status is {2}. Exiting...</value>
-  </data>
-  <data name="Job_0_Request_to_download_exported_package_reached_1_attempts_Exiting" xml:space="preserve">
-    <value>Job: {0}. Request to download exported package reached {1} attempts. Exiting...</value>
-  </data>
   <data name="Job_0_ExportToPackage_request_failed" xml:space="preserve">
     <value>jon: {0} ExportToPackage request failed. Details below.{1}</value>
+  </data>
+  <data name="Job_0_Checking_if_export_is_completed_Try_1_Status_2_Next_check_in_3" xml:space="preserve">
+    <value>Job: {0} Checking if export is completed. Try: {1}. Status: {2}. Next check in: {3}</value>
+  </data>
+  <data name="Job_0_Export_did_not_finish_within_1_minutes_Status_2_Execution_Id_3_Elapsed_4_Checks_5_Last_error_6" xml:space="preserve">
+    <value>Job: {0}. Export did not finish within {1} minutes. Status: {2}. Execution Id: {3}. Elapsed: {4}. Status checks: {5}. Last error: {6}</value>
+  </data>
+  <data name="Job_0_Exported_package_URL_not_available_within_1_minutes_Execution_Id_2_Elapsed_3_Checks_4_Last_error_5" xml:space="preserve">
+    <value>Job: {0}. Exported package URL was not available within {1} minutes. Execution Id: {2}. Elapsed: {3}. Checks: {4}. Last error: {5}</value>
+  </data>
+  <data name="Job_0_Export_finished_with_status_1_Execution_Id_2_Elapsed_3_Checks_4" xml:space="preserve">
+    <value>Job: {0}. Export finished with status {1}. Execution Id: {2}. Elapsed: {3}. Status checks: {4}</value>
+  </data>
+  <data name="Job_0_Temporary_error_while_waiting_for_D365_Execution_Id_1_Error_2_Next_check_in_3" xml:space="preserve">
+    <value>Job: {0}. Temporary error while waiting for D365. Execution Id: {1}. Error: {2}. Next check in: {3}</value>
+  </data>
+  <data name="Job_0_was_interrupted_Execution_Id_1_may_still_run_in_D365" xml:space="preserve">
+    <value>Job: {0} was interrupted (e.g. service stop). Execution Id: {1} may still be running in D365.</value>
   </data>
 </root>

@@ -26,6 +26,8 @@ namespace RecurringIntegrationsScheduler.Server
             HostFactory.Run(x =>
             {
                 x.RunAsLocalSystem();
+                // Stop scheduler gracefully also on Windows shutdown/restart, so interrupted jobs are logged.
+                x.EnableShutdown();
 
                 x.SetDescription(Configuration.ServiceDescription);
                 x.SetDisplayName(Configuration.ServiceDisplayName);

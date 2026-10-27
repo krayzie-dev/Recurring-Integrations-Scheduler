@@ -61,7 +61,7 @@ namespace RecurringIntegrationsScheduler.Job.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Export execution failed for job: {0}. Execution status: {1}.
+        ///   Looks up a localized string similar to Export execution failed for job: {0}. Execution status: {1}. Execution Id: {2}.
         /// </summary>
         internal static string Export_execution_failed_for_job_0_Status_1 {
             get {
@@ -75,24 +75,6 @@ namespace RecurringIntegrationsScheduler.Job.Properties {
         internal static string Job_0_Acknowledgment_failure_response {
             get {
                 return ResourceManager.GetString("Job_0_Acknowledgment_failure_response", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Job: {0}. Checking for status reached {1} attempts. Status is {2}. Exiting....
-        /// </summary>
-        internal static string Job_0_Checking_for_status_reached_1_attempts_Status_is_2_Exiting {
-            get {
-                return ResourceManager.GetString("Job_0_Checking_for_status_reached_1_attempts_Status_is_2_Exiting", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Job: {0} Checking if export is completed. Try: {1}. Status: {2}.
-        /// </summary>
-        internal static string Job_0_Checking_if_export_is_completed_Try_1_Status_2 {
-            get {
-                return ResourceManager.GetString("Job_0_Checking_if_export_is_completed_Try_1_Status_2", resourceCulture);
             }
         }
         
@@ -223,15 +205,6 @@ namespace RecurringIntegrationsScheduler.Job.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Job: {0}. Request to download exported package reached {1} attempts. Exiting....
-        /// </summary>
-        internal static string Job_0_Request_to_download_exported_package_reached_1_attempts_Exiting {
-            get {
-                return ResourceManager.GetString("Job_0_Request_to_download_exported_package_reached_1_attempts_Exiting", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Job: {0}. Retrying HTTP operation. Exception : {1}.
         /// </summary>
         internal static string Job_0_Retrying_Http_operation_Exception_1 {
@@ -291,6 +264,60 @@ namespace RecurringIntegrationsScheduler.Job.Properties {
         internal static string Job_0_was_paused_indefinitely {
             get {
                 return ResourceManager.GetString("Job_0_was_paused_indefinitely", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0} Checking if export is completed. Try: {1}. Status: {2}. Next check in: {3}.
+        /// </summary>
+        internal static string Job_0_Checking_if_export_is_completed_Try_1_Status_2_Next_check_in_3 {
+            get {
+                return ResourceManager.GetString("Job_0_Checking_if_export_is_completed_Try_1_Status_2_Next_check_in_3", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0}. Export did not finish within {1} minutes. Status: {2}. Execution Id: {3}. Elapsed: {4}. Status checks: {5}. Last error: {6}.
+        /// </summary>
+        internal static string Job_0_Export_did_not_finish_within_1_minutes_Status_2_Execution_Id_3_Elapsed_4_Checks_5_Last_error_6 {
+            get {
+                return ResourceManager.GetString("Job_0_Export_did_not_finish_within_1_minutes_Status_2_Execution_Id_3_Elapsed_4_Checks_5_Last_error_6", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0}. Exported package URL was not available within {1} minutes. Execution Id: {2}. Elapsed: {3}. Checks: {4}. Last error: {5}.
+        /// </summary>
+        internal static string Job_0_Exported_package_URL_not_available_within_1_minutes_Execution_Id_2_Elapsed_3_Checks_4_Last_error_5 {
+            get {
+                return ResourceManager.GetString("Job_0_Exported_package_URL_not_available_within_1_minutes_Execution_Id_2_Elapsed_3_Checks_4_Last_error_5", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0}. Export finished with status {1}. Execution Id: {2}. Elapsed: {3}. Status checks: {4}.
+        /// </summary>
+        internal static string Job_0_Export_finished_with_status_1_Execution_Id_2_Elapsed_3_Checks_4 {
+            get {
+                return ResourceManager.GetString("Job_0_Export_finished_with_status_1_Execution_Id_2_Elapsed_3_Checks_4", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0}. Temporary error while waiting for D365. Execution Id: {1}. Error: {2}. Next check in: {3}.
+        /// </summary>
+        internal static string Job_0_Temporary_error_while_waiting_for_D365_Execution_Id_1_Error_2_Next_check_in_3 {
+            get {
+                return ResourceManager.GetString("Job_0_Temporary_error_while_waiting_for_D365_Execution_Id_1_Error_2_Next_check_in_3", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Job: {0} was interrupted (e.g. service stop). Execution Id: {1} may still be running in D365..
+        /// </summary>
+        internal static string Job_0_was_interrupted_Execution_Id_1_may_still_run_in_D365 {
+            get {
+                return ResourceManager.GetString("Job_0_was_interrupted_Execution_Id_1_may_still_run_in_D365", resourceCulture);
             }
         }
     }

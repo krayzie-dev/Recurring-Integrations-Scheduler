@@ -11,7 +11,7 @@ namespace RecurringIntegrationsScheduler.Server
 	/// <summary>
 	/// The main server logic.
 	/// </summary>
-	public class QuartzServer : ServiceControl, IQuartzServer
+	public class QuartzServer : ServiceControl, ServiceShutdown, IQuartzServer
 	{
 		private readonly ILog logger;
 		private ISchedulerFactory schedulerFactory = null!;
@@ -92,6 +92,13 @@ namespace RecurringIntegrationsScheduler.Server
 		{
             try
             {
+                // Jobs may wait for D365 for many hours - interrupt them so service stops within seconds.
+                // Interrupted jobs log execution ids which may still run in D365.
+                foreach (var executingJob in scheduler.GetCurrentlyExecutingJobs().GetAwaiter().GetResult())
+                {
+                    logger.Info($"Interrupting job {executingJob.JobDetail.Key} because service is stopping");
+                    scheduler.Interrupt(executingJob.FireInstanceId).GetAwaiter().GetResult();
+                }
                 scheduler.Shutdown(waitForJobsToComplete: true).GetAwaiter().GetResult();
             }
             catch (Exception ex)
@@ -144,6 +151,14 @@ namespace RecurringIntegrationsScheduler.Server
 	        Stop();
 	        return true;
 	    }
+
+        /// <summary>
+        /// TopShelf's method called on Windows shutdown, delegated to <see cref="Stop()"/>.
+        /// </summary>
+        public void Shutdown(HostControl hostControl)
+        {
+            Stop();
+        }
 
         /// <summary>
         /// TopShelf's method delegated to <see cref="Pause()"/>.
