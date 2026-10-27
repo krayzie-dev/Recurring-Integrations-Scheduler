@@ -1,0 +1,81 @@
+@page "/audit"
+@attribute [Authorize(Policy = RisRoles.CanAdminister)]
+@inherits RisPageBase
+@using RIS.Persistence
+@inject ConfigurationRepository Repository
+@inject ExportService Exports
+@inject IJSRuntime JS
+
+<PageTitle>RIS 5 – @T["Nav_Audit"]</PageTitle>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudText Typo="Typo.h5">@T["Nav_Audit"]</MudText>
+    <MudSpacer />
+    <MudTextField T="string" @bind-Value="_search" @bind-Value:after="ApplyFilter" Placeholder="@T["Common_Search"]" Immediate="true" DebounceInterval="250"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Style="max-width: 320px" />
+    <MudMenu Icon="@Icons.Material.Filled.Download" title="@T["Common_Export"]" Dense="true">
+        <MudMenuItem Icon="@Icons.Material.Filled.TableView" OnClick="@(() => ExportAsync("xlsx"))">@T["Export_Xlsx"]</MudMenuItem>
+        <MudMenuItem Icon="@Icons.Material.Filled.Description" OnClick="@(() => ExportAsync("csv"))">@T["Export_Csv"]</MudMenuItem>
+    </MudMenu>
+</MudStack>
+
+<MudDataGrid T="AuditEntry" Items="_filtered" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" Loading="Loading" RowsPerPage="50">
+    <Columns>
+        <HierarchyColumn T="AuditEntry" ButtonDisabledFunc="e => e.Before is null && e.After is null" />
+        <PropertyColumn Property="e => e.TimestampUtc" Title="@T["Audit_Time"]">
+            <CellTemplate>@Prefs.Format(new DateTimeOffset(context.Item.TimestampUtc, TimeSpan.Zero), "G")</CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="e => e.User" Title="@T["Audit_User"]" />
+        <PropertyColumn Property="e => e.EntityType" Title="@T["Audit_Entity"]" />
+        <PropertyColumn Property="e => e.EntityKey" Title="@T["Audit_Key"]" />
+        <PropertyColumn Property="e => e.Action" Title="@T["Audit_Action"]" />
+    </Columns>
+    <ChildRowContent>
+        <MudGrid Spacing="2" Class="pa-2">
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2">@T["Audit_Before"]</MudText>
+                <pre class="ris-log ris-mono">@Pretty(context.Item.Before)</pre>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2">@T["Audit_After"]</MudText>
+                <pre class="ris-log ris-mono">@Pretty(context.Item.After)</pre>
+            </MudItem>
+        </MudGrid>
+    </ChildRowContent>
+    <PagerContent><MudDataGridPager T="AuditEntry" PageSizeOptions="[50, 100, 500]" /></PagerContent>
+</MudDataGrid>
+
+@code {
+    private IReadOnlyList<AuditEntry> _all = [];
+    private IReadOnlyList<AuditEntry> _filtered = [];
+    private string? _search;
+
+    protected override TimeSpan? RefreshInterval => null;
+
+    protected override async Task LoadAsync()
+    {
+        _all = await Repository.GetAuditAsync(5000);
+        ApplyFilter();
+    }
+
+    private void ApplyFilter() =>
+        _filtered = string.IsNullOrWhiteSpace(_search)
+            ? _all
+            : _all.Where(e => new[] { e.User, e.EntityType, e.EntityKey, e.Action, e.Before, e.After }
+                .Any(v => v?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true)).ToList();
+
+    private static string Pretty(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return "–";
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            return System.Text.Json.JsonSerializer.Serialize(document.RootElement, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return json;
+        }
+    }
+
+    private async Task ExportAsync(string format) => await ExportService.DownloadAsync(JS, Exports.Audit(_filtered, format, Prefs.Zone));
+}

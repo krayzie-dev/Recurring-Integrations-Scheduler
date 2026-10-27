@@ -1,0 +1,193 @@
+@using System.Reflection
+@using System.Globalization
+@using System.Text.Json.Serialization
+@* Edits the public settable properties of an options object (generated form). Nested option classes are sections. *@
+
+<MudGrid Spacing="2">
+    @foreach (var property in Properties(Target.GetType()))
+    {
+        var p = property;
+        var type = System.Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
+        var label = Label(p);
+        var required = p.GetCustomAttribute<System.ComponentModel.DataAnnotations.RequiredAttribute>() is not null;
+
+        if (IsSection(type))
+        {
+            var value = p.GetValue(Target);
+            <MudItem xs="12">
+                <MudPaper Outlined="true" Elevation="0" Class="pa-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.subtitle2">@label</MudText>
+                        <MudSpacer />
+                        @if (value is null)
+                        {
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="() => Set(p, Activator.CreateInstance(type))">@T["Editor_AddSection"]</MudButton>
+                        }
+                        else if (IsNullable(p))
+                        {
+                            <MudButton Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Remove" OnClick="() => Set(p, null)">@T["Editor_RemoveSection"]</MudButton>
+                        }
+                    </MudStack>
+                    @if (value is not null)
+                    {
+                        <ObjectEditor Target="value" Connections="Connections" SftpServers="SftpServers" Changed="Changed" Exclude="Exclude" />
+                    }
+                </MudPaper>
+            </MudItem>
+        }
+        else if (type == typeof(bool))
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudSwitch T="bool" Value="(bool)(p.GetValue(Target) ?? false)" ValueChanged="v => Set(p, v)" Color="Color.Primary" Label="@label" />
+            </MudItem>
+        }
+        else if (type.IsEnum)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect T="string" Value="@(p.GetValue(Target)?.ToString())" ValueChanged="v => Set(p, v is null ? null : Enum.Parse(type, v))" Label="@label"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="IsNullable(p)">
+                    @foreach (var name in Enum.GetNames(type).Where(n => type.GetField(n)?.GetCustomAttribute<ObsoleteAttribute>() is null || Equals(p.GetValue(Target)?.ToString(), n)))
+                    {
+                        <MudSelectItem Value="name">@name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+        else if (p.Name == "Connection" && type == typeof(string) && Connections is not null)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var connection in Connections)
+                    {
+                        <MudSelectItem Value="connection">@connection</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+        else if (p.Name == "TimeZone" && type == typeof(string))
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudAutocomplete T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, string.IsNullOrWhiteSpace(v) ? null : v)" Label="@label"
+                                 SearchFunc="SearchZones" Clearable="true" ResetValueOnEmptyText="true" CoerceValue="false" MaxItems="null"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@T["Editor_HintTimeZone"]" />
+            </MudItem>
+        }
+        else if (p.Name == "Server" && type == typeof(string) && SftpServers is not null)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var server in SftpServers)
+                    {
+                        <MudSelectItem Value="server">@server</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+        else if (TryFormat(type, out _))
+        {
+            var wide = type == typeof(string) && (p.Name.EndsWith("Dir", StringComparison.Ordinal) || p.Name.EndsWith("Path", StringComparison.Ordinal) || p.Name.EndsWith("Uri", StringComparison.Ordinal));
+            <MudItem xs="12" sm="@(wide ? 12 : 6)" md="@(wide ? 8 : 4)">
+                <MudTextField T="string" Value="@Format(p)" ValueChanged="v => Parse(p, type, v)" Label="@label" Required="required" Immediate="false"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@Hint(type)"
+                              Error="_errors.ContainsKey(Key(p))" ErrorText="@(_errors.GetValueOrDefault(Key(p)))" />
+            </MudItem>
+        }
+    }
+</MudGrid>
+
+@code {
+    /// <summary>Object to edit (changed in place).</summary>
+    [Parameter, EditorRequired] public object Target { get; set; } = null!;
+    [Parameter] public IReadOnlyList<string>? Connections { get; set; }
+    [Parameter] public IReadOnlyList<string>? SftpServers { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    /// <summary>Properties not shown (e.g. secrets edited separately).</summary>
+    [Parameter] public IReadOnlyCollection<string> Exclude { get; set; } = [];
+
+    private readonly Dictionary<string, string> _errors = [];
+
+    private IEnumerable<PropertyInfo> Properties(Type type) =>
+        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite && p.SetMethod!.IsPublic && p.GetCustomAttribute<JsonIgnoreAttribute>() is null && !Exclude.Contains(p.Name))
+            .OrderBy(p => IsSection(System.Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType) ? 1 : 0)
+            .ThenBy(p => p.DeclaringType == type ? 1 : 0); // base class properties (connection, retry, ...) first
+
+    private static bool IsSection(Type type) =>
+        type.IsClass && type != typeof(string) && type != typeof(Uri) && type.Namespace?.StartsWith("RIS.Core", StringComparison.Ordinal) == true;
+
+    private static bool IsNullable(PropertyInfo p) =>
+        new NullabilityInfoContext().Create(p).WriteState == NullabilityState.Nullable;
+
+    private string Label(PropertyInfo p)
+    {
+        var localized = T["Field_" + p.Name];
+        return localized.ResourceNotFound ? Humanize(p.Name) : localized.Value;
+    }
+
+    private static string Humanize(string name) =>
+        string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) && !char.IsUpper(name[i - 1]) ? " " + char.ToLowerInvariant(c) : c.ToString()));
+
+    private string Key(PropertyInfo p) => p.DeclaringType!.Name + "." + p.Name;
+
+    private static bool TryFormat(Type type, out string? _)
+    {
+        _ = null;
+        return type == typeof(string) || type == typeof(int) || type == typeof(double) || type == typeof(TimeSpan)
+               || type == typeof(Guid) || type == typeof(Uri) || type == typeof(DateTimeOffset);
+    }
+
+    private string Hint(Type type) =>
+        type == typeof(TimeSpan) ? T["Editor_HintTimeSpan"]
+        : type == typeof(DateTimeOffset) ? T["Editor_HintDate"]
+        : string.Empty;
+
+    private string? Format(PropertyInfo p) => p.GetValue(Target) switch
+    {
+        null => null,
+        TimeSpan span => span.ToString("c", CultureInfo.InvariantCulture),
+        DateTimeOffset date => date.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture),
+        double number => number.ToString(CultureInfo.InvariantCulture),
+        var value => value.ToString()
+    };
+
+    private async Task Parse(PropertyInfo p, Type type, string? text)
+    {
+        _errors.Remove(Key(p));
+        object? value;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            value = type == typeof(string) && !IsNullable(p) ? string.Empty : null;
+            if (value is null && !IsNullable(p) && type != typeof(string))
+            {
+                _errors[Key(p)] = T["Editor_Required"];
+                return;
+            }
+        }
+        else if (type == typeof(string)) value = text.Trim();
+        else if (type == typeof(int) && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) value = i;
+        else if (type == typeof(double) && double.TryParse(text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) value = d;
+        else if (type == typeof(TimeSpan) && TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out var span)) value = span;
+        else if (type == typeof(Guid) && Guid.TryParse(text, out var guid)) value = guid;
+        else if (type == typeof(Uri) && Uri.TryCreate(text.Trim(), UriKind.Absolute, out var uri)) value = uri;
+        else if (type == typeof(DateTimeOffset) && DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date)) value = date;
+        else
+        {
+            _errors[Key(p)] = T["Editor_InvalidValue"];
+            return;
+        }
+        await Set(p, value);
+    }
+
+    private static readonly string[] ZoneIds = TimeZoneInfo.GetSystemTimeZones().Select(z => z.Id).Order().ToArray();
+
+    private static Task<IEnumerable<string>> SearchZones(string? text, CancellationToken _) =>
+        Task.FromResult(string.IsNullOrWhiteSpace(text) ? ZoneIds.AsEnumerable() : ZoneIds.Where(z => z.Contains(text, StringComparison.OrdinalIgnoreCase)));
+
+    private async Task Set(PropertyInfo p, object? value)
+    {
+        p.SetValue(Target, value);
+        await Changed.InvokeAsync();
+    }
+}

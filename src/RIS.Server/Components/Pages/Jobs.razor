@@ -8,6 +8,10 @@
     <MudText Typo="Typo.h5">@T["Nav_Jobs"]</MudText>
     <MudChip T="string" Size="Size.Small">@UiFormat.Number(_filtered.Count) / @UiFormat.Number(_all.Count)</MudChip>
     <MudSpacer />
+    @if (CanAdminister)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/jobs/new">@T["Editor_NewJob"]</MudButton>
+    }
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ReloadAsync" title="@T["Common_Refresh"]" />
 </MudStack>
 

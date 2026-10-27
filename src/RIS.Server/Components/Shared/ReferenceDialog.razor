@@ -1,0 +1,40 @@
+@* Edits a connection or SFTP server. The secret is write-only: empty = keep the stored value. *@
+<MudDialog>
+    <TitleContent>@Title</TitleContent>
+    <DialogContent>
+        @if (Errors.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@foreach (var error in Errors) { <div class="ris-mono">@error</div> }</MudAlert>
+        }
+        <ObjectEditor Target="Item" Exclude="Secrets" />
+        <MudTextField T="string" @bind-Value="_secret" Label="@SecretLabel" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3"
+                      HelperText="@(IsNew ? T["Secret_HintNew"] : T["Secret_HintKeep"])" autocomplete="new-password" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="_saving">@T["Common_Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public object Item { get; set; } = null!;
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public IReadOnlyCollection<string> Secrets { get; set; } = [];
+    [Parameter] public string SecretLabel { get; set; } = "";
+    /// <summary>Saves item and secret (null = unchanged); returns validation errors.</summary>
+    [Parameter] public Func<object, string?, Task<IReadOnlyList<string>>> Save { get; set; } = null!;
+
+    private string? _secret;
+    private bool _saving;
+    private IReadOnlyList<string> Errors { get; set; } = [];
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        Errors = await Save(Item, string.IsNullOrEmpty(_secret) ? null : _secret);
+        _saving = false;
+        if (Errors.Count == 0) Dialog.Close(DialogResult.Ok(true));
+    }
+}

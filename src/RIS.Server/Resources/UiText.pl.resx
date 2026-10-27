@@ -277,4 +277,112 @@
   <data name="Plan_Kind" xml:space="preserve"><value>Rodzaj</value></data>
   <data name="Plan_Runs" xml:space="preserve"><value>Uruchomienia</value></data>
   <data name="Run_Finished" xml:space="preserve"><value>Koniec</value></data>
+  <data name="Editor_NewJob" xml:space="preserve"><value>Nowe zadanie</value></data>
+  <data name="Editor_EditJob" xml:space="preserve"><value>Edycja {0}</value></data>
+  <data name="Editor_TabForm" xml:space="preserve"><value>Formularz</value></data>
+  <data name="Editor_Identity" xml:space="preserve"><value>Identyfikacja</value></data>
+  <data name="Editor_Interval" xml:space="preserve"><value>Interwał</value></data>
+  <data name="Editor_Options" xml:space="preserve"><value>Ustawienia typu zadania</value></data>
+  <data name="Editor_CronHint" xml:space="preserve"><value>Cron Quartz: sekundy minuty godziny dzień-miesiąca miesiąc dzień-tygodnia, np. 0 0 2 * * ? = codziennie o 02:00.</value></data>
+  <data name="Editor_IntervalHint" xml:space="preserve"><value>Interwał z punktem startu: np. co 02:00:00 od 12:00 uruchamia o 12:00, 14:00, ... także po restarcie.</value></data>
+  <data name="Editor_HintTimeSpan" xml:space="preserve"><value>hh:mm:ss lub d.hh:mm:ss</value></data>
+  <data name="Editor_HintDate" xml:space="preserve"><value>rrrr-MM-ddTGG:mm:ss+zz:zz</value></data>
+  <data name="Editor_HintTimeZone" xml:space="preserve"><value>Identyfikator strefy Windows; puste = strefa serwera</value></data>
+  <data name="Editor_AddSection" xml:space="preserve"><value>Dodaj</value></data>
+  <data name="Editor_RemoveSection" xml:space="preserve"><value>Usuń</value></data>
+  <data name="Editor_Required" xml:space="preserve"><value>Wartość jest wymagana.</value></data>
+  <data name="Editor_InvalidValue" xml:space="preserve"><value>Nieprawidłowa wartość.</value></data>
+  <data name="Editor_Invalid" xml:space="preserve"><value>Nie można zapisać konfiguracji:</value></data>
+  <data name="Editor_Valid" xml:space="preserve"><value>Nie znaleziono problemów.</value></data>
+  <data name="Editor_JsonHint" xml:space="preserve"><value>Definicja jako JSON (bez sekretów). Zastosuj, aby przenieść ją do formularza; Zapisz zapisuje formularz.</value></data>
+  <data name="Editor_ApplyJson" xml:space="preserve"><value>Zastosuj JSON</value></data>
+  <data name="Editor_JsonApplied" xml:space="preserve"><value>JSON przeniesiony do formularza.</value></data>
+  <data name="Editor_JsonInvalid" xml:space="preserve"><value>Nieprawidłowy JSON: {0}</value></data>
+  <data name="Editor_TypeChange" xml:space="preserve"><value>Nie można zmienić typu zadania; utwórz nowe zadanie.</value></data>
+  <data name="Editor_Exists" xml:space="preserve"><value>Zadanie {0} już istnieje.</value></data>
+  <data name="Editor_Saved" xml:space="preserve"><value>Zapisano zadanie {0}.</value></data>
+  <data name="Saved" xml:space="preserve"><value>Zapisano.</value></data>
+  <data name="Secret" xml:space="preserve"><value>Sekret</value></data>
+  <data name="Secret_Set" xml:space="preserve"><value>Ustawiony</value></data>
+  <data name="Secret_Missing" xml:space="preserve"><value>Brak</value></data>
+  <data name="Secret_Connection" xml:space="preserve"><value>Client secret / hasło</value></data>
+  <data name="Secret_Sftp" xml:space="preserve"><value>Hasło / hasło klucza</value></data>
+  <data name="Secret_HintNew" xml:space="preserve"><value>Zapisany w postaci zaszyfrowanej; nie będzie więcej wyświetlany.</value></data>
+  <data name="Secret_HintKeep" xml:space="preserve"><value>Pozostaw puste, aby zachować zapisaną wartość.</value></data>
+  <data name="Connections_Add" xml:space="preserve"><value>Nowe połączenie</value></data>
+  <data name="Sftp_Add" xml:space="preserve"><value>Nowy serwer SFTP</value></data>
+  <data name="Usage_Jobs" xml:space="preserve"><value>Używane przez zadania</value></data>
+  <data name="Reference_NoRename" xml:space="preserve"><value>Zmiana nazwy nie jest obsługiwana: utwórz nowy obiekt i zmień zadania.</value></data>
+  <data name="Reference_DeleteTitle" xml:space="preserve"><value>Usunąć {0}?</value></data>
+  <data name="Reference_DeleteText" xml:space="preserve"><value>Usunięcie zostanie odrzucone, jeśli używają go zadania.</value></data>
+  <data name="Field_Name" xml:space="preserve"><value>Nazwa</value></data>
+  <data name="Field_Tenant" xml:space="preserve"><value>Tenant</value></data>
+  <data name="Field_ClientId" xml:space="preserve"><value>Client id</value></data>
+  <data name="Field_AuthMode" xml:space="preserve"><value>Uwierzytelnianie</value></data>
+  <data name="Field_AosUri" xml:space="preserve"><value>Adres AOS</value></data>
+  <data name="Field_Authority" xml:space="preserve"><value>Authority</value></data>
+  <data name="Field_CertificateThumbprint" xml:space="preserve"><value>Odcisk certyfikatu</value></data>
+  <data name="Field_UserName" xml:space="preserve"><value>Nazwa użytkownika</value></data>
+  <data name="Field_Host" xml:space="preserve"><value>Host</value></data>
+  <data name="Field_Port" xml:space="preserve"><value>Port</value></data>
+  <data name="Field_UseKey" xml:space="preserve"><value>Klucz prywatny</value></data>
+  <data name="Field_KeyPath" xml:space="preserve"><value>Plik klucza</value></data>
+  <data name="Field_ConnectTimeout" xml:space="preserve"><value>Limit czasu połączenia</value></data>
+  <data name="Field_OperationTimeout" xml:space="preserve"><value>Limit czasu operacji</value></data>
+  <data name="Field_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Field_Cron" xml:space="preserve"><value>Wyrażenie cron</value></data>
+  <data name="Field_Interval" xml:space="preserve"><value>Interwał</value></data>
+  <data name="Field_StartAt" xml:space="preserve"><value>Start (punkt odniesienia)</value></data>
+  <data name="Field_TimeZone" xml:space="preserve"><value>Strefa czasowa</value></data>
+  <data name="Field_MissedRuns" xml:space="preserve"><value>Przegapione terminy</value></data>
+  <data name="Field_Paused" xml:space="preserve"><value>Wstrzymane w konfiguracji</value></data>
+  <data name="Field_PauseOnError" xml:space="preserve"><value>Wstrzymaj po błędzie</value></data>
+  <data name="Field_IndefinitePause" xml:space="preserve"><value>Wyłączone (nigdy nie uruchamia)</value></data>
+  <data name="Field_Company" xml:space="preserve"><value>Firma (legal entity)</value></data>
+  <data name="Field_DataProject" xml:space="preserve"><value>Projekt danych</value></data>
+  <data name="Field_DelayBetweenFiles" xml:space="preserve"><value>Odstęp między plikami</value></data>
+  <data name="Field_Retry" xml:space="preserve"><value>Ponawianie</value></data>
+  <data name="Field_Count" xml:space="preserve"><value>Liczba</value></data>
+  <data name="Field_Delay" xml:space="preserve"><value>Odstęp</value></data>
+  <data name="Field_Polling" xml:space="preserve"><value>Sprawdzanie statusu</value></data>
+  <data name="Field_InitialDelay" xml:space="preserve"><value>Początkowy odstęp</value></data>
+  <data name="Field_MaxDelay" xml:space="preserve"><value>Maksymalny odstęp</value></data>
+  <data name="Field_GrowthFactor" xml:space="preserve"><value>Mnożnik odstępu</value></data>
+  <data name="Field_Timeout" xml:space="preserve"><value>Limit czasu</value></data>
+  <data name="Field_Files" xml:space="preserve"><value>Pliki wejściowe</value></data>
+  <data name="Field_SearchPattern" xml:space="preserve"><value>Maska plików</value></data>
+  <data name="Field_OrderBy" xml:space="preserve"><value>Kolejność</value></data>
+  <data name="Field_Reverse" xml:space="preserve"><value>Odwrotna kolejność</value></data>
+  <data name="Field_InputDir" xml:space="preserve"><value>Folder wejściowy</value></data>
+  <data name="Field_UploadSuccessDir" xml:space="preserve"><value>Folder wysłanych</value></data>
+  <data name="Field_UploadErrorsDir" xml:space="preserve"><value>Folder błędów wysyłki</value></data>
+  <data name="Field_ProcessingSuccessDir" xml:space="preserve"><value>Folder przetworzonych</value></data>
+  <data name="Field_ProcessingErrorsDir" xml:space="preserve"><value>Folder błędów przetwarzania</value></data>
+  <data name="Field_DownloadSuccessDir" xml:space="preserve"><value>Folder pobranych</value></data>
+  <data name="Field_DownloadErrorsDir" xml:space="preserve"><value>Folder błędów pobierania</value></data>
+  <data name="Field_UnzipPackage" xml:space="preserve"><value>Rozpakuj pakiet</value></data>
+  <data name="Field_AddTimestamp" xml:space="preserve"><value>Dodaj znacznik czasu</value></data>
+  <data name="Field_DeletePackage" xml:space="preserve"><value>Usuń pakiet</value></data>
+  <data name="Field_FileNamePattern" xml:space="preserve"><value>Wzorzec nazwy pliku</value></data>
+  <data name="Field_StatusFileExtension" xml:space="preserve"><value>Rozszerzenie pliku statusu</value></data>
+  <data name="Field_WriteStatusFiles" xml:space="preserve"><value>Zapisuj pliki statusu</value></data>
+  <data name="Field_PackageTemplate" xml:space="preserve"><value>Szablon pakietu</value></data>
+  <data name="Field_InputFilesArePackages" xml:space="preserve"><value>Pliki wejściowe są pakietami</value></data>
+  <data name="Field_OverwriteDataProject" xml:space="preserve"><value>Nadpisz projekt danych</value></data>
+  <data name="Field_ExecuteImport" xml:space="preserve"><value>Wykonaj import</value></data>
+  <data name="Field_MultiCompany" xml:space="preserve"><value>Wiele firm</value></data>
+  <data name="Field_Source" xml:space="preserve"><value>Źródło</value></data>
+  <data name="Field_TokenPosition" xml:space="preserve"><value>Pozycja tokenu</value></data>
+  <data name="Field_FileNameSeparator" xml:space="preserve"><value>Separator w nazwie pliku</value></data>
+  <data name="Field_ActivityId" xml:space="preserve"><value>Id aktywności</value></data>
+  <data name="Field_EntityName" xml:space="preserve"><value>Nazwa encji</value></data>
+  <data name="Field_IsDataPackage" xml:space="preserve"><value>Pakiet danych</value></data>
+  <data name="Field_GetExecutionErrors" xml:space="preserve"><value>Pobierz błędy wykonania</value></data>
+  <data name="Field_ErrorKeysFileTimeout" xml:space="preserve"><value>Limit czasu pliku kluczy błędów</value></data>
+  <data name="Field_SftpInbound" xml:space="preserve"><value>SFTP przychodzące</value></data>
+  <data name="Field_SftpOutbound" xml:space="preserve"><value>SFTP wychodzące</value></data>
+  <data name="Field_Server" xml:space="preserve"><value>Serwer SFTP</value></data>
+  <data name="Field_RemoteFolder" xml:space="preserve"><value>Folder zdalny</value></data>
+  <data name="Field_FileMask" xml:space="preserve"><value>Maska plików</value></data>
+  <data name="Field_ActionPaths" xml:space="preserve"><value>Ścieżki akcji D365 (OData)</value></data>
 </root>

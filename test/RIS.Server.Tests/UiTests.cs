@@ -127,6 +127,34 @@ public sealed class UiTests
 
 
     [TestMethod]
+    public async Task EditorConnectionsAndAudit_AdminOnly_NoSecretsInHtml()
+    {
+        var admin = _factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+        (await admin.PutRisAsync("/api/v1/jobs/Tests/Daily",
+            RisTestHost.Export("Daily", Path.Combine(_factory.DataDirectory, "export"), new ScheduleOptions { Cron = "0 0 2 * * ?" }))).EnsureSuccessStatusCode();
+
+        var editor = await GetPageAsync("/jobs/Tests/Daily/edit", "Admin", "pl-PL");
+        StringAssert.Contains(editor, "Edycja Tests.Daily");
+        StringAssert.Contains(editor, "Projekt danych", "Generated form with Polish field labels.");
+        StringAssert.Contains(editor, "Najbliższe uruchomienia");
+        StringAssert.Contains(await GetPageAsync("/jobs/new", "Admin", "en-US"), "New job");
+
+        var connections = await GetPageAsync("/connections", "Admin", "en-US");
+        StringAssert.Contains(connections, "TEST");
+        StringAssert.Contains(connections, "Set");
+        Assert.IsFalse(connections.Contains("secret\"") || connections.Contains(">secret<"), "Secret value never rendered.");
+        StringAssert.Contains(await GetPageAsync("/sftp-servers", "Admin", "en-US"), "New SFTP server");
+        StringAssert.Contains(await GetPageAsync("/audit", "Admin", "en-US"), "Created");
+
+        // Operator: no access to configuration pages.
+        var operatorClient = _factory.Client("Operator");
+        operatorClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US");
+        StringAssert.Contains(WebUtility.HtmlDecode(await (await operatorClient.GetAsync("/jobs/Tests/Daily/edit")).Content.ReadAsStringAsync()), "No access");
+    }
+
+
+    [TestMethod]
     public void Translations_AreComplete()
     {
         var folder = Path.Combine(RepoRoot(), "src", "RIS.Server", "Resources");
