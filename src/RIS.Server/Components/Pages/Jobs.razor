@@ -203,11 +203,20 @@
         if (await DeleteJobsAsync(SelectedRefs)) _selected = [];
     }
 
-    private Task BulkEditAsync()
+    private async Task BulkEditAsync()
     {
-        Snackbar.Add(T["Bulk_EditSoon"], Severity.Info);
-        return Task.CompletedTask;
+        var dialog = await Dialogs.ShowAsync<BulkEditDialog>(T["Action_BulkEdit"], new DialogParameters<BulkEditDialog>
+        {
+            { d => d.Jobs, SelectedRefs },
+            { d => d.UserName, UserName }
+        }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseOnEscapeKey = true });
+        if (await dialog.Result is { Canceled: false, Data: int count })
+        {
+            Snackbar.Add(T["BulkEdit_Saved", count], Severity.Success);
+            await ReloadAsync();
+        }
     }
+
 
     private sealed class KeyComparer : IEqualityComparer<JobSummary>
     {

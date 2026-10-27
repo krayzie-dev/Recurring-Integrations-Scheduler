@@ -1,0 +1,199 @@
+@using System.Globalization
+@inject BulkEditService BulkEdits
+@inject IRisConfigurationStore Store
+@* Bulk edit of the selected jobs: set the changes, preview the differences, apply in one transaction. *@
+
+<MudDialog>
+    <TitleContent>@T["BulkEdit_Title", Jobs.Count]</TitleContent>
+    <DialogContent>
+        <MudExpansionPanels MultiExpansion="true" Elevation="0" Outlined="true">
+            <MudExpansionPanel Text="@T["BulkEdit_Common"]" Expanded="true">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_connection" Label="@T["Job_Connection"]" Clearable="true" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var c in Store.Current.Connections.Select(c => c.Name).Order()) { <MudSelectItem Value="c">@c</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" @bind-Value="_group" Label="@T["Job_Group"]" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_timeZone" Label="@T["Field_TimeZone"]" Clearable="true" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@ServerZone">@T["BulkEdit_ServerZone"]</MudSelectItem>
+                            @foreach (var zone in TimeZoneInfo.GetSystemTimeZones()) { <MudSelectItem Value="zone.Id">@zone.Id</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="MissedRunPolicy?" @bind-Value="_missedRuns" Label="@T["Field_MissedRuns"]" Clearable="true" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var p in Enum.GetValues<MissedRunPolicy>()) { <MudSelectItem T="MissedRunPolicy?" Value="p">@T["MissedRuns_" + p]</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6"><TriState Label="@T["Field_Paused"]" @bind-Value="_paused" /></MudItem>
+                    <MudItem xs="12" sm="6"><TriState Label="@T["Field_PauseOnError"]" @bind-Value="_pauseOnError" /></MudItem>
+                    <MudItem xs="6" sm="3"><MudNumericField T="int?" @bind-Value="_retryCount" Label="@T["BulkEdit_RetryCount"]" Min="0" Max="100" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" /></MudItem>
+                    <MudItem xs="6" sm="3"><Duration Label="@T["BulkEdit_RetryDelay"]" @bind-Value="_retryDelay" /></MudItem>
+                    <MudItem xs="6" sm="2"><Duration Label="@T["Field_InitialDelay"]" @bind-Value="_pollingInitial" /></MudItem>
+                    <MudItem xs="6" sm="2"><Duration Label="@T["Field_MaxDelay"]" @bind-Value="_pollingMax" /></MudItem>
+                    <MudItem xs="6" sm="2"><Duration Label="@T["BulkEdit_PollingTimeout"]" @bind-Value="_pollingTimeout" /></MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="@T["Job_Schedule"]">
+                <MudRadioGroup T="string" @bind-Value="_scheduleMode">
+                    <MudRadio Value="@("keep")">@T["BulkEdit_Unchanged"]</MudRadio>
+                    <MudRadio Value="@("cron")">Cron</MudRadio>
+                    <MudRadio Value="@("interval")">@T["Editor_Interval"]</MudRadio>
+                </MudRadioGroup>
+                <MudGrid Spacing="2">
+                    @if (_scheduleMode == "cron")
+                    {
+                        <MudItem xs="12" sm="6"><MudTextField T="string" @bind-Value="_cron" Label="@T["Field_Cron"]" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    }
+                    else if (_scheduleMode == "interval")
+                    {
+                        <MudItem xs="6" sm="3"><Duration Label="@T["Field_Interval"]" @bind-Value="_interval" /></MudItem>
+                        <MudItem xs="6" sm="3"><MudTextField T="string" @bind-Value="_startAt" Label="@T["Field_StartAt"]" HelperText="@T["Editor_HintDate"]" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    }
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int?" @bind-Value="_shift" Label="@T["BulkEdit_Shift"]" HelperText="@T["BulkEdit_ShiftHint"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudTimePicker @bind-Time="_staggerStart" Label="@T["BulkEdit_StaggerStart"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" AmPm="false" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudNumericField T="int?" @bind-Value="_staggerStep" Label="@T["BulkEdit_StaggerStep"]" HelperText="@T["BulkEdit_StaggerHint"]" Min="0" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    </MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="@T["BulkEdit_Paths"]">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="5"><MudTextField T="string" @bind-Value="_find" Label="@T["BulkEdit_Find"]" Placeholder="\\old-server\share" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="12" sm="5"><MudTextField T="string" @bind-Value="_replace" Label="@T["BulkEdit_Replace"]" Placeholder="\\new-server\share" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="12" sm="2"><MudCheckBox T="bool" @bind-Value="_ignoreCase" Label="@T["BulkEdit_IgnoreCase"]" /></MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        @if (_inputError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_inputError</MudAlert>
+        }
+
+        @if (_preview is not null)
+        {
+            <MudText Typo="Typo.h6" Class="mt-4">@T["BulkEdit_PreviewTitle", _preview.Changes.Count, _preview.Jobs.Count]</MudText>
+            @foreach (var error in _preview.Errors)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-1 ris-mono">@error</MudAlert>
+            }
+            @foreach (var warning in _preview.Warnings)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-1">@warning</MudAlert>
+            }
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0" Class="mt-2" Style="max-height: 40vh; overflow: auto">
+                <thead><tr><th>@T["Job_Name"]</th><th>@T["BulkEdit_Field"]</th><th>@T["Audit_Before"]</th><th>@T["Audit_After"]</th></tr></thead>
+                <tbody>
+                    @foreach (var change in _preview.Changes)
+                    {
+                        <tr>
+                            <td>@change.Job</td>
+                            <td class="ris-mono">@change.Field</td>
+                            <td class="ris-mono" style="text-decoration: line-through; opacity: .7">@change.Before</td>
+                            <td class="ris-mono"><b>@change.After</b></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Preview" OnClick="PreviewAsync">@T["Common_Preview"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="ApplyAsync"
+                   Disabled="_preview is null || !_preview.CanApply || _saving">@T["Common_Apply"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string ServerZone = "";
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<JobRef> Jobs { get; set; } = [];
+    [Parameter] public string? UserName { get; set; }
+
+    private string? _connection, _group, _timeZone, _cron, _startAt, _find, _replace;
+    private MissedRunPolicy? _missedRuns;
+    private bool? _paused, _pauseOnError;
+    private int? _retryCount, _shift, _staggerStep;
+    private TimeSpan? _retryDelay, _pollingInitial, _pollingMax, _pollingTimeout, _interval, _staggerStart;
+    private bool _ignoreCase = true;
+    private string _scheduleMode = "keep";
+    private string? _inputError;
+    private BulkEditPreview? _preview;
+    private bool _saving;
+
+    private BulkEdit? Build()
+    {
+        _inputError = null;
+        DateTimeOffset? startAt = null;
+        if (_scheduleMode == "interval" && !string.IsNullOrWhiteSpace(_startAt))
+        {
+            if (!DateTimeOffset.TryParse(_startAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed))
+            {
+                _inputError = T["Editor_InvalidValue"] + " " + T["Field_StartAt"];
+                return null;
+            }
+            startAt = parsed;
+        }
+        return new BulkEdit
+        {
+            Connection = _connection,
+            Group = _group,
+            TimeZone = string.IsNullOrEmpty(_timeZone) ? null : _timeZone,
+            ClearTimeZone = _timeZone == ServerZone,
+            MissedRuns = _missedRuns,
+            Paused = _paused,
+            PauseOnError = _pauseOnError,
+            RetryCount = _retryCount,
+            RetryDelay = _retryDelay,
+            PollingInitialDelay = _pollingInitial,
+            PollingMaxDelay = _pollingMax,
+            PollingTimeout = _pollingTimeout,
+            Cron = _scheduleMode == "cron" ? _cron : null,
+            Interval = _scheduleMode == "interval" ? _interval : null,
+            StartAt = startAt,
+            ShiftMinutes = _shift,
+            StaggerStart = _staggerStart is { } s ? TimeOnly.FromTimeSpan(s) : null,
+            StaggerStepMinutes = _staggerStart is not null ? _staggerStep ?? 0 : null,
+            PathFind = _find,
+            PathReplace = _replace,
+            PathIgnoreCase = _ignoreCase
+        };
+    }
+
+    private Task PreviewAsync()
+    {
+        if (Build() is { } edit) _preview = BulkEdits.Preview(Jobs, edit);
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (Build() is not { } edit) return;
+        _saving = true;
+        try
+        {
+            _preview = await BulkEdits.ApplyAsync(Jobs, edit, UserName);
+            if (_preview.CanApply) Dialog.Close(DialogResult.Ok(_preview.Jobs.Count));
+        }
+        catch (RIS.Persistence.ConfigurationValidationException ex)
+        {
+            _preview = _preview! with { Errors = ex.Errors };
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

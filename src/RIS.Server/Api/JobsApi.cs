@@ -9,6 +9,8 @@ public sealed record PauseRequest(string? Reason);
 /// <summary>Bulk operation: jobs as "Group.Name" keys.</summary>
 public sealed record BulkRequest(IReadOnlyList<string> Jobs, string? Reason = null);
 
+public sealed record BulkEditRequest(IReadOnlyList<string> Jobs, BulkEdit Edit);
+
 /// <summary>Operational API: jobs, their state, history and runs (Viewer), run/pause/resume (Operator), bulk delete (Admin).</summary>
 public static class JobsApi
 {
@@ -49,6 +51,15 @@ public static class JobsApi
             Results.Ok(await operations.ResumeAsync(Refs(request), user.Identity?.Name, ct)));
         api.MapPost("/jobs/bulk/delete", async (BulkRequest request, JobOperationsService operations, ClaimsPrincipal user, CancellationToken ct) =>
             Results.Ok(await operations.DeleteAsync(Refs(request), user.Identity?.Name, ct))).RequireAuthorization(RisRoles.CanAdminister);
+
+        // Bulk edit: preview=true only returns differences, warnings and validation errors; otherwise saves when valid (else 400).
+        api.MapPost("/jobs/bulk/edit", async (BulkEditRequest request, bool? preview, BulkEditService edits, ClaimsPrincipal user, CancellationToken ct) =>
+        {
+            var jobs = request.Jobs.Select(JobRef.Parse).ToList();
+            var result = preview == true ? edits.Preview(jobs, request.Edit) : await edits.ApplyAsync(jobs, request.Edit, user.Identity?.Name, ct);
+            var body = new { result.Changes, result.Warnings, result.Errors, Saved = preview != true && result.CanApply };
+            return result.Errors.Count > 0 ? Results.BadRequest(body) : Results.Ok(body);
+        }).RequireAuthorization(RisRoles.CanAdminister);
     }
 
     private static IEnumerable<JobRef> Refs(BulkRequest request) => request.Jobs.Select(JobRef.Parse);

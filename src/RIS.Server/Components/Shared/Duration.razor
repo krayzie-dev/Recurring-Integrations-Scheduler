@@ -1,0 +1,37 @@
+@using System.Globalization
+@* Optional duration as text (hh:mm:ss or d.hh:mm:ss). *@
+<MudTextField T="string" Value="@_text" ValueChanged="SetAsync" Label="@Label" Placeholder="hh:mm:ss" Clearable="true"
+              Variant="Variant.Outlined" Margin="Margin.Dense" Error="_error" ErrorText="@T["Editor_HintTimeSpan"]" />
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public TimeSpan? Value { get; set; }
+    [Parameter] public EventCallback<TimeSpan?> ValueChanged { get; set; }
+
+    private string? _text;
+    private bool _error;
+
+    protected override void OnParametersSet()
+    {
+        if (!_error) _text = Value?.ToString("c", CultureInfo.InvariantCulture);
+    }
+
+    private async Task SetAsync(string? text)
+    {
+        _text = text;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _error = false;
+            await ValueChanged.InvokeAsync(null);
+        }
+        else if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out var value))
+        {
+            _error = false;
+            await ValueChanged.InvokeAsync(value);
+        }
+        else
+        {
+            _error = true;
+        }
+    }
+}

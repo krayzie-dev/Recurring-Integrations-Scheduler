@@ -52,7 +52,6 @@
   <data name="Attention_NotScheduled" xml:space="preserve"><value>Not in the scheduler</value></data>
   <data name="Attention_Paused" xml:space="preserve"><value>Paused</value></data>
   <data name="Bulk_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
-  <data name="Bulk_EditSoon" xml:space="preserve"><value>Bulk edit is coming in the next step.</value></data>
   <data name="Bulk_PartlyFailed" xml:space="preserve"><value>{0} succeeded, {1} failed:</value></data>
   <data name="Bulk_Selected" xml:space="preserve"><value>{0} selected</value></data>
   <data name="Chart_Tooltip" xml:space="preserve"><value>{0} succeeded, {1} failed, {2} other</value></data>
@@ -311,4 +310,23 @@
   <data name="Field_RemoteFolder" xml:space="preserve"><value>Remote folder</value></data>
   <data name="Field_FileMask" xml:space="preserve"><value>File mask</value></data>
   <data name="Field_ActionPaths" xml:space="preserve"><value>D365 action paths (OData)</value></data>
+  <data name="BulkEdit_Title" xml:space="preserve"><value>Edit {0} job(s) together</value></data>
+  <data name="BulkEdit_Common" xml:space="preserve"><value>Common settings</value></data>
+  <data name="BulkEdit_Unchanged" xml:space="preserve"><value>(unchanged)</value></data>
+  <data name="BulkEdit_ServerZone" xml:space="preserve"><value>Server time zone (remove)</value></data>
+  <data name="BulkEdit_RetryCount" xml:space="preserve"><value>Retries</value></data>
+  <data name="BulkEdit_RetryDelay" xml:space="preserve"><value>Retry delay</value></data>
+  <data name="BulkEdit_PollingTimeout" xml:space="preserve"><value>Polling timeout</value></data>
+  <data name="BulkEdit_Shift" xml:space="preserve"><value>Shift by minutes</value></data>
+  <data name="BulkEdit_ShiftHint" xml:space="preserve"><value>e.g. 30 or -15; cron hour/minute or interval start</value></data>
+  <data name="BulkEdit_StaggerStart" xml:space="preserve"><value>Stagger: first start</value></data>
+  <data name="BulkEdit_StaggerStep" xml:space="preserve"><value>Every N minutes</value></data>
+  <data name="BulkEdit_StaggerHint" xml:space="preserve"><value>next jobs in list order</value></data>
+  <data name="BulkEdit_Paths" xml:space="preserve"><value>Replace in folder paths</value></data>
+  <data name="BulkEdit_Find" xml:space="preserve"><value>Find</value></data>
+  <data name="BulkEdit_Replace" xml:space="preserve"><value>Replace with</value></data>
+  <data name="BulkEdit_IgnoreCase" xml:space="preserve"><value>Ignore case</value></data>
+  <data name="BulkEdit_PreviewTitle" xml:space="preserve"><value>{0} change(s) in {1} job(s)</value></data>
+  <data name="BulkEdit_Field" xml:space="preserve"><value>Field</value></data>
+  <data name="BulkEdit_Saved" xml:space="preserve"><value>Saved changes of {0} job(s).</value></data>
 </root>

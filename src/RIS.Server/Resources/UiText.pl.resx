@@ -126,7 +126,6 @@
   <data name="Attention_NotScheduled" xml:space="preserve"><value>Brak w harmonogramie</value></data>
   <data name="Attention_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
   <data name="Bulk_ClearSelection" xml:space="preserve"><value>Wyczyść zaznaczenie</value></data>
-  <data name="Bulk_EditSoon" xml:space="preserve"><value>Edycja zbiorcza będzie dostępna w kolejnym kroku.</value></data>
   <data name="Bulk_PartlyFailed" xml:space="preserve"><value>Powodzenie: {0}, błędy: {1}:</value></data>
   <data name="Bulk_Selected" xml:space="preserve"><value>Zaznaczono: {0}</value></data>
   <data name="Chart_Tooltip" xml:space="preserve"><value>sukces: {0}, błąd: {1}, inne: {2}</value></data>
@@ -385,4 +384,23 @@
   <data name="Field_RemoteFolder" xml:space="preserve"><value>Folder zdalny</value></data>
   <data name="Field_FileMask" xml:space="preserve"><value>Maska plików</value></data>
   <data name="Field_ActionPaths" xml:space="preserve"><value>Ścieżki akcji D365 (OData)</value></data>
+  <data name="BulkEdit_Title" xml:space="preserve"><value>Edycja zbiorcza zadań ({0})</value></data>
+  <data name="BulkEdit_Common" xml:space="preserve"><value>Wspólne ustawienia</value></data>
+  <data name="BulkEdit_Unchanged" xml:space="preserve"><value>(bez zmian)</value></data>
+  <data name="BulkEdit_ServerZone" xml:space="preserve"><value>Strefa serwera (usuń ustawienie)</value></data>
+  <data name="BulkEdit_RetryCount" xml:space="preserve"><value>Liczba ponowień</value></data>
+  <data name="BulkEdit_RetryDelay" xml:space="preserve"><value>Odstęp ponowień</value></data>
+  <data name="BulkEdit_PollingTimeout" xml:space="preserve"><value>Limit czasu sprawdzania</value></data>
+  <data name="BulkEdit_Shift" xml:space="preserve"><value>Przesuń o minut</value></data>
+  <data name="BulkEdit_ShiftHint" xml:space="preserve"><value>np. 30 lub -15; godzina/minuta cron albo start interwału</value></data>
+  <data name="BulkEdit_StaggerStart" xml:space="preserve"><value>Rozłóż: pierwszy start</value></data>
+  <data name="BulkEdit_StaggerStep" xml:space="preserve"><value>Co N minut</value></data>
+  <data name="BulkEdit_StaggerHint" xml:space="preserve"><value>kolejne zadania w kolejności listy</value></data>
+  <data name="BulkEdit_Paths" xml:space="preserve"><value>Zamiana w ścieżkach folderów</value></data>
+  <data name="BulkEdit_Find" xml:space="preserve"><value>Znajdź</value></data>
+  <data name="BulkEdit_Replace" xml:space="preserve"><value>Zamień na</value></data>
+  <data name="BulkEdit_IgnoreCase" xml:space="preserve"><value>Bez rozróżniania wielkości liter</value></data>
+  <data name="BulkEdit_PreviewTitle" xml:space="preserve"><value>Zmiany: {0} w zadaniach: {1}</value></data>
+  <data name="BulkEdit_Field" xml:space="preserve"><value>Pole</value></data>
+  <data name="BulkEdit_Saved" xml:space="preserve"><value>Zapisano zmiany zadań: {0}.</value></data>
 </root>

@@ -1,0 +1,16 @@
+@* Yes / No / unchanged (null). *@
+<MudSelect T="string" Value="@Text" ValueChanged="SetAsync" Label="@Label" Variant="Variant.Outlined" Margin="Margin.Dense">
+    <MudSelectItem Value="@("")">@T["BulkEdit_Unchanged"]</MudSelectItem>
+    <MudSelectItem Value="@("true")">@T["Common_Yes"]</MudSelectItem>
+    <MudSelectItem Value="@("false")">@T["Common_No"]</MudSelectItem>
+</MudSelect>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public bool? Value { get; set; }
+    [Parameter] public EventCallback<bool?> ValueChanged { get; set; }
+
+    private string Text => Value switch { true => "true", false => "false", _ => "" };
+
+    private Task SetAsync(string text) => ValueChanged.InvokeAsync(text switch { "true" => true, "false" => false, _ => null });
+}
