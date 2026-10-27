@@ -1,4 +1,4 @@
-; Recurring Integrations Scheduler 5 - installer (Inno Setup 6).
+﻿; Recurring Integrations Scheduler 5 - installer (Inno Setup 6).
 ; Build with scripts\build-installer.ps1 (publishes the server and the CLI, passes the defines below).
 ;
 ; Silent install, e.g.:
