@@ -396,6 +396,72 @@ public sealed partial class ConverterTests
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
     }
 
+    /// <summary>portable.config of the 4.x client (PortableSettingsProvider), app registrations as nested XML.</summary>
+    private static string ClientSettings(string clientId, string encryptedSecret) => $"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <userSettings>
+            <Roaming>
+              <setting name="AadApplications" serializeAs="Xml">
+                <value>
+                  <ArrayOfAadApplication xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                    <AadApplication><Name>OTHER APP</Name><ClientId>11111111-2222-3333-4444-555555555555</ClientId><Secret>{encryptedSecret}</Secret><AuthenticationType>Service</AuthenticationType></AadApplication>
+                    <AadApplication><Name>CONTOSO APP</Name><ClientId>{clientId}</ClientId><Secret>{encryptedSecret}</Secret><AuthenticationType>Service</AuthenticationType></AadApplication>
+                  </ArrayOfAadApplication>
+                </value>
+              </setting>
+            </Roaming>
+          </userSettings>
+        </configuration>
+        """;
+
+    [TestMethod]
+    public void ClientSettings_AppRegistrations_AreRead_AsNestedOrEscapedXml()
+    {
+        var folder = Directory.CreateTempSubdirectory("ris-client-settings-").FullName;
+        var nested = Path.Combine(folder, "nested.config");
+        var escaped = Path.Combine(folder, "escaped.config");
+        var xml = ClientSettings("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "QUJD");
+        File.WriteAllText(nested, xml);
+        var start = xml.IndexOf("<ArrayOfAadApplication", StringComparison.Ordinal);
+        var end = xml.IndexOf("</ArrayOfAadApplication>", StringComparison.Ordinal) + "</ArrayOfAadApplication>".Length;
+        File.WriteAllText(escaped, xml[..start] + System.Net.WebUtility.HtmlEncode(xml[start..end]) + xml[end..]);
+
+        foreach (var file in new[] { nested, escaped })
+        {
+            var registrations = ClientSettingsReader.ReadAppRegistrations(file);
+            Assert.AreEqual(2, registrations.Count, file);
+            Assert.AreEqual(new AppRegistration("CONTOSO APP", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "QUJD", true), registrations[1]);
+        }
+        Directory.Delete(folder, recursive: true);
+    }
+
+    [TestMethod]
+    public async Task Cli_Import4x_SecretOfTheClientAppRegistration_ComesFirst()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Inconclusive("DPAPI is Windows only.");
+        var folder = Directory.CreateTempSubdirectory("ris-cli-4x-client-").FullName;
+        var data = Path.Combine(folder, "data");
+        var schedule = Path.Combine(folder, "Schedule.xml");
+        // The jobs carry the old secret; the secret was renewed in the client's app registration only (as found on a test server).
+        await File.WriteAllTextAsync(schedule, WithClientSecrets(Dpapi("old-secret"), Dpapi("old-secret"), Dpapi("old-secret")));
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--paused", "--no-secret-check"]).InvokeAsync());
+        Assert.AreEqual("old-secret", await StoredSecretAsync(data));
+
+        await File.WriteAllTextAsync(Path.Combine(folder, ClientSettingsReader.FileName), ClientSettings("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", Dpapi("renewed-secret")));
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--secrets-only", "--no-secret-check"]).InvokeAsync());
+
+        Assert.AreEqual("renewed-secret", await StoredSecretAsync(data), "portable.config next to Schedule.xml is read and its secret comes first.");
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+    }
+
+    private static async Task<string?> StoredSecretAsync(string data)
+    {
+        await using var services = new ServiceCollection().AddLogging().AddRisPersistence(new PersistenceOptions { DataDirectory = data }).BuildServiceProvider();
+        return (await services.GetRequiredService<ConfigurationRepository>().LoadAsync(CancellationToken.None)).Connections.Single().ClientSecret;
+    }
+
     [TestMethod]
     public async Task Cli_Access_AddListRemove()
     {

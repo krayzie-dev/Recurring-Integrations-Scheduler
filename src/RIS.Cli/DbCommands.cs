@@ -89,14 +89,20 @@ internal static partial class DbCommands
         var report = new Option<DirectoryInfo?>("--report") { Description = "Folder for jobs.json (without secrets) of the converted configuration" };
         var secretsOnly = new Option<bool>("--secrets-only") { Description = "Only set the secrets of D365 instances and SFTP servers that already exist in RIS 5 (jobs are not touched)" };
         var noCheck = new Option<bool>("--no-secret-check") { Description = "Do not try the client secrets against Entra ID (offline)" };
+        var clientSettings = new Option<FileInfo?>("--client-settings") { Description = "Settings of the 4.x client with the app registrations (default: portable.config next to Schedule.xml)" };
         var command = new Command("import-4x", "Convert RIS 4.x Schedule.xml and import it, with the 4.x secrets when run on the 4.x server")
-            { schedule, data, paused, noSecrets, report, secretsOnly, noCheck };
+            { schedule, data, paused, noSecrets, report, secretsOnly, noCheck, clientSettings };
         command.SetAction(async (parse, ct) =>
         {
             var source = parse.GetValue(schedule)!;
             var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = !parse.GetValue(noSecrets) }).Convert(XDocument.Load(source.FullName));
             var configuration = result.Configuration;
-            if (!parse.GetValue(noSecrets) && !parse.GetValue(noCheck)) await ChooseClientSecretsAsync(result, ct);
+            if (!parse.GetValue(noSecrets))
+            {
+                var settingsFile = parse.GetValue(clientSettings)?.FullName ?? Path.Combine(source.DirectoryName ?? ".", ClientSettingsReader.FileName);
+                AddAppRegistrationSecrets(result, settingsFile);
+                if (!parse.GetValue(noCheck)) await ChooseClientSecretsAsync(result, ct);
+            }
             if (parse.GetValue(secretsOnly)) return await SetSecretsOnlyAsync(configuration, parse.GetValue(data), ct);
             if (parse.GetValue(paused))
             {
@@ -143,6 +149,48 @@ internal static partial class DbCommands
     /// 4.x jobs of one connection may carry different client secrets (renewed only in some jobs): each one is tried against
     /// Entra ID (client credentials token) and the first one accepted is used. Secrets are never printed.
     /// </summary>
+    /// <summary>
+    /// The 4.x client validates instances with its app registrations (portable.config): their secret is the one users keep up to
+    /// date, while every job carries its own, possibly outdated copy. Registrations with the client id of a connection come first.
+    /// </summary>
+    private static void AddAppRegistrationSecrets(ConversionResult result, string settingsFile)
+    {
+        if (!File.Exists(settingsFile) || !OperatingSystem.IsWindows()) return;
+        IReadOnlyList<AppRegistration> registrations;
+        try
+        {
+            registrations = ClientSettingsReader.ReadAppRegistrations(settingsFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
+        {
+            Console.WriteLine($"WARNING 4.x client settings {settingsFile} could not be read: {ex.Message}");
+            return;
+        }
+        Console.WriteLine($"4.x client settings {settingsFile}: {registrations.Count} app registration(s): " +
+                          string.Join(", ", registrations.Select(r => $"{r.Name} ({r.ClientId})")));
+
+        foreach (var connection in result.Configuration.Connections.Where(c => c.AuthMode == D365AuthMode.ClientSecret))
+        {
+            foreach (var registration in registrations.Where(r => r.IsService && r.EncryptedSecret is not null
+                                                                  && string.Equals(r.ClientId, connection.ClientId, StringComparison.OrdinalIgnoreCase)).Reverse())
+            {
+                string value;
+                try { value = ScheduleXmlConverter.DecryptDpapi(registration.EncryptedSecret!); }
+                catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or FormatException) { continue; }
+
+                if (!result.ClientSecretCandidates.TryGetValue(connection.Name, out var candidates))
+                {
+                    result.ClientSecretCandidates[connection.Name] = candidates = [];
+                }
+                var candidate = candidates.FirstOrDefault(c => c.Value == value) ?? new SecretCandidate(value);
+                candidates.Remove(candidate);
+                candidate.Jobs.Insert(0, $"app registration '{registration.Name}' of the 4.x client");
+                candidates.Insert(0, candidate);
+                connection.ClientSecret = candidate.Value;
+            }
+        }
+    }
+
     private static async Task ChooseClientSecretsAsync(ConversionResult result, CancellationToken cancellationToken)
     {
         var tokens = new MsalTokenProvider(NullLogger<MsalTokenProvider>.Instance);
@@ -177,12 +225,12 @@ internal static partial class DbCommands
             if (accepted is not null)
             {
                 connection.ClientSecret = accepted.Value;
-                Console.WriteLine($"Connection {name}: client secret accepted by Entra ID (carried by {accepted.Jobs.Count} job(s), e.g. {accepted.Jobs[0]}; " +
-                                  $"{tried} of {candidates.Count} tried).");
+                Console.WriteLine($"Connection {name}: client secret accepted by Entra ID (source: {accepted.Jobs[0]}" +
+                                  (accepted.Jobs.Count > 1 ? $" and {accepted.Jobs.Count - 1} more" : "") + $"; {tried} of {candidates.Count} tried).");
             }
             else
             {
-                Console.WriteLine($"WARNING Connection {name}: no client secret of the 4.x jobs was accepted ({tried} of {candidates.Count} tried, last: {lastError}). " +
+                Console.WriteLine($"WARNING Connection {name}: no client secret of the 4.x jobs or client was accepted ({tried} of {candidates.Count} tried, last: {lastError}). " +
                                   "The most used one is stored; when it is expired, set a new secret on the D365 instances page.");
             }
         }
