@@ -4,6 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    @* Before anything is shown: the server renders the "System" theme with the browser's color scheme from this cookie; when
+       it is missing or out of date (first visit, Windows theme changed), the page is loaded again instead of flashing. *@
+    <script>
+        (function () {
+            var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? '1' : '0';
+            var m = document.cookie.match(/(?:^|; )@(UiPreferences.SystemDarkCookieName)=([01])/);
+            document.cookie = '@(UiPreferences.SystemDarkCookieName)=' + dark + '; path=/; max-age=31536000; samesite=lax';
+            if (@(_preferences.Theme == ThemeMode.System ? "true" : "false") && (m ? m[1] : '0') !== dark && !sessionStorage.getItem('ris.sysdark.reload')) {
+                sessionStorage.setItem('ris.sysdark.reload', '1');
+                location.reload();
+            } else {
+                sessionStorage.removeItem('ris.sysdark.reload');
+            }
+        })();
+    </script>
     <title>RIS 5</title>
     <link href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" rel="stylesheet" />
     <link href="@Assets["css/ris.css"]" rel="stylesheet" />
@@ -38,5 +53,8 @@
     private UiPreferences _preferences = new();
 
     protected override void OnInitialized() =>
-        _preferences = UiPreferences.FromCookie(HttpContext?.Request.Cookies[UiPreferences.CookieName]);
+        _preferences = UiPreferences.FromCookie(HttpContext?.Request.Cookies[UiPreferences.CookieName]) with
+        {
+            SystemDark = HttpContext?.Request.Cookies[UiPreferences.SystemDarkCookieName] == "1"
+        };
 }

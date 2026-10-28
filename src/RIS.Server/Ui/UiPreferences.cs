@@ -28,6 +28,14 @@ public sealed record UiPreferences(ThemeMode Theme = ThemeMode.System, DisplayTi
 {
     public const string CookieName = "ris.prefs";
 
+    /// <summary>Cookie with the color scheme of the browser ("1" = dark), set by a script in the page head before the page is shown.</summary>
+    public const string SystemDarkCookieName = "ris.sysdark";
+
+    /// <summary>The browser prefers dark (last known): lets the server render the "System" theme dark, without a light flash.</summary>
+    public bool SystemDark { get; init; }
+
+    public bool IsDark => Theme switch { ThemeMode.Dark => true, ThemeMode.Light => false, _ => SystemDark };
+
     public static UiPreferences FromCookie(string? value)
     {
         var parts = (value ?? string.Empty).Split('|');

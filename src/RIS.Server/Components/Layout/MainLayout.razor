@@ -42,7 +42,7 @@
     </MudDrawer>
 
     <MudMainContent>
-        <CascadingValue Value="Preferences">
+        <CascadingValue Value="_preferences">
             <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-4">
                 @Body
             </MudContainer>
@@ -51,7 +51,11 @@
 </MudLayout>
 
 @code {
+    /// <summary>Preferences from the cookie when the page was opened; changes are kept in <see cref="_preferences"/> (the cascaded
+    /// value is set again on every navigation and would undo them).</summary>
     [CascadingParameter] public UiPreferences Preferences { get; set; } = new();
+
+    private UiPreferences? _preferences;
 
     private readonly MudTheme _theme = RisTheme.Create();
     private MudThemeProvider? _themeProvider;
@@ -59,14 +63,22 @@
     private bool _isDarkMode;
     private bool _systemDark;
 
-    private string ThemeIcon => Preferences.Theme switch
+    private string ThemeIcon => _preferences?.Theme switch
     {
         ThemeMode.Light => Icons.Material.Filled.LightMode,
         ThemeMode.Dark => Icons.Material.Filled.DarkMode,
         _ => Icons.Material.Filled.BrightnessAuto
     };
 
-    protected override void OnParametersSet() => ApplyTheme();
+    protected override void OnParametersSet()
+    {
+        if (_preferences is null)
+        {
+            _preferences = Preferences;
+            _systemDark = Preferences.SystemDark;
+        }
+        ApplyTheme();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -88,23 +100,23 @@
     }
 
     private void ApplyTheme() =>
-        _isDarkMode = Preferences.Theme switch { ThemeMode.Dark => true, ThemeMode.Light => false, _ => _systemDark };
+        _isDarkMode = ((_preferences ?? Preferences) with { SystemDark = _systemDark }).IsDark;
 
     private async Task SetThemeAsync(ThemeMode mode)
     {
-        Preferences = Preferences with { Theme = mode };
+        _preferences = _preferences! with { Theme = mode };
         ApplyTheme();
         await SavePreferencesAsync();
     }
 
     private async Task SetTimeZoneAsync(DisplayTimeZone zone)
     {
-        Preferences = Preferences with { TimeZone = zone };
+        _preferences = _preferences! with { TimeZone = zone };
         await SavePreferencesAsync();
     }
 
     private async Task SavePreferencesAsync() =>
-        await JS.InvokeVoidAsync("ris.setCookie", UiPreferences.CookieName, Preferences.ToCookie(), 365);
+        await JS.InvokeVoidAsync("ris.setCookie", UiPreferences.CookieName, _preferences!.ToCookie(), 365);
 
     private void SetCulture(string culture)
     {
