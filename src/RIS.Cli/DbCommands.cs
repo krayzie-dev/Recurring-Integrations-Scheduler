@@ -359,7 +359,9 @@ internal static partial class DbCommands
         if (dataDirectory is not null) persistence.DataDirectory = dataDirectory.FullName;
 
         var services = new ServiceCollection()
-            .AddLogging(logging => logging.AddSimpleConsole(console => console.SingleLine = true).SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(logging => logging.AddSimpleConsole(console => console.SingleLine = true).SetMinimumLevel(LogLevel.Warning)
+                // Database errors are reported by the command (short message), not as EF Core log dumps.
+                .AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None))
             .AddRisPersistence(persistence)
             .BuildServiceProvider();
         await DatabaseMaintenance.MigrateAsync(services, cancellationToken);

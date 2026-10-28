@@ -26,6 +26,23 @@ public static class Program
             Console.Error.WriteLine($"ERROR   {ex.Message}");
             return 3;
         }
+        catch (Exception ex) when (IsNoWriteAccess(ex))
+        {
+            // Typically a console that is not elevated: the data folder of the service is read-only for it.
+            Console.Error.WriteLine("ERROR   The RIS 5 database is read-only for this account - nothing was changed. Run the command prompt as administrator " +
+                                    "(right-click > Run as administrator) or as the RIS 5 service account.");
+            return 4;
+        }
+    }
+
+    /// <summary>SQLite "readonly database" / "cannot open" (codes 8, 14) or access denied, wherever wrapped (EF Core, migrations).</summary>
+    private static bool IsNoWriteAccess(Exception? ex)
+    {
+        for (; ex is not null; ex = ex.InnerException)
+        {
+            if (ex is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 8 or 14 } or UnauthorizedAccessException) return true;
+        }
+        return false;
     }
 
     public static RootCommand BuildCommand()
