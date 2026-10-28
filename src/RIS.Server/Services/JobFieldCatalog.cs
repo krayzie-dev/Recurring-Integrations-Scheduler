@@ -79,7 +79,8 @@ public static class JobFieldCatalog
 
     public static JobOptionsBase NewOptions(JobType type) => type switch
     {
-        JobType.Import => new ImportJobOptions(),
+        // In the wizard the data project usually exists already; D365 then refuses the import without overwrite.
+        JobType.Import => new ImportJobOptions { OverwriteDataProject = true },
         JobType.Upload => new UploadJobOptions(),
         JobType.Download => new DownloadJobOptions(),
         JobType.ExecutionMonitor => new ExecutionMonitorJobOptions(),

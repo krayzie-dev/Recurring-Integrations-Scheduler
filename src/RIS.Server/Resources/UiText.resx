@@ -424,8 +424,8 @@
   <data name="FieldHelp_InputFilesArePackages" xml:space="preserve"><value>On: each input file is a zip data package imported as is. Off: each file is wrapped into the package template.</value></data>
   <data name="FieldHint_PackageTemplate" xml:space="preserve"><value>Zip exported from D365 with Manifest.xml</value></data>
   <data name="FieldHelp_PackageTemplate" xml:space="preserve"><value>Path to a data package template: export the data project once from D365 and keep the zip. RIS replaces the data file in it with each input file.</value></data>
-  <data name="FieldHint_OverwriteDataProject" xml:space="preserve"><value>Replace the project definition with the package</value></data>
-  <data name="FieldHelp_OverwriteDataProject" xml:space="preserve"><value>Passed to ImportFromPackage: the data project definition is overwritten by the manifest of the package.</value></data>
+  <data name="FieldHint_OverwriteDataProject" xml:space="preserve"><value>Needed when the data project already exists in D365</value></data>
+  <data name="FieldHelp_OverwriteDataProject" xml:space="preserve"><value>Passed to ImportFromPackage. D365 rejects the import of a package into a data project that already exists unless this is on (&quot;The data project … exists and overwrite has not been specified&quot;); the project definition is then replaced by the manifest of the package. Usually on.</value></data>
   <data name="FieldHint_ExecuteImport" xml:space="preserve"><value>Run the import right away (otherwise only staging)</value></data>
   <data name="FieldHelp_ExecuteImport" xml:space="preserve"><value>On: data goes to the target tables. Off: data stays in staging and the import is finished in D365.</value></data>
   <data name="FieldHint_GetExecutionErrors" xml:space="preserve"><value>Save D365 execution errors next to failed files</value></data>

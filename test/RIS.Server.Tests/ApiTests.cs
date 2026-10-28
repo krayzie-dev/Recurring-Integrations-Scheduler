@@ -229,4 +229,15 @@ public sealed class ApiTests
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, missing.StatusCode);
         StringAssert.Contains(await missing.Content.ReadAsStringAsync(), "type discriminator");
     }
+
+    [TestMethod]
+    [DataRow("""{ "jobs": null }""", 204)]
+    [DataRow("""{ "jobs": [ null ] }""", 400)]
+    [DataRow("""{ "connections": [ null ], "jobs": [] }""", 400)]
+    public async Task ImportConfiguration_EmptyListsAndItems(string body, int expected)
+    {
+        await using var factory = new RisServerFactory();
+        var response = await factory.Client("Admin").PostAsync("/api/v1/config/import", new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+        Assert.AreEqual(expected, (int)response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
 }

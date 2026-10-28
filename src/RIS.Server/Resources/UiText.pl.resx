@@ -498,8 +498,8 @@
   <data name="FieldHelp_InputFilesArePackages" xml:space="preserve"><value>Włączone: każdy plik wejściowy to pakiet danych (zip) importowany bez zmian. Wyłączone: każdy plik jest pakowany do szablonu pakietu.</value></data>
   <data name="FieldHint_PackageTemplate" xml:space="preserve"><value>Plik zip wyeksportowany z D365 z Manifest.xml</value></data>
   <data name="FieldHelp_PackageTemplate" xml:space="preserve"><value>Ścieżka do szablonu pakietu: wyeksportuj raz projekt danych z D365 i zachowaj plik zip. RIS podmienia w nim plik danych na każdy plik wejściowy.</value></data>
-  <data name="FieldHint_OverwriteDataProject" xml:space="preserve"><value>Zastąp definicję projektu definicją z pakietu</value></data>
-  <data name="FieldHelp_OverwriteDataProject" xml:space="preserve"><value>Przekazywane do ImportFromPackage: definicja projektu danych jest nadpisywana manifestem z pakietu.</value></data>
+  <data name="FieldHint_OverwriteDataProject" xml:space="preserve"><value>Wymagane, gdy projekt danych istnieje już w D365</value></data>
+  <data name="FieldHelp_OverwriteDataProject" xml:space="preserve"><value>Przekazywane do ImportFromPackage. D365 odrzuca import pakietu do istniejącego projektu danych, jeśli ta opcja jest wyłączona (&quot;The data project … exists and overwrite has not been specified&quot;); definicja projektu jest wtedy zastępowana manifestem z pakietu. Zwykle włączone.</value></data>
   <data name="FieldHint_ExecuteImport" xml:space="preserve"><value>Uruchom import od razu (w przeciwnym razie tylko staging)</value></data>
   <data name="FieldHelp_ExecuteImport" xml:space="preserve"><value>Włączone: dane trafiają do tabel docelowych. Wyłączone: dane zostają w stagingu, a import kończy się w D365.</value></data>
   <data name="FieldHint_GetExecutionErrors" xml:space="preserve"><value>Zapisz błędy wykonania z D365 obok nieudanych plików</value></data>

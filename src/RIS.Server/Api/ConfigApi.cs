@@ -78,12 +78,14 @@ public static class ConfigApi
 
         api.MapPost("/config/validate", (RisConfiguration configuration) =>
         {
+            if (EmptyItems(configuration) is { } empty) return empty;
             var errors = ConfigurationValidator.Validate(configuration);
             return Results.Ok(new ValidationResult(errors.Count == 0, errors));
         });
         api.MapGet("/config/export", async (ConfigurationRepository repository, CancellationToken ct) => Results.Ok(await repository.ExportAsync(ct)));
         api.MapPost("/config/import", async (RisConfiguration configuration, ConfigurationRepository repository, ClaimsPrincipal user, CancellationToken ct) =>
         {
+            if (EmptyItems(configuration) is { } empty) return empty;
             await repository.ImportAsync(configuration, User(user), ct);
             return Results.NoContent();
         });
@@ -115,6 +117,20 @@ public static class ConfigApi
             ? null
             : Results.Problem($"Name in the URL ('{route}') differs from the name in the body ('{body}'). Renaming is delete + create.",
                 statusCode: StatusCodes.Status400BadRequest);
+
+    /// <summary>Missing lists count as empty; null items (e.g. "jobs": [null]) are a client error, not a crash.</summary>
+    private static IResult? EmptyItems(RisConfiguration configuration)
+    {
+        configuration.Connections ??= [];
+        configuration.SftpServers ??= [];
+        configuration.Jobs ??= [];
+        var empty = new[] { ("connections", configuration.Connections.Cast<object?>()), ("sftpServers", configuration.SftpServers), ("jobs", configuration.Jobs) }
+            .SelectMany(list => list.Item2.Select((item, index) => item is null ? $"{list.Item1}[{index}]" : null))
+            .OfType<string>().ToList();
+        return empty.Count == 0
+            ? null
+            : Results.Problem($"Empty item(s) in the configuration: {string.Join(", ", empty)}.", statusCode: StatusCodes.Status400BadRequest);
+    }
 
     private static string? User(ClaimsPrincipal user) => user.Identity?.Name;
 

@@ -114,9 +114,13 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
                 }
                 catch (D365ApiException ex)
                 {
-                    await MoveToErrorsAsync(options, file, new ErrorReport(ErrorCodes.ImportRequestFailed, ex.Message, executionId,
+                    // Most common setup error: the data project exists in D365 and the job does not allow overwriting it.
+                    var hint = !options.OverwriteDataProject && ex.ResponseBody?.Contains("overwrite has not been specified", StringComparison.OrdinalIgnoreCase) == true
+                        ? $" Data project '{options.DataProject}' already exists in D365: turn on OverwriteDataProject (\"Overwrite data project\") in the job."
+                        : "";
+                    await MoveToErrorsAsync(options, file, new ErrorReport(ErrorCodes.ImportRequestFailed, ex.Message + hint, executionId,
                         (int?)ex.StatusCode, ex.ResponseBody, new { options.DataProject, LegalEntity = legalEntity }), cancellationToken);
-                    throw new RisException(ErrorCodes.ImportRequestFailed, $"ImportFromPackage failed for '{fileName}': {ex.Message}. File moved to errors.",
+                    throw new RisException(ErrorCodes.ImportRequestFailed, $"ImportFromPackage failed for '{fileName}': {ex.Message}.{hint} File moved to errors.",
                         new Dictionary<string, object?> { ["ExecutionId"] = executionId }, ex);
                 }
             }

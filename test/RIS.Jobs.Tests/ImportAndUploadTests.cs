@@ -64,6 +64,22 @@ public sealed class ImportTests
     }
 
     [TestMethod]
+    public async Task ExistingDataProjectWithoutOverwrite_ErrorSaysWhatToChange()
+    {
+        // Real D365 answer (org0516c10d, 28.10.2026) for an existing project and overwrite = false.
+        using var host = new JobsTestHost();
+        AddTemplate(host);
+        host.FileSystem.AddFile(@"C:\ris\in\a.csv", new MockFileData("A"));
+        host.D365.ImportFromPackage = (_, _) => throw FakeD365Client.HttpError(HttpStatusCode.BadRequest,
+            "{\"error\":{\"innererror\":{\"message\":\"The data project 'Vendor invoices' exists and overwrite has not been specified.\"}}}");
+
+        var outcome = await host.RunAsync(Options());
+
+        Assert.AreEqual(JobOutcomeStatus.Failed, outcome.Status);
+        StringAssert.Contains(host.FileSystem.File.ReadAllText(@"C:\ris\errors\a.Status"), "turn on OverwriteDataProject");
+    }
+
+    [TestMethod]
     public async Task WrappedPackage_ContainsInputFile_AndManifestPointsToOriginalName()
     {
         using var host = new JobsTestHost();
