@@ -80,6 +80,8 @@
 </MudGrid>
 
 @code {
+    protected override bool RefreshOnRuns => false;
+
     private IReadOnlyList<DataStore> _stores = [];
     private bool _cleaning;
 

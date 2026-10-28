@@ -69,6 +69,8 @@
 </MudDataGrid>
 
 @code {
+    protected override bool RefreshOnRuns => false;
+
     private IReadOnlyList<SftpServerOptions> _items = [];
     private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 

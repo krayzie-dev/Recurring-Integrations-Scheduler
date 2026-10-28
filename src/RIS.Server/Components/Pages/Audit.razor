@@ -88,6 +88,8 @@
 </MudDataGrid>
 
 @code {
+    protected override bool RefreshOnRuns => false;
+
     private IReadOnlyList<AuditEntry> _all = [];
     private IReadOnlyList<AuditEntry> _filtered = [];
     private string? _search;

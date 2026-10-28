@@ -218,7 +218,7 @@ public sealed class PersistenceTests
     public async Task ConfigurationStore_IsRefreshedAfterChange()
     {
         var store = _services.GetRequiredService<DbConfigurationStore>();
-        store.Refresh();
+        await store.RefreshAsync();
         var reloaded = 0;
         store.Reloaded += () => reloaded++;
 
@@ -226,6 +226,25 @@ public sealed class PersistenceTests
 
         Assert.AreEqual(1, reloaded);
         Assert.IsNotNull(store.Current.FindConnection("PROD"));
+    }
+
+    [TestMethod]
+    public async Task DeleteJobs_OneTransaction_RejectedAsAWhole()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+        var a = Job();
+        var b = Job();
+        b.Name = "Second";
+        await _repository.SaveJobAsync(a, "tester");
+        await _repository.SaveJobAsync(b, "tester");
+
+        await _repository.DeleteJobsAsync([("Export jobs", "CustInvoiceJour"), ("Export jobs", "Second")], "tester");
+        Assert.AreEqual(0, (await _repository.LoadAsync()).Jobs.Count);
+        Assert.AreEqual(2, (await _repository.GetAuditAsync()).Count(e => e.Action == "Deleted"));
+
+        await _repository.SaveJobAsync(a, "tester");
+        await Assert.ThrowsExactlyAsync<ConfigurationNotFoundException>(() => _repository.DeleteJobsAsync([("Export jobs", "CustInvoiceJour"), ("Export jobs", "Missing")], "tester"));
+        Assert.AreEqual(1, (await _repository.LoadAsync()).Jobs.Count, "Nothing deleted when one of them fails.");
     }
 
     [TestMethod]

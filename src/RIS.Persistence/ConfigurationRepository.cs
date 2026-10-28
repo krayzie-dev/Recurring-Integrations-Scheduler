@@ -38,6 +38,9 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
     /// <summary>Raised after a successful change.</summary>
     public event Action? Changed;
 
+    /// <summary>Raised after a successful change with the complete, validated configuration (with secrets) as it is now.</summary>
+    public event Action<RisConfiguration>? Committed;
+
     public async Task<RisConfiguration> LoadAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
@@ -158,6 +161,19 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             db.SftpServers.Remove(entity);
             configuration.SftpServers.RemoveAll(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
             audit("SftpServer", name, "Deleted", AuditJson(entity), null);
+        });
+
+    /// <summary>Deletes several jobs in one transaction (one validation, one reload, one scheduler synchronization).</summary>
+    public Task DeleteJobsAsync(IReadOnlyCollection<(string Group, string Name)> jobs, string? user, CancellationToken cancellationToken = default) =>
+        ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            foreach (var (group, name) in jobs)
+            {
+                var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == group && j.Name == name, cancellationToken) ?? throw NotFound("Job", $"{group}.{name}");
+                db.Jobs.Remove(entity);
+                configuration.Jobs.RemoveAll(j => string.Equals(j.Key, $"{group}.{name}", StringComparison.OrdinalIgnoreCase));
+                audit("Job", $"{group}.{name}", "Deleted", JobJson(ToDefinition(entity)), null);
+            }
         });
 
     public Task DeleteJobAsync(string group, string name, string? user, CancellationToken cancellationToken = default) =>
@@ -324,6 +340,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         db.Audit.AddRange(audits);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        Committed?.Invoke(configuration);
         Changed?.Invoke();
     }
 

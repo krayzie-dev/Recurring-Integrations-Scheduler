@@ -48,7 +48,35 @@ public sealed class ScheduleSynchronizer(
     public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private void OnReloaded() => _ = Task.Run(async () =>
+    /// <summary>
+    /// Changes arriving while a synchronization runs are coalesced into one more pass (a bulk edit or an import raises
+    /// one event, but several users or "ris db import" can change things at the same time).
+    /// </summary>
+    private void OnReloaded()
+    {
+        Interlocked.Exchange(ref _requested, 1);
+        if (Interlocked.CompareExchange(ref _working, 1, 0) != 0) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (Interlocked.Exchange(ref _requested, 0) == 1)
+                {
+                    await SynchronizeSafelyAsync();
+                }
+            }
+            finally
+            {
+                Volatile.Write(ref _working, 0);
+                if (Volatile.Read(ref _requested) == 1 && !_stopping.IsCancellationRequested) OnReloaded();
+            }
+        });
+    }
+
+    private int _requested;
+    private int _working;
+
+    private async Task SynchronizeSafelyAsync()
     {
         try
         {
@@ -62,7 +90,10 @@ public sealed class ScheduleSynchronizer(
         {
             logger.LogError(ex, "[{ErrorCode}] Applying changed configuration to the scheduler failed: {Error}", Core.Errors.ErrorCodes.Unexpected, ex.Message);
         }
-    });
+    }
+
+    /// <summary>Definition hashes applied to the scheduler; read from Quartz once (first pass), then kept up to date here.</summary>
+    private Dictionary<JobKey, string>? _applied;
 
     public async Task<SyncResult> SynchronizeAsync(CancellationToken cancellationToken)
     {
@@ -73,20 +104,34 @@ public sealed class ScheduleSynchronizer(
             var configuration = store.Current;
             int added = 0, updated = 0, removed = 0, unchanged = 0;
 
+            if (_applied is null)
+            {
+                // First pass after start: the persistent store still has the jobs of the previous run.
+                _applied = [];
+                foreach (var key in await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup(), cancellationToken))
+                {
+                    if (await scheduler.GetJobDetail(key, cancellationToken) is { } detail && detail.JobType.Type == typeof(RisQuartzJob))
+                    {
+                        _applied[key] = detail.JobDataMap.GetString(RisJobScheduling.DefinitionHashKey) ?? "";
+                    }
+                }
+            }
+
             foreach (var definition in configuration.Jobs)
             {
                 var key = new JobKey(definition.Name, definition.Group);
                 var hash = ConfigurationRepository.ComputeHash(definition);
-                var existing = await scheduler.GetJobDetail(key, cancellationToken);
-                if (existing is not null && existing.JobDataMap.GetString(RisJobScheduling.DefinitionHashKey) == hash)
+                var exists = _applied.TryGetValue(key, out var appliedHash);
+                if (exists && appliedHash == hash)
                 {
                     unchanged++;
                     continue;
                 }
 
-                var wasPaused = existing is not null && await IsPausedAsync(scheduler, key, cancellationToken);
+                var wasPaused = exists && await IsPausedAsync(scheduler, key, cancellationToken);
                 await RisJobScheduling.ScheduleAsync(scheduler, definition, cancellationToken, hash, keepPaused: wasPaused);
-                if (existing is null)
+                _applied[key] = hash;
+                if (!exists)
                 {
                     added++;
                     logger.LogInformation("Job {JobKey} added to the scheduler", definition.Key);
@@ -99,15 +144,12 @@ public sealed class ScheduleSynchronizer(
             }
 
             var configured = configuration.Jobs.Select(j => new JobKey(j.Name, j.Group)).ToHashSet();
-            foreach (var key in await scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup(), cancellationToken))
+            foreach (var key in _applied.Keys.Where(k => !configured.Contains(k)).ToList())
             {
-                var detail = await scheduler.GetJobDetail(key, cancellationToken);
-                if (detail?.JobType.Type == typeof(RisQuartzJob) && !configured.Contains(key))
-                {
-                    await scheduler.DeleteJob(key, cancellationToken);
-                    removed++;
-                    logger.LogInformation("Job {JobKey} removed from the scheduler (no longer configured)", $"{key.Group}.{key.Name}");
-                }
+                await scheduler.DeleteJob(key, cancellationToken);
+                _applied.Remove(key);
+                removed++;
+                logger.LogInformation("Job {JobKey} removed from the scheduler (no longer configured)", $"{key.Group}.{key.Name}");
             }
 
             LastResult = new SyncResult(added, updated, removed, unchanged);
@@ -179,7 +221,7 @@ public sealed class ConfigurationChangeWatcher(ConfigurationRepository repositor
 
                 logger.LogInformation("Configuration changed in the database (version {Previous} -> {Current}); reloading", version, current);
                 version = current;
-                store.Refresh();
+                await store.RefreshAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

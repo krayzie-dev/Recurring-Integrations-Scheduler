@@ -40,6 +40,9 @@ public abstract class RisPageBase : ComponentBase, IDisposable
     /// <summary>Period of the background refresh; null = only event driven.</summary>
     protected virtual TimeSpan? RefreshInterval => TimeSpan.FromSeconds(30);
 
+    /// <summary>Reload when a job starts or finishes (pages that show run state); configuration changes always reload.</summary>
+    protected virtual bool RefreshOnRuns => true;
+
     protected CancellationToken Disposed => _disposed.Token;
 
     protected abstract Task LoadAsync();
@@ -54,7 +57,7 @@ public abstract class RisPageBase : ComponentBase, IDisposable
             CanAdminister = user.IsInRole(RisRoles.Admin);
         }
 
-        RunningJobs.Changed += OnChanged;
+        if (RefreshOnRuns) RunningJobs.Changed += OnChanged;
         ConfigurationStore.Reloaded += OnChanged;
         await ReloadAsync();
         if (RefreshInterval is { } interval) _ = RefreshPeriodicallyAsync(interval);
@@ -146,13 +149,26 @@ public abstract class RisPageBase : ComponentBase, IDisposable
     {
         // Several events arrive together (start of many jobs, reload + resync): refresh once.
         _debounce?.Dispose();
-        _debounce = new Timer(_ => _ = InvokeAsync(async () =>
+        _debounce = new Timer(_ => _ = InvokeAsync(BackgroundReloadAsync), null, TimeSpan.FromSeconds(1.5), Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Event or timer driven reload; skipped while the previous one is still loading (slow page, many jobs).</summary>
+    private async Task BackgroundReloadAsync()
+    {
+        if (_disposed.IsCancellationRequested || _backgroundLoading) return;
+        _backgroundLoading = true;
+        try
         {
-            if (_disposed.IsCancellationRequested) return;
             await LoadAsync();
             StateHasChanged();
-        }), null, TimeSpan.FromSeconds(1.5), Timeout.InfiniteTimeSpan);
+        }
+        finally
+        {
+            _backgroundLoading = false;
+        }
     }
+
+    private bool _backgroundLoading;
 
     private async Task RefreshPeriodicallyAsync(TimeSpan interval)
     {
@@ -161,11 +177,7 @@ public abstract class RisPageBase : ComponentBase, IDisposable
         {
             while (await _periodic.WaitForNextTickAsync(_disposed.Token))
             {
-                await InvokeAsync(async () =>
-                {
-                    await LoadAsync();
-                    StateHasChanged();
-                });
+                await InvokeAsync(BackgroundReloadAsync);
             }
         }
         catch (OperationCanceledException)
@@ -175,7 +187,7 @@ public abstract class RisPageBase : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        RunningJobs.Changed -= OnChanged;
+        if (RefreshOnRuns) RunningJobs.Changed -= OnChanged;
         ConfigurationStore.Reloaded -= OnChanged;
         _disposed.Cancel();
         _debounce?.Dispose();

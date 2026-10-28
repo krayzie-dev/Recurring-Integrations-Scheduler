@@ -36,7 +36,7 @@ public sealed class RisStartup(IServiceProvider services, PersistenceOptions per
             await File.WriteAllTextAsync(marker, quartzVersion, cancellationToken);
         }
 
-        store.Refresh();
+        await store.RefreshAsync(cancellationToken);
         logger.LogInformation("Configuration loaded: {Jobs} job(s), {Connections} connection(s), {SftpServers} SFTP server(s). Data: {DataDirectory}",
             store.Current.Jobs.Count, store.Current.Connections.Count, store.Current.SftpServers.Count, persistence.DataDirectory);
     }

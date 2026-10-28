@@ -53,8 +53,23 @@ public sealed class JobOperationsService(
     /// <summary>Deletes job definitions one by one (each validated: e.g. a job still referenced as a pair stays).</summary>
     public async Task<IReadOnlyList<BulkItemResult>> DeleteAsync(IEnumerable<JobRef> jobs, string? user, CancellationToken ct = default)
     {
+        var list = jobs.ToList();
+        if (list.Count > 1)
+        {
+            // One transaction: one validation and one scheduler synchronization for all of them.
+            try
+            {
+                await repository.DeleteJobsAsync(list.Select(j => (j.Group, j.Name)).ToList(), user, ct);
+                return list.Select(j => new BulkItemResult(j.Key, true)).ToList();
+            }
+            catch (RisException)
+            {
+                // Something blocks it (e.g. a monitor still points to one of the jobs): one by one, to say which.
+            }
+        }
+
         var results = new List<BulkItemResult>();
-        foreach (var job in jobs)
+        foreach (var job in list)
         {
             try
             {

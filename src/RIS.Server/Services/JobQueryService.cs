@@ -50,15 +50,29 @@ public sealed record StatisticsBucket(DateTimeOffset StartUtc, int Succeeded, in
 /// <summary>Read side of jobs: configuration joined with scheduler state and execution history. Used by the UI and the REST API.</summary>
 public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFactory schedulers, IExecutionHistoryStore history, RunningJobs running)
 {
+    /// <summary>
+    /// All jobs with state and last result: two queries in total (triggers with state and pause, run statuses), not
+    /// several per job - the list, the dashboard, the plan and the REST API call it on every refresh.
+    /// </summary>
     public async Task<IReadOnlyList<JobSummary>> ListAsync(CancellationToken ct = default)
     {
         var scheduler = await schedulers.GetScheduler(ct);
-        var result = new List<JobSummary>();
-        foreach (var job in store.Current.Jobs.OrderBy(j => j.Group).ThenBy(j => j.Name))
+        var triggers = (await scheduler.QueryTriggers(new TriggerQuery { Take = PagedQuery.All }, ct)).Items
+            .Where(t => t.Key.Name == t.JobKey.Name + " trigger")
+            .GroupBy(t => t.JobKey).ToDictionary(g => g.Key, g => g.First());
+        var statuses = (await history.QueryJobRunStatuses(new JobRunStatusQuery { SchedulerName = scheduler.SchedulerName, Take = PagedQuery.All }, ct)).Items
+            .GroupBy(s => s.Job).ToDictionary(g => g.Key, g => g.First());
+        var runningKeys = running.Current.Select(r => r.Key).ToHashSet();
+
+        return store.Current.Jobs.OrderBy(j => j.Group).ThenBy(j => j.Name).Select(job =>
         {
-            result.Add(await SummaryAsync(scheduler, job, ct));
-        }
-        return result;
+            var key = new JobKey(job.Name, job.Group);
+            var trigger = triggers.GetValueOrDefault(key);
+            var state = trigger is null ? "NotScheduled" : trigger.State.ToString();
+            var pause = state == nameof(TriggerState.Paused) ? trigger!.Pause : null;
+            return Summary(job, state, trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc, statuses.GetValueOrDefault(key),
+                pause?.Reason, pause?.RequestedBy, runningKeys.Contains(key));
+        }).ToList();
     }
 
     public JobDefinition? Find(string group, string name) =>
@@ -151,6 +165,7 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
         return schedule.TimeZone is null ? text : $"{text} ({schedule.TimeZone})";
     }
 
+    /// <summary>One job (details page): per-job reads are fine here.</summary>
     private async Task<JobSummary> SummaryAsync(IScheduler scheduler, JobDefinition job, CancellationToken ct)
     {
         var key = new JobKey(job.Name, job.Group);
@@ -158,11 +173,16 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
         var state = trigger is null ? "NotScheduled" : (await scheduler.GetTriggerState(trigger.Key, ct)).ToString();
         var pause = trigger is not null && state == nameof(TriggerState.Paused) ? await scheduler.GetTriggerPause(trigger.Key, ct) : null;
         var status = await history.GetJobRunStatus(scheduler.SchedulerName, key, ct);
-        return new JobSummary(job.Key, job.Group, job.Name, job.Type.ToString(), job.Description, job.Options?.Connection, Describe(job.Schedule), state,
-            trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc,
-            status?.LastResult.ToString(), status?.LastSummary, status?.LastFiredAtUtc, status?.LastSucceededAtUtc, status?.ConsecutiveFailures ?? 0,
-            pause?.Reason, pause?.RequestedBy, running.Current.Any(r => r.Key.Equals(key)));
+        return Summary(job, state, trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc, status, pause?.Reason, pause?.RequestedBy,
+            running.Current.Any(r => r.Key.Equals(key)));
     }
+
+    private static JobSummary Summary(JobDefinition job, string state, DateTimeOffset? next, DateTimeOffset? previous, JobRunStatus? status,
+        string? pauseReason, string? pausedBy, bool isRunning) =>
+        new(job.Key, job.Group, job.Name, job.Type.ToString(), job.Description, job.Options?.Connection, Describe(job.Schedule), state,
+            next, previous,
+            status?.LastResult.ToString(), status?.LastSummary, status?.LastFiredAtUtc, status?.LastSucceededAtUtc, status?.ConsecutiveFailures ?? 0,
+            pauseReason, pausedBy, isRunning);
 
     private static RunDetails ToRun(ExecutionHistoryEntry e, bool includeLog) => new(
         e.FireInstanceId ?? "", e.EntryId ?? "", $"{e.JobGroup}.{e.JobName}", e.FiredAtUtc, e.Duration, e.EffectiveResult.ToString(), e.Summary,

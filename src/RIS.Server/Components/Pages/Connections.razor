@@ -70,6 +70,8 @@
 </MudDataGrid>
 
 @code {
+    protected override bool RefreshOnRuns => false;
+
     private IReadOnlyList<D365ConnectionOptions> _items = [];
     private IReadOnlyList<CertificateInfo> _certificates = [];
     private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);

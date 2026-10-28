@@ -40,7 +40,8 @@ public sealed class DbConfigurationStore : IRisConfigurationStore
     public DbConfigurationStore(ConfigurationRepository repository)
     {
         _repository = repository;
-        _repository.Changed += () => Refresh();
+        // The repository hands over the configuration it has just validated and saved: no second read of the database.
+        _repository.Committed += Apply;
     }
 
     public RisConfiguration Current => _current;
@@ -48,9 +49,12 @@ public sealed class DbConfigurationStore : IRisConfigurationStore
     /// <summary>Raised after the cached configuration was reloaded.</summary>
     public event Action? Reloaded;
 
-    public void Refresh()
+    /// <summary>Reads the configuration from the database (start, change made by another process).</summary>
+    public async Task RefreshAsync(CancellationToken cancellationToken = default) => Apply(await _repository.LoadAsync(cancellationToken));
+
+    private void Apply(RisConfiguration configuration)
     {
-        _current = _repository.LoadAsync().GetAwaiter().GetResult();
+        _current = configuration;
         Reloaded?.Invoke();
     }
 }

@@ -240,4 +240,25 @@ public sealed class ApiTests
         var response = await factory.Client("Admin").PostAsync("/api/v1/config/import", new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
         Assert.AreEqual(expected, (int)response.StatusCode, await response.Content.ReadAsStringAsync());
     }
+
+    [TestMethod]
+    public async Task JobList_MoreThanOnePageOfTriggers_AllJobsWithState()
+    {
+        // Quartz queries return 250 items unless told otherwise: the list must not be cut there.
+        var admin = _factory.Client("Admin");
+        (await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection)).EnsureSuccessStatusCode();
+        var jobs = Enumerable.Range(1, 300).Select(i => RisTestHost.Export($"Job {i:000}", ExportDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" })).ToList();
+        (await admin.PostAsJsonAsync("/api/v1/config/import", new { jobs }, RisJson.Options)).EnsureSuccessStatusCode();
+
+        System.Text.Json.JsonElement[] list = [];
+        for (var i = 0; i < 100; i++)
+        {
+            list = (await admin.GetFromJsonAsync<System.Text.Json.JsonElement[]>("/api/v1/jobs"))!;
+            if (list.Length == 300 && list.All(j => j.GetProperty("state").GetString() == "Normal")) break;
+            await Task.Delay(200);
+        }
+        Assert.AreEqual(300, list.Length);
+        Assert.AreEqual(300, list.Count(j => j.GetProperty("state").GetString() == "Normal"), "Every job has its trigger state.");
+        Assert.IsTrue(list.All(j => j.GetProperty("nextRunUtc").ValueKind == System.Text.Json.JsonValueKind.String));
+    }
 }

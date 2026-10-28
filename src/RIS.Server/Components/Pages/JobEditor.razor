@@ -142,6 +142,8 @@ else
 
     protected override TimeSpan? RefreshInterval => null;
 
+    protected override bool RefreshOnRuns => false;
+
     protected override Task LoadAsync()
     {
         // Loaded once: live configuration reloads must not overwrite the form.
