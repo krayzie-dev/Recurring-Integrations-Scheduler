@@ -701,4 +701,9 @@
   <data name="Maint_DoneWithErrors" xml:space="preserve"><value>Czyszczenie zakończone z błędami – szczegóły poniżej.</value></data>
   <data name="Plan_Truncated" xml:space="preserve"><value>Zadanie ma w tym oknie ponad {0} uruchomień; reszta nie jest pokazana. Użyj widoku dnia.</value></data>
   <data name="History_More" xml:space="preserve"><value>Pokaż {0} starszych uruchomień</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>Pomoc</value></data>
+  <data name="Help_Search" xml:space="preserve"><value>Szukaj w instrukcji</value></data>
+  <data name="Help_Results" xml:space="preserve"><value>Rozdziały: {0}</value></data>
+  <data name="Help_Print" xml:space="preserve"><value>Drukuj / PDF</value></data>
+  <data name="Help_NotFound" xml:space="preserve"><value>Ten rozdział nie istnieje.</value></data>
 </root>

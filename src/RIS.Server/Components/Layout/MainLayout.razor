@@ -23,6 +23,7 @@
             <MudMenuItem Icon="@Icons.Material.Filled.LightMode" OnClick="() => SetThemeAsync(ThemeMode.Light)">@T["Theme_Light"]</MudMenuItem>
             <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="() => SetThemeAsync(ThemeMode.Dark)">@T["Theme_Dark"]</MudMenuItem>
         </MudMenu>
+        <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Inherit" Href="/help" title="@T["Nav_Help"]" />
         <MudMenu Icon="@Icons.Material.Filled.Schedule" Color="Color.Inherit" Dense="true">
             <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Server)">@T["TimeZone_Server", UiPreferences.ServerZoneLabel]</MudMenuItem>
             <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Utc)">@T["TimeZone_Utc"]</MudMenuItem>

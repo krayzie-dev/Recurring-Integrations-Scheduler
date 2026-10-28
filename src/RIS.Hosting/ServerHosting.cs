@@ -106,7 +106,11 @@ public static class ServerHosting
             history.MaxEntriesPerScheduler = retention.MaxRuns;
             history.RecordInput = true;
         });
-        services.AddQuartzHostedService(quartz => quartz.WaitForJobsToComplete = true);
+        services.AddQuartzHostedService(quartz =>
+        {
+            quartz.WaitForJobsToComplete = true;
+            if (hostOptions.SchedulerStartDelay > TimeSpan.Zero) quartz.StartDelay = hostOptions.SchedulerStartDelay;
+        });
         services.AddSingleton<ScheduleSynchronizer>();
         services.AddHostedService(sp => sp.GetRequiredService<ScheduleSynchronizer>());
         services.AddHostedService<RunningJobsInterrupter>();

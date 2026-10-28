@@ -1,0 +1,87 @@
+@page "/help"
+@page "/help/{Slug}"
+@attribute [Authorize(Policy = RisRoles.CanView)]
+@inject ManualService Manual
+@inject IJSRuntime JS
+
+<PageTitle>RIS 5 – @T["Nav_Help"]@(_chapter is null ? "" : " – " + _chapter.Title)</PageTitle>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="3" Class="ris-no-print">
+        <MudPaper Outlined="true" Class="pa-2" Style="position: sticky; top: 72px">
+            <MudTextField T="string" @bind-Value="_query" Placeholder="@T["Help_Search"]" Immediate="true" DebounceInterval="300"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Class="mb-2" />
+            @if (!string.IsNullOrWhiteSpace(_query))
+            {
+                var hits = Manual.Search(Language, _query);
+                <MudText Typo="Typo.caption" Class="mud-text-secondary px-2">@T["Help_Results", hits.Count]</MudText>
+                @foreach (var hit in hits)
+                {
+                    <MudLink Href="@($"/help/{hit.Chapter.Slug}")" Class="d-block px-2 py-1" Underline="Underline.None">
+                        <b>@hit.Chapter.Title</b>
+                        <div class="mud-text-secondary" style="font-size: .75rem">@hit.Snippet</div>
+                    </MudLink>
+                }
+            }
+            else
+            {
+                <MudNavMenu Dense="true">
+                    @foreach (var chapter in Manual.Chapters(Language))
+                    {
+                        <MudNavLink Href="@($"/help/{chapter.Slug}")" Match="NavLinkMatch.All"
+                                    Class="@(chapter.Slug == _chapter?.Slug ? "mud-nav-link-active" : "")">@chapter.Title</MudNavLink>
+                    }
+                </MudNavMenu>
+            }
+            <MudDivider Class="my-2" />
+            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintAsync">@T["Help_Print"]</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="9">
+        @if (_chapter is null)
+        {
+            <MudAlert Severity="Severity.Warning">@T["Help_NotFound"]</MudAlert>
+        }
+        else
+        {
+            <MudPaper Outlined="true" Class="pa-6 ris-manual">
+                @((MarkupString)_chapter.Html)
+            </MudPaper>
+            <MudStack Row="true" Class="mt-3 ris-no-print">
+                @if (Neighbour(-1) is { } previous)
+                {
+                    <MudButton Href="@($"/help/{previous.Slug}")" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text">@previous.Title</MudButton>
+                }
+                <MudSpacer />
+                @if (Neighbour(1) is { } next)
+                {
+                    <MudButton Href="@($"/help/{next.Slug}")" EndIcon="@Icons.Material.Filled.ArrowForward" Variant="Variant.Text">@next.Title</MudButton>
+                }
+            </MudStack>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+
+    private ManualChapter? _chapter;
+    private string? _query;
+
+    private static string Language => ManualService.LanguageOf(CultureInfo.CurrentUICulture);
+
+    protected override void OnParametersSet()
+    {
+        _chapter = Manual.Find(Language, Slug);
+        _query = null;
+    }
+
+    private ManualChapter? Neighbour(int offset)
+    {
+        var chapters = Manual.Chapters(Language);
+        var index = chapters.ToList().FindIndex(c => c.Slug == _chapter?.Slug) + offset;
+        return index >= 0 && index < chapters.Count ? chapters[index] : null;
+    }
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("ris.print");
+}

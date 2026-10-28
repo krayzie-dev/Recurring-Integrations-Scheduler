@@ -627,4 +627,9 @@
   <data name="Maint_DoneWithErrors" xml:space="preserve"><value>Cleanup finished with errors – see below.</value></data>
   <data name="Plan_Truncated" xml:space="preserve"><value>A job has more than {0} runs in this window; the rest is not shown. Use the day view.</value></data>
   <data name="History_More" xml:space="preserve"><value>Show {0} older runs</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Help_Search" xml:space="preserve"><value>Search the manual</value></data>
+  <data name="Help_Results" xml:space="preserve"><value>{0} chapter(s)</value></data>
+  <data name="Help_Print" xml:space="preserve"><value>Print / PDF</value></data>
+  <data name="Help_NotFound" xml:space="preserve"><value>This chapter does not exist.</value></data>
 </root>

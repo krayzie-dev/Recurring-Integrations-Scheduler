@@ -25,6 +25,12 @@ public sealed class RisHostOptions
 
     public int LogRetentionDays { get; set; } = 30;
 
+    /// <summary>
+    /// Server: jobs start to run this long after the service started (UI and API are available at once). For maintenance,
+    /// e.g. checking the configuration after an upgrade before anything runs. Missed runs follow the MissedRuns policy.
+    /// </summary>
+    public TimeSpan SchedulerStartDelay { get; set; } = TimeSpan.Zero;
+
     /// <summary>Per-job log files kept open at the same time; more jobs than this means files are closed and reopened.</summary>
     public int JobLogFilesOpen { get; set; } = 2000;
 

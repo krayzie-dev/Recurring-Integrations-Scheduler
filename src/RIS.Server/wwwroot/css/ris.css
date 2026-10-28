@@ -90,3 +90,24 @@
 .ris-type-chip.t-download { --ris-type: var(--ris-type-download); }
 .ris-type-chip.t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
 .ris-type-chip.t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }
+
+/* User manual (/help): rendered Markdown. */
+.ris-manual { line-height: 1.6; max-width: 1100px; }
+.ris-manual h1 { font-size: 1.9rem; font-weight: 500; margin: 0 0 .8rem; }
+.ris-manual h2 { font-size: 1.4rem; font-weight: 500; margin: 2rem 0 .6rem; padding-bottom: .2rem; border-bottom: 1px solid var(--mud-palette-lines-default); }
+.ris-manual h3 { font-size: 1.15rem; font-weight: 500; margin: 1.4rem 0 .4rem; }
+.ris-manual p, .ris-manual ul, .ris-manual ol { margin: .5rem 0; }
+.ris-manual ul, .ris-manual ol { padding-left: 1.6rem; }
+.ris-manual li { margin: .2rem 0; }
+.ris-manual ul { list-style: disc; } .ris-manual ol { list-style: decimal; }
+.ris-manual a { color: var(--mud-palette-primary); }
+.ris-manual code { font-family: Consolas, monospace; font-size: .88em; padding: 1px 4px; border-radius: 3px; background: var(--mud-palette-background-gray); }
+.ris-manual pre { padding: 10px 12px; border-radius: 4px; overflow-x: auto; background: var(--mud-palette-background-gray); }
+.ris-manual pre code { padding: 0; background: none; }
+.ris-manual img { max-width: 100%; border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; margin: .5rem 0 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.ris-manual blockquote { margin: .8rem 0; padding: .4rem 1rem; border-left: 4px solid var(--mud-palette-info); background: var(--mud-palette-background-gray); }
+.ris-manual-table { overflow-x: auto; margin: .6rem 0 1rem; }
+.ris-manual table { border-collapse: collapse; width: 100%; font-size: .92em; }
+.ris-manual th, .ris-manual td { border: 1px solid var(--mud-palette-lines-default); padding: 5px 8px; text-align: left; vertical-align: top; }
+.ris-manual th { background: var(--mud-palette-background-gray); font-weight: 500; }
+@media print { .ris-manual { border: none !important; padding: 0 !important; } .ris-manual img { box-shadow: none; page-break-inside: avoid; } }

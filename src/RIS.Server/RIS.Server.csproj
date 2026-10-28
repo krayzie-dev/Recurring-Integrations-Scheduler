@@ -15,5 +15,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="ClosedXML" />
+    <PackageReference Include="Markdig" />
   </ItemGroup>
 </Project>

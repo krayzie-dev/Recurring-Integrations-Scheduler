@@ -105,6 +105,7 @@ server as an account with access to the data directory.
 
 ## Documents
 
+- **User manual** (installation, operation, maintenance, troubleshooting, FAQ; Polish and English, with screenshots) – in the application under *Help* (`/help`); source: [src/RIS.Server/wwwroot/manual](../../src/RIS.Server/wwwroot/manual) (`pl/`, `en/`, `img/`). Both languages must have the same chapter files; `ManualTests` checks chapters, links, anchors and images.
 - [ui.md](ui.md) – web UI: roles, language/theme, dashboard, Gantt charts, bulk edit, exports
 - [ci.md](ci.md) – installer build, GitHub Actions, releases
 - [operations.md](operations.md) – installation (installer, silent install, upgrade), backup and restore, moving to another server, restarts and missed runs
