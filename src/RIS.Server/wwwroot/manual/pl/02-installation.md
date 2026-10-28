@@ -133,6 +133,7 @@ RIS 5 instaluje się **obok** RIS 4.x na tym samym serwerze (osobna usługa, oso
 
 3. Uruchom instalator RIS 5 jako administrator na serwerze RIS 4.x. Instalator sam znajduje harmonogram 4.x (przez usługę 4.x i jej plik konfiguracji, więc także w niestandardowym folderze) i pokazuje stronę **Import z RIS 4.x**.
 4. Zadania są importowane jako **wstrzymane**. **Sekrety** 4.x (client secret, hasła SFTP) są odszyfrowywane na tym serwerze i zapisywane w RIS 5 – nie trafiają do żadnego pliku. Raport importu: `%ProgramData%\RIS5\import-4x\import.log` (lista ostrzeżeń i sekretów, których nie dało się przenieść) oraz `jobs.json` (konfiguracja bez sekretów).
+   RIS 4.x zapisywał sekret w **każdym zadaniu osobno** – jeśli sekret aplikacji był odnawiany tylko w części zadań, zadania mają różne sekrety. Import sprawdza każdy z nich w Entra ID i zapisuje ten, który działa (raport podaje, z którego zadania pochodzi albo że żaden nie został przyjęty).
 5. Instalacja cicha: `/IMPORT4X=1` (domyślnie). Dla konta domenowego podaj `/ACCOUNT` i `/PASSWORD` – bez nich użyte zostanie konto usługi 4.x, ale zwykłe konto domenowe wymaga hasła.
 
 **Sprawdzenie po instalacji**

@@ -15,6 +15,19 @@ public sealed class ConversionResult
 
     /// <summary>Things that need attention (unknown keys, secrets not decrypted, defaults applied).</summary>
     public List<string> Warnings { get; } = [];
+
+    /// <summary>
+    /// Every distinct decrypted client secret per connection name, most used first. 4.x stores the secret in every job, so when
+    /// it was renewed only in some jobs, the jobs of one connection carry different secrets. Never written to a file.
+    /// </summary>
+    public Dictionary<string, List<SecretCandidate>> ClientSecretCandidates { get; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>A decrypted 4.x client secret and the jobs that carry it.</summary>
+public sealed class SecretCandidate(string value)
+{
+    public string Value { get; } = value;
+    public List<string> Jobs { get; } = [];
 }
 
 public sealed class ConversionOptions
@@ -85,7 +98,44 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
         }
 
         LinkMonitors(result.Configuration);
+
+        // The secret used by most jobs is the default; "ris db import-4x" tries all of them against Entra ID.
+        foreach (var (connectionName, candidates) in result.ClientSecretCandidates)
+        {
+            candidates.Sort((a, b) => b.Jobs.Count.CompareTo(a.Jobs.Count));
+            if (result.Configuration.FindConnection(connectionName) is { } connection) connection.ClientSecret = candidates[0].Value;
+            if (candidates.Count > 1)
+            {
+                result.Warnings.Add($"Connection {connectionName}: the 4.x jobs carry {candidates.Count} different client secrets " +
+                                    $"({string.Join(", ", candidates.Select(c => $"{c.Jobs.Count} job(s), e.g. {c.Jobs[0]}"))}) - the secret was renewed only in some jobs.");
+            }
+        }
         return result;
+    }
+
+    /// <summary>Records the decrypted client secret of a job (4.x copies the secret into every job).</summary>
+    private void AddSecretCandidate(string connectionName, JobData data, string key, bool serviceAuth, ConversionResult result)
+    {
+        if (!serviceAuth || !_options.DecryptSecrets || !OperatingSystem.IsWindows()) return;
+        var encrypted = data.OptionalString("AadClientSecret");
+        if (string.IsNullOrEmpty(encrypted)) return;
+        string value;
+        try
+        {
+            value = DecryptDpapi(encrypted);
+        }
+        catch (Exception ex) when (ex is CryptographicException or FormatException)
+        {
+            return;
+        }
+
+        if (!result.ClientSecretCandidates.TryGetValue(connectionName, out var candidates))
+        {
+            result.ClientSecretCandidates[connectionName] = candidates = [];
+        }
+        var candidate = candidates.FirstOrDefault(c => c.Value == value);
+        if (candidate is null) candidates.Add(candidate = new SecretCandidate(value));
+        candidate.Jobs.Add(key);
     }
 
     private static readonly HashSet<string> ConsumedKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -219,6 +269,7 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
             (serviceAuth || string.Equals(c.UserName, data.OptionalString("UserName"), StringComparison.OrdinalIgnoreCase)));
         if (existing is not null)
         {
+            AddSecretCandidate(existing.Name, data, key, serviceAuth, result);
             return existing;
         }
 
@@ -248,6 +299,7 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
             result.Warnings.Add($"Connection {name}: uses username/password authentication (no MFA). Consider an app registration with client secret or certificate.");
         }
         result.Configuration.Connections.Add(connection);
+        AddSecretCandidate(name, data, key, serviceAuth, result);
         return connection;
     }
 

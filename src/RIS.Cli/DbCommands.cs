@@ -3,6 +3,9 @@ using System.Text;
 using System.Xml.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RIS.D365;
+using RIS.Core.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 using RIS.Core.Configuration;
 using RIS.Migration;
 using RIS.Persistence;
@@ -14,7 +17,7 @@ namespace RIS.Cli;
 /// the data directory and its Data Protection keys (Administrator or the service account).
 /// A running service picks up the changes within ConfigurationPollInterval (30 s by default).
 /// </summary>
-internal static class DbCommands
+internal static partial class DbCommands
 {
     public static Command Build()
     {
@@ -84,12 +87,17 @@ internal static class DbCommands
         var paused = new Option<bool>("--paused") { Description = "Import all jobs paused (switch them one by one from 4.x)" };
         var noSecrets = new Option<bool>("--no-secrets") { Description = "Do not decrypt the 4.x secrets (set them later)" };
         var report = new Option<DirectoryInfo?>("--report") { Description = "Folder for jobs.json (without secrets) of the converted configuration" };
-        var command = new Command("import-4x", "Convert RIS 4.x Schedule.xml and import it, with the 4.x secrets when run on the 4.x server") { schedule, data, paused, noSecrets, report };
+        var secretsOnly = new Option<bool>("--secrets-only") { Description = "Only set the secrets of D365 instances and SFTP servers that already exist in RIS 5 (jobs are not touched)" };
+        var noCheck = new Option<bool>("--no-secret-check") { Description = "Do not try the client secrets against Entra ID (offline)" };
+        var command = new Command("import-4x", "Convert RIS 4.x Schedule.xml and import it, with the 4.x secrets when run on the 4.x server")
+            { schedule, data, paused, noSecrets, report, secretsOnly, noCheck };
         command.SetAction(async (parse, ct) =>
         {
             var source = parse.GetValue(schedule)!;
             var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = !parse.GetValue(noSecrets) }).Convert(XDocument.Load(source.FullName));
             var configuration = result.Configuration;
+            if (!parse.GetValue(noSecrets) && !parse.GetValue(noCheck)) await ChooseClientSecretsAsync(result, ct);
+            if (parse.GetValue(secretsOnly)) return await SetSecretsOnlyAsync(configuration, parse.GetValue(data), ct);
             if (parse.GetValue(paused))
             {
                 foreach (var job in configuration.Jobs) job.Schedule.Paused = true;
@@ -129,6 +137,89 @@ internal static class DbCommands
             });
         });
         return command;
+    }
+
+    /// <summary>
+    /// 4.x jobs of one connection may carry different client secrets (renewed only in some jobs): each one is tried against
+    /// Entra ID (client credentials token) and the first one accepted is used. Secrets are never printed.
+    /// </summary>
+    private static async Task ChooseClientSecretsAsync(ConversionResult result, CancellationToken cancellationToken)
+    {
+        var tokens = new MsalTokenProvider(NullLogger<MsalTokenProvider>.Instance);
+        foreach (var (name, candidates) in result.ClientSecretCandidates)
+        {
+            if (result.Configuration.FindConnection(name) is not { } connection) continue;
+            string? lastError = null;
+            var tried = 0;
+            SecretCandidate? accepted = null;
+            foreach (var candidate in candidates)
+            {
+                tried++;
+                var probe = new D365ConnectionOptions
+                {
+                    Name = connection.Name, AosUri = connection.AosUri, Tenant = connection.Tenant, Authority = connection.Authority,
+                    ClientId = connection.ClientId, AuthMode = D365AuthMode.ClientSecret, ClientSecret = candidate.Value
+                };
+                try
+                {
+                    await tokens.GetAuthorizationHeaderAsync(probe, cancellationToken);
+                    accepted = candidate;
+                    break;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    lastError = AadError().Match(ex.ToString()) is { Success: true } m ? m.Value : ex.GetBaseException().Message;
+                    // Not an answer about the secret (network, proxy): the other candidates would fail the same way.
+                    if (!lastError.StartsWith("AADSTS", StringComparison.Ordinal)) break;
+                }
+            }
+
+            if (accepted is not null)
+            {
+                connection.ClientSecret = accepted.Value;
+                Console.WriteLine($"Connection {name}: client secret accepted by Entra ID (carried by {accepted.Jobs.Count} job(s), e.g. {accepted.Jobs[0]}; " +
+                                  $"{tried} of {candidates.Count} tried).");
+            }
+            else
+            {
+                Console.WriteLine($"WARNING Connection {name}: no client secret of the 4.x jobs was accepted ({tried} of {candidates.Count} tried, last: {lastError}). " +
+                                  "The most used one is stored; when it is expired, set a new secret on the D365 instances page.");
+            }
+        }
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"AADSTS\d+: [^.\r\n]+")]
+    private static partial System.Text.RegularExpressions.Regex AadError();
+
+    /// <summary>"--secrets-only": the converted secrets go to the D365 instances and SFTP servers of the same name, nothing else changes.</summary>
+    private static async Task<int> SetSecretsOnlyAsync(RisConfiguration converted, DirectoryInfo? data, CancellationToken cancellationToken)
+    {
+        await using var services = await OpenAsync(data, cancellationToken);
+        var repository = services.GetRequiredService<ConfigurationRepository>();
+        var stored = await repository.LoadAsync(cancellationToken);
+        var set = 0;
+        foreach (var connection in converted.Connections.Where(c => !SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret)))
+        {
+            if (stored.FindConnection(connection.Name) is null)
+            {
+                Console.WriteLine($"Connection {connection.Name}: not in RIS 5, skipped.");
+                continue;
+            }
+            await repository.SetSecretAsync(SecretOwner.Connection, connection.Name, connection.ClientSecret!, CurrentUser(), cancellationToken);
+            set++;
+        }
+        foreach (var server in converted.SftpServers.Where(s => !s.UseKey && !SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)))
+        {
+            if (stored.FindSftpServer(server.Name) is null)
+            {
+                Console.WriteLine($"SFTP server {server.Name}: not in RIS 5, skipped.");
+                continue;
+            }
+            await repository.SetSecretAsync(SecretOwner.SftpServer, server.Name, server.Password!, CurrentUser(), cancellationToken);
+            set++;
+        }
+        Console.WriteLine($"Secrets set: {set}. Jobs were not changed.");
+        return 0;
     }
 
     private static Command ExportCommand()

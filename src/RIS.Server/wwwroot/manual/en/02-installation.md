@@ -133,6 +133,7 @@ RIS 5 is installed **next to** RIS 4.x on the same server (separate service, dat
 
 3. Run the RIS 5 installer as administrator on the RIS 4.x server. The installer finds the 4.x schedule itself (through the 4.x service and its configuration file, so also in a non-default folder) and shows the **Import from RIS 4.x** page.
 4. Jobs are imported **paused**. The 4.x **secrets** (client secrets, SFTP passwords) are decrypted on this server and stored in RIS 5 – they are not written to any file. Import report: `%ProgramData%\RIS5\import-4x\import.log` (warnings and secrets that could not be taken over) and `jobs.json` (configuration without secrets).
+   RIS 4.x stored the secret in **every job separately** – when the app secret was renewed only in some jobs, the jobs carry different secrets. The import tries each of them against Entra ID and stores the one that works (the report tells which job it comes from, or that none was accepted).
 5. Silent installation: `/IMPORT4X=1` (default). For a domain account pass `/ACCOUNT` and `/PASSWORD` – without them the account of the 4.x service is used, but a regular domain account needs its password.
 
 **Checks after the installation**

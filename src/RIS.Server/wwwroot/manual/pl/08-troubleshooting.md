@@ -12,6 +12,7 @@
 | Objaw | Przyczyna i rozwiązanie |
 |---|---|
 | `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | Wklejono *Secret ID* zamiast **wartości** sekretu albo sekret wygasł. Utwórz nowy sekret, wklej kolumnę *Value* w instancji D365 i użyj **Testuj połączenie**. |
+| Po imporcie z 4.x instancje D365 zgłaszają `AADSTS7000215` | RIS 4.x zapisywał sekret w każdym zadaniu osobno; wersje do 5.0.0-local.22 brały sekret z pierwszego zadania, a ten mógł być stary (sekret odnowiony tylko w części zadań). Na serwerze 4.x uruchom jako administrator: `"C:\Program Files\RIS5\cli\ris.exe" db import-4x "C:\Program Files (x86)\Recurring Integrations Scheduler\Schedule.xml" --secrets-only` – sprawdza wszystkie sekrety zadań w Entra ID i ustawia działający; zadań nie zmienia. Jeśli raport mówi, że żaden nie został przyjęty, sekret wygasł – utwórz nowy. |
 | `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Zły client id albo tenant w instancji D365. |
 | `RIS-HTTP-001` 401/403 przy wywołaniu D365 | Aplikacji nie dodano w D365 (*Aplikacje Microsoft Entra ID*) albo jej użytkownik nie ma uprawnień do zarządzania danymi lub firmy. |
 | `RIS-IMP-001` … *exists and overwrite has not been specified* | Projekt danych istnieje w D365 – włącz **Nadpisz projekt danych** w zadaniu. |

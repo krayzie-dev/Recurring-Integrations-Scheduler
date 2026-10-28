@@ -307,7 +307,7 @@ public sealed partial class ConverterTests
         await File.WriteAllTextAsync(schedule, xml[..first] + encrypted + xml[(first + 32)..].Replace(
             "<key>AadClientSecret</key><value>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA", "<key>AadClientSecret</key><value>" + encrypted));
 
-        var exit = await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--paused", "--report", report]).InvokeAsync();
+        var exit = await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--paused", "--report", report, "--no-secret-check"]).InvokeAsync();
 
         Assert.AreEqual(0, exit);
         var reported = await File.ReadAllTextAsync(Path.Combine(report, "jobs.json"));
@@ -328,6 +328,68 @@ public sealed partial class ConverterTests
             Assert.AreEqual(secret, configuration.Connections.Single().ClientSecret, "Decrypted on the 4.x server and stored by RIS 5.");
             Assert.IsTrue(configuration.SftpServers.All(s => SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)), "Not decryptable: left to be set.");
             Assert.IsTrue(configuration.Jobs.All(j => j.Schedule.Paused));
+        }
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+    }
+
+    private static string Dpapi(string secret) => Convert.ToBase64String(System.Security.Cryptography.ProtectedData.Protect(
+        System.Text.Encoding.Unicode.GetBytes(secret), null, System.Security.Cryptography.DataProtectionScope.LocalMachine));
+
+    /// <summary>The sample schedule with the client secrets of its three jobs (one connection) replaced in order.</summary>
+    private static string WithClientSecrets(params string[] encrypted)
+    {
+        // Every DPAPI blob starts with the bytes of the sample value, so the jobs are numbered first, then filled in.
+        const string placeholder = "<key>AadClientSecret</key><value>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA";
+        var xml = WithTriggers();
+        for (var i = 0; xml.Contains(placeholder, StringComparison.Ordinal); i++)
+        {
+            var index = xml.IndexOf(placeholder, StringComparison.Ordinal);
+            xml = xml[..index] + $"<key>AadClientSecret</key><value>@SECRET{i}@" + xml[(index + placeholder.Length)..];
+        }
+        for (var i = 0; i < encrypted.Length; i++) xml = xml.Replace($"@SECRET{i}@", encrypted[i], StringComparison.Ordinal);
+        return xml;
+    }
+
+    [TestMethod]
+    public void JobsWithDifferentSecrets_AllAreCandidates_TheMostUsedIsTheDefault()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Inconclusive("DPAPI is Windows only.");
+        // 4.x copies the secret into every job; renewed in two jobs only.
+        var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = true })
+            .Convert(XDocument.Parse(WithClientSecrets(Dpapi("old-secret"), Dpapi("new-secret"), Dpapi("new-secret"))));
+
+        var connection = result.Configuration.Connections.Single();
+        Assert.AreEqual("new-secret", connection.ClientSecret, "The secret carried by most jobs.");
+        var candidates = result.ClientSecretCandidates[connection.Name];
+        CollectionAssert.AreEqual(new[] { "new-secret", "old-secret" }, candidates.Select(c => c.Value).ToList());
+        Assert.AreEqual(2, candidates[0].Jobs.Count);
+        Assert.IsTrue(result.Warnings.Any(w => w.Contains("2 different client secrets") && !w.Contains("secret\"") && !w.Contains("new-secret")),
+            "Warned, without the secret values.");
+    }
+
+    [TestMethod]
+    public async Task Cli_Import4x_SecretsOnly_SetsTheSecrets_JobsUntouched()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Inconclusive("DPAPI is Windows only.");
+        var folder = Directory.CreateTempSubdirectory("ris-cli-4x-secrets-").FullName;
+        var data = Path.Combine(folder, "data");
+        var schedule = Path.Combine(folder, "Schedule.xml");
+        await File.WriteAllTextAsync(schedule, WithClientSecrets(Dpapi("old-secret"), Dpapi("old-secret"), Dpapi("old-secret")));
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--paused", "--no-secret-check"]).InvokeAsync());
+
+        // The secret was renewed in 4.x afterwards (in two of the three jobs).
+        await File.WriteAllTextAsync(schedule, WithClientSecrets(Dpapi("old-secret"), Dpapi("new-secret"), Dpapi("new-secret")));
+        Assert.AreEqual(0, await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--secrets-only", "--no-secret-check"]).InvokeAsync());
+
+        var persistence = new PersistenceOptions { DataDirectory = data };
+        await using (var services = new ServiceCollection().AddLogging().AddRisPersistence(persistence).BuildServiceProvider())
+        {
+            var configuration = await services.GetRequiredService<ConfigurationRepository>().LoadAsync(CancellationToken.None);
+            Assert.AreEqual("new-secret", configuration.Connections.Single().ClientSecret);
+            Assert.AreEqual(3, configuration.Jobs.Count);
+            Assert.IsTrue(configuration.Jobs.All(j => j.Schedule.Paused), "Jobs not touched (still paused).");
         }
 
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();

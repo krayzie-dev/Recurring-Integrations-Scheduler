@@ -12,6 +12,7 @@
 | Symptom | Cause and fix |
 |---|---|
 | `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | The *Secret ID* was pasted instead of the secret **value**, or the secret expired. Create a new secret, paste the *Value* column in the D365 instance and use **Test connection**. |
+| After the import from 4.x the D365 instances report `AADSTS7000215` | RIS 4.x stored the secret in every job separately; versions up to 5.0.0-local.22 took the secret of the first job, which may have been an old one (secret renewed only in some jobs). On the 4.x server run as administrator: `"C:\Program Files\RIS5\cli\ris.exe" db import-4x "C:\Program Files (x86)\Recurring Integrations Scheduler\Schedule.xml" --secrets-only` – it tries every secret of the jobs against Entra ID and sets the one that works; jobs are not changed. When the report says none was accepted, the secret has expired – create a new one. |
 | `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Wrong client id or tenant in the D365 instance. |
 | `RIS-HTTP-001` 401/403 calling D365 | The application is not registered in D365 (*Microsoft Entra ID applications*) or its user lacks data management or company permissions. |
 | `RIS-IMP-001` … *exists and overwrite has not been specified* | The data project exists in D365 – turn on **Overwrite data project** in the job. |
