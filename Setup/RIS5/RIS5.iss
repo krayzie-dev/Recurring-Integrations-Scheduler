@@ -36,7 +36,8 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-MinVersion=10.0.17763
+; Windows Server 2016 / Windows 10 1607 - the oldest Windows supported by .NET 10 (2012 R2 only with paid ESU)
+MinVersion=10.0.14393
 OutputDir={#OutputDir}
 OutputBaseFilename=RIS5-Setup-{#AppVersion}
 SetupIconFile=..\Recurring Integrations Scheduler.ico

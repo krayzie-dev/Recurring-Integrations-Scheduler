@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Windows Server 2019 or later (or Windows 10/11 for testing), 64-bit. **No .NET installation needed** – the program carries its own runtime.
+- Windows Server 2016 or later (or Windows 10/11 for testing), 64-bit. **No .NET installation needed** – the program carries its own runtime.
 - Local administrator rights for the installation.
 - Network access from the server to D365 (`https://<environment>.operations.dynamics.com`), to `login.microsoftonline.com` and to Azure Blob storage (data packages).
 - For network folders (UNC) – a service account with access to the shares (domain account or gMSA).

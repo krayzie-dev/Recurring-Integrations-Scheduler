@@ -2,7 +2,7 @@
 
 ## Wymagania
 
-- Windows Server 2019 lub nowszy (lub Windows 10/11 do testów), 64-bit. **.NET nie trzeba instalować** – program zawiera własne środowisko.
+- Windows Server 2016 lub nowszy (lub Windows 10/11 do testów), 64-bit. **.NET nie trzeba instalować** – program zawiera własne środowisko.
 - Uprawnienia administratora lokalnego do instalacji.
 - Dostęp sieciowy z serwera do D365 (`https://<środowisko>.operations.dynamics.com`), do `login.microsoftonline.com` i do magazynu Azure Blob (pakiety danych).
 - Dla folderów sieciowych (UNC) – konto usługi z dostępem do udziałów (konto domenowe albo gMSA).
