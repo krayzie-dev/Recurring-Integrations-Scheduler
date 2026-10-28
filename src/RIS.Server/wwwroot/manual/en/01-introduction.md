@@ -25,7 +25,8 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 |---|---|
 | **Job** | One integration: what, from where, to where and when. It has a name and a group (key `Group.Name`). |
 | **Job type** | Export, Import, Upload, Download, Execution monitor, Processing monitor – see [Job types](04-job-types.md). |
-| **D365 instance** | A D365 environment and the Microsoft Entra ID application RIS signs in with (client secret or certificate). Many jobs share one instance. |
+| **App registration** | The Microsoft Entra ID application RIS signs in to D365 with: tenant, client id and client secret or certificate. Defined once; a renewed secret is set in one place for every instance and job that uses it. |
+| **D365 instance** | A D365 environment (AOS address) and its **default app registration**. Many jobs share one instance; a job may sign in with another app registration. |
 | **Data project** | A project in D365 *Data management* that defines entities and file format. RIS export and import run data projects. |
 | **Recurring data job** | A recurring integration in D365 identified by an *activity ID*. Used by Upload and Download. |
 | **Monitor** | A job that checks the result of an import or upload in D365 and moves the file to a "processed" or "errors" folder. Paired with the import or upload job. |
@@ -38,7 +39,7 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 |---|---|
 | **Viewer** | View the dashboard, jobs, plan, history and run details; export lists. |
 | **Operator** | Everything a Viewer can, plus run, pause and resume jobs (also in bulk). |
-| **Admin** | Everything: jobs, D365 instances, SFTP servers, access (roles), bulk edit, audit, data maintenance. |
+| **Admin** | Everything: jobs, app registrations, D365 instances, SFTP servers, access (roles), bulk edit, audit, data maintenance. |
 
 Roles are given by an Admin on the *Access* page (and by the installer – administrators and operators) – see [Installation](02-installation.md#roles).
 

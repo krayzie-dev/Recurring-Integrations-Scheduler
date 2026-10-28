@@ -68,7 +68,7 @@ Needed when jobs read or write files on network shares.
 
 | Role | Can |
 |---|---|
-| **Admin** | Everything: jobs, D365 instances, SFTP servers, access, audit, data maintenance. |
+| **Admin** | Everything: jobs, app registrations, D365 instances, SFTP servers, access, audit, data maintenance. |
 | **Operator** | Run, pause and resume jobs (also in bulk), plus everything a Viewer can. |
 | **Viewer** | Read only: dashboard, jobs, plan, history, run details, exports. |
 
@@ -134,11 +134,12 @@ RIS 5 is installed **next to** RIS 4.x on the same server (separate service, dat
 3. Run the RIS 5 installer as administrator on the RIS 4.x server. The installer finds the 4.x schedule itself (through the 4.x service and its configuration file, so also in a non-default folder) and shows the **Import from RIS 4.x** page.
 4. Jobs are imported **paused**. The 4.x **secrets** (client secrets, SFTP passwords) are decrypted on this server and stored in RIS 5 – they are not written to any file. Import report: `%ProgramData%\RIS5\import-4x\import.log` (warnings and secrets that could not be taken over) and `jobs.json` (configuration without secrets).
    RIS 4.x stored the secret in **every job separately** – when the app secret was renewed only in some jobs, the jobs carry different secrets. The import also takes the secrets of the 4.x client app registrations (*Parameters → Azure App registrations*, file `portable.config` next to `Schedule.xml` – the 4.x client runs *Validate* with them), tries all of them against Entra ID and stores the one that works (the report tells which job it comes from, or that none was accepted).
+   Every 4.x application becomes one **app registration** (named as in the 4.x client, e.g. `MCOV-TEST-02`; without `portable.config`, `APP-` and the start of the client id) and every AOS address one **D365 instance**, whose default app registration is the one used by most of its jobs. A job that signed in with another application in 4.x gets it as its own app registration.
 5. Silent installation: `/IMPORT4X=1` (default). For a domain account pass `/ACCOUNT` and `/PASSWORD` – without them the account of the 4.x service is used, but a regular domain account needs its password.
 
 **Checks after the installation**
 
-6. *D365 instances* – **Test all**. Enter the missing secrets (listed in the report) manually.
+6. *App registrations* and *D365 instances* – **Test all**. Enter the missing secrets (listed in the report) in the app registration – once for every instance and job.
 7. *Jobs* (filter *Paused*) – review the jobs. **Start time**: RIS 4.x did not save the start time of "every N minutes/hours" schedules, so RIS 5 uses 00:00 – fix the jobs that should start at another time (in bulk: *Bulk edit → Schedule*).
 8. Use **Check access** next to folders and package templates – the test runs as the RIS 5 service account.
 
@@ -147,4 +148,4 @@ RIS 5 is installed **next to** RIS 4.x on the same server (separate service, dat
 9. For every job (the job and its **monitor together**): stop it in RIS 4.x → resume it in RIS 5 (*Resume*) → check the history after the first run. The RIS 5 monitor reads status files written by the 4.x import, so nothing in progress is lost.
 10. **Note:** a pause in RIS 4.x does not survive a restart of the 4.x service (e.g. after Windows updates) – the job then runs again, in parallel with RIS 5. After switching, **delete the job in RIS 4.x and save the schedule**; when all jobs are switched, disable the RIS 4.x service (`Set-Service RecurringIntegrationsScheduler -StartupType Disabled`).
 
-Manually (e.g. on another server): `ris db import-4x Schedule.xml --paused` (secrets are taken over only on the server where RIS 4.x encrypted them; elsewhere set them in *D365 instances*).
+Manually (e.g. on another server): `ris db import-4x Schedule.xml --paused` (secrets are taken over only on the server where RIS 4.x encrypted them; elsewhere set them in *App registrations*).

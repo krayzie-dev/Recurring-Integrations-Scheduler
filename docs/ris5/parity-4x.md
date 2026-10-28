@@ -7,8 +7,9 @@ or deliberately ignored. This is enforced by `Every4xSettingKey_IsConvertedOrDel
 
 | 4.x key | 5.0 | Notes |
 |---|---|---|
-| AosUri, AadTenant, AzureAuthEndpoint, AadClientId | `connections[].aosUri/tenant/authority/clientId` | Jobs with the same environment and app share one named connection. |
-| UseServiceAuthentication + AadClientSecret | `authMode: ClientSecret`, `clientSecret` | 5.0 also supports `Certificate` (thumbprint). |
+| AosUri | `connections[].aosUri` | One D365 instance per AOS address (named after the host). |
+| AadTenant, AzureAuthEndpoint, AadClientId | `appRegistrations[].tenant/authority/clientId` | One app registration per application (a tenant given as domain in some jobs and as id in others is one tenant). Named as in the 4.x client (`portable.config`, *Azure App registrations*), otherwise `APP-` + start of the client id. The instance's `appRegistration` is the one used by most of its jobs; a job using another one gets `options.appRegistration`. |
+| UseServiceAuthentication + AadClientSecret | `authMode: ClientSecret`, `clientSecret` of the app registration | 5.0 also supports `Certificate` (thumbprint). 4.x copied the secret into every job; `import-4x` tries the secrets of the 4.x client and of all jobs against Entra ID once per app registration and keeps the accepted one. A renewed secret is set once, in the app registration. |
 | UserName, UserPassword | `authMode: UsernamePassword` | Kept for compatibility; no MFA – converter warns. |
 | UseADAL | – | ADAL was removed already in 4.x. |
 | Sftp{Inbound,Outbound}Host/Port/Username/Password/UseKey/KeyPath/KeyPassphrase | `sftpServers[]` | Named entry; jobs reference it by name. Secrets never become job data. |
@@ -87,5 +88,5 @@ Job/monitor pairs (4.x naming convention `"<name>-Execution monitor"`, `"<name>-
 | No history, no logs | Run history (table and Gantt), run details with captured log and error code description |
 | No overview of the week | Gantt chart of planned runs (week/day), dashboard with alerts |
 | English only | Polish and English, light/dark theme |
-| Instance, application, user, data job forms per job | Connections and SFTP servers defined once, referenced by jobs; write-only secrets |
+| Instance, application, user, data job forms per job | App registrations, D365 instances (with a default app registration) and SFTP servers defined once, referenced by jobs (a job may choose another app registration); write-only secrets |
 | No export | xlsx/CSV/PNG/PDF/JSON exports, REST exports |

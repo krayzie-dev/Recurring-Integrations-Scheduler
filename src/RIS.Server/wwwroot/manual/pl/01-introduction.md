@@ -25,7 +25,8 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 |---|---|
 | **Zadanie (job)** | Jedna integracja: co, skąd, dokąd i kiedy. Ma nazwę i grupę (klucz `Grupa.Nazwa`). |
 | **Typ zadania** | Eksport, Import, Wysyłka (Upload), Pobieranie (Download), Monitor wykonania, Monitor przetwarzania – patrz [Typy zadań](04-job-types.md). |
-| **Instancja D365** | Środowisko D365 i aplikacja Entra ID, którą RIS się loguje (client secret albo certyfikat). Wiele zadań korzysta z jednej instancji. |
+| **Rejestracja aplikacji** | Aplikacja Microsoft Entra ID, którą RIS loguje się do D365: tenant, client id i client secret albo certyfikat. Definiowana raz; sekret odnawiasz w jednym miejscu dla wszystkich instancji i zadań, które jej używają. |
+| **Instancja D365** | Środowisko D365 (adres AOS) i jego **domyślna rejestracja aplikacji**. Wiele zadań korzysta z jednej instancji; zadanie może logować się inną rejestracją aplikacji. |
 | **Projekt danych** | Projekt w D365 *Zarządzanie danymi*, który określa encje i format plików. Eksport i import RIS uruchamiają projekty danych. |
 | **Zadanie cykliczne (recurring data job)** | Integracja cykliczna w D365 identyfikowana przez *activity ID*. Używają jej typy Wysyłka i Pobieranie. |
 | **Monitor** | Zadanie sprawdzające wynik importu lub wysyłki w D365 i przenoszące plik do folderu „przetworzone” albo „błędy”. Tworzy parę z zadaniem importu lub wysyłki. |
@@ -38,7 +39,7 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 |---|---|
 | **Viewer** | Oglądać pulpit, zadania, harmonogram, historię i szczegóły uruchomień, eksportować listy. |
 | **Operator** | To co Viewer oraz uruchamiać, wstrzymywać i wznawiać zadania (także zbiorczo). |
-| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, dostęp (role), edycja zbiorcza, audyt, utrzymanie danych. |
+| **Admin** | Wszystko: zadania, rejestracje aplikacji, instancje D365, serwery SFTP, dostęp (role), edycja zbiorcza, audyt, utrzymanie danych. |
 
 Role nadaje Admin na stronie *Dostęp* (oraz instalator – administratorów i operatorów) – patrz [Instalacja](02-installation.md#roles).
 

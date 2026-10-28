@@ -11,11 +11,11 @@ operations, Gantt charts of schedule and history, exports – see [ui.md](ui.md)
 
 | Project | Content |
 |---|---|
-| RIS.Core | Configuration model (connections, SFTP servers, job options), D365 statuses, error codes, 4.x status file contract |
+| RIS.Core | Configuration model (app registrations, D365 instances, SFTP servers, job options), D365 statuses, error codes, 4.x status file contract |
 | RIS.D365 | Package API and Recurring Integrations clients, MSAL with token cache, retry of transient errors, masked request logging |
 | RIS.Transfer | File operations (locked-file retry, safe unzip), status files, SFTP |
 | RIS.Jobs | Job pipeline (logging scope, single error log, summary), 6 job handlers, Quartz 4 job adapter |
-| RIS.Persistence | ris.db (EF Core SQLite): connections, SFTP servers, jobs, audit; encrypted secrets; backups |
+| RIS.Persistence | ris.db (EF Core SQLite): app registrations, D365 instances, SFTP servers, jobs, audit; encrypted secrets; backups |
 | RIS.Hosting | DI setup, Serilog (console, daily file, file per job, Event Log), Quartz (in-memory for the CLI, quartz.db for the server), schedule synchronization |
 | RIS.Server | Windows service: web UI (Blazor + MudBlazor), REST API `/api/v1`, Windows authentication and roles, `/health` |
 | RIS.Migration | Converter of 4.x `Schedule.xml` |
@@ -59,9 +59,9 @@ are in `%ProgramData%\RIS5\appsettings.json` (loaded after the program's `appset
 | GET | `/jobs/{group}/{name}/history?take=50` | Viewer |
 | GET | `/runs/{runId}` – result, summary, metrics, error, captured log | Viewer |
 | POST | `/jobs/{group}/{name}/run`, `/pause` (`{"reason": "…"}`), `/resume` | Operator |
-| PUT / DELETE | `/jobs/{group}/{name}`, `/connections/{name}`, `/sftp-servers/{name}` | Admin |
-| GET | `/connections`, `/sftp-servers` (secrets as `<SET-SECRET>`) | Admin |
-| PUT | `/connections/{name}/secret`, `/sftp-servers/{name}/secret` (`{"value": "…"}`) | Admin |
+| PUT / DELETE | `/jobs/{group}/{name}`, `/app-registrations/{name}`, `/connections/{name}`, `/sftp-servers/{name}` | Admin |
+| GET | `/app-registrations`, `/connections`, `/sftp-servers` (secrets as `<SET-SECRET>`) | Admin |
+| PUT | `/app-registrations/{name}/secret`, `/connections/{name}/secret` (= its default app registration), `/sftp-servers/{name}/secret` (`{"value": "…"}`) | Admin |
 | POST | `/config/validate`, `/config/import`; GET `/config/export`, `/audit` | Admin |
 | GET | `/me` – current user and roles | any user |
 | GET | `/history?from&to&result&job` – runs of all jobs | Viewer |
@@ -86,10 +86,13 @@ ris run jobs.json --job "CustInvoicejour interface D365_AX2012" [--dry-run] [--l
 
 ris db migrate                         [--data <dir>]
 ris db import jobs.json                [--data <dir>]   add/update; <SET-SECRET> keeps stored secrets
-ris db import-4x Schedule.xml [--paused] [--report <dir>] [--no-secrets] [--data <dir>]
-                                       4.x upgrade in one step; secrets decrypted on the 4.x server, never written to a file
+ris db import-4x Schedule.xml [--paused] [--report <dir>] [--no-secrets] [--secrets-only] [--no-secret-check]
+                             [--client-settings portable.config] [--data <dir>]
+                                       4.x upgrade in one step; secrets decrypted on the 4.x server, never written to a file;
+                                       app registrations named after the 4.x client, secrets tried once per app registration
 ris db export -o jobs.json             [--data <dir>]   secrets replaced by <SET-SECRET>
-ris db set-secret connection CONTOSO-PROD              value read without echo (or from stdin)
+ris db set-secret app-registration RIS-PROD           value read without echo (or from stdin)
+ris db set-secret connection CONTOSO-PROD              = the default app registration of the instance
 ris db set-secret sftp "Contoso SFTP"
 ris run --db --job <name> [--dry-run]                  job from ris.db, in-memory scheduler (quartz.db untouched)
 ris access list | add <Admin|Operator|Viewer> <DOMAIN\group|user|SID> | remove <role> <account>

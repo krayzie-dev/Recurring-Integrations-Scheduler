@@ -7,7 +7,10 @@ Tak – to osobna usługa (`RIS5`) z osobnymi danymi. Importuj zadania 4.x jako 
 Zaszyfrowane w `ris.db` kluczami z `%ProgramData%\RIS5\keys`. Nie są wyświetlane w interfejsie, zwracane przez API ani zapisywane w audycie i logach. Można je tylko nadpisać.
 
 ### Jak zmienić sekret, który wygasa?
-*Instancje D365 → edycja instancji → wklej nową wartość w polu Client secret → Testuj połączenie → Zapisz*. Zadania korzystają z nowego sekretu od następnego uruchomienia. W audycie pojawi się wpis `*** (nowa wartość, ukryta)`.
+*Rejestracje aplikacji → edycja rejestracji → wklej nową wartość w polu Client secret → Testuj → Zapisz*. Sekret ustawiasz **raz** – od następnego uruchomienia korzystają z niego wszystkie instancje D365 i zadania, które używają tej rejestracji (kolumna *Używana przez*). W audycie pojawi się wpis `*** (nowa wartość, ukryta)`.
+
+### Czy zadanie może logować się inną aplikacją niż jego instancja D365?
+Tak. W kreatorze zadania, w kroku *Dynamics 365*, wybierz pole **Rejestracja aplikacji** – puste oznacza domyślną rejestrację instancji. Tak samo w *Edycji zbiorczej* (ustaw albo wyczyść dla wielu zadań). Import z 4.x robi to sam dla zadań, które w 4.x miały inną aplikację niż reszta zadań instancji.
 
 ### Co się stanie, gdy serwer zostanie wyłączony w czasie zaplanowanego uruchomienia?
 Po starcie usługa wykryje przegapiony termin: przy ustawieniu *Uruchom raz po starcie* uruchomi zadanie jeden raz, przy *Pomiń* poczeka na następny termin. Rytm harmonogramu nie przesuwa się.

@@ -6,7 +6,7 @@
 |---|---|
 | `%ProgramFiles%\RIS5` | Program, `cli\ris.exe` |
 | `%ProgramData%\RIS5\appsettings.json` | Machine settings (ports, HTTPS, roles, retention). Restart the service after a change. |
-| `%ProgramData%\RIS5\ris.db` | Configuration: D365 instances, SFTP servers, jobs, encrypted secrets, audit |
+| `%ProgramData%\RIS5\ris.db` | Configuration: app registrations, D365 instances, SFTP servers, jobs, encrypted secrets, audit |
 | `%ProgramData%\RIS5\quartz.db` | Schedule (triggers, pauses) and run history with logs |
 | `%ProgramData%\RIS5\keys\` | Secret encryption keys – **without them the secrets cannot be read** |
 | `%ProgramData%\RIS5\logs\` | `ris-YYYYMMDD.clef` (service log), `jobs\<Group.Job>\` (per job log) |
@@ -90,7 +90,7 @@ or stop the service and copy the files. Configuration without secrets (e.g. for 
 Secret keys are protected by the machine's DPAPI by default and do not work on another server. Options:
 
 - **Certificate** (for servers that may need to be rebuilt): the same certificate with a private key on both servers, `Ris:Data:KeyCertificateThumbprint` set *before* secrets are saved, then copy the data folder;
-- **Export and re-enter secrets**: `ris db export -o jobs.json` on the old server, `ris db import jobs.json` and enter the secrets again (in *D365 instances* or with `ris db set-secret`) on the new one. The run history stays on the old server.
+- **Export and re-enter secrets**: `ris db export -o jobs.json` on the old server, `ris db import jobs.json` and enter the secrets again (in *App registrations* or with `ris db set-secret`) on the new one. The run history stays on the old server.
 
 ## Maintenance windows
 
@@ -103,9 +103,9 @@ Secret keys are protected by the machine's DPAPI by default and do not work on a
 | Command | Purpose |
 |---|---|
 | `ris db export -o jobs.json` | Configuration to a file (secrets as `<SET-SECRET>`) |
-| `ris db import jobs.json [--paused]` | Add/update D365 instances, SFTP servers and jobs |
+| `ris db import jobs.json [--paused]` | Add/update app registrations, D365 instances, SFTP servers and jobs |
 | `ris access list` / `add <role> <account>` / `remove <role> <account>` | Access (roles) – as on the *Access* page |
-| `ris db set-secret connection <name>` | Set the secret of a D365 instance (typed without echo) |
+| `ris db set-secret app-registration <name>` | Set the secret of an app registration (typed without echo); `connection <name>` sets the secret of the default app registration of the instance |
 | `ris convert-schedule Schedule.xml -o jobs.json` | Convert a RIS 4.x configuration |
 | `ris validate jobs.json` | Check a configuration file and its folders |
 | `ris run jobs.json --job <Group.Job>` | Run one job once from the console (testing) |

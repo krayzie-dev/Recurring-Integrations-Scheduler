@@ -6,7 +6,7 @@
 |---|---|
 | `%ProgramFiles%\RIS5` | Program, `cli\ris.exe` |
 | `%ProgramData%\RIS5\appsettings.json` | Ustawienia maszyny (porty, HTTPS, role, retencja). Po zmianie uruchom usługę ponownie. |
-| `%ProgramData%\RIS5\ris.db` | Konfiguracja: instancje D365, serwery SFTP, zadania, zaszyfrowane sekrety, audyt |
+| `%ProgramData%\RIS5\ris.db` | Konfiguracja: rejestracje aplikacji, instancje D365, serwery SFTP, zadania, zaszyfrowane sekrety, audyt |
 | `%ProgramData%\RIS5\quartz.db` | Harmonogram (wyzwalacze, wstrzymania) i historia uruchomień z logami |
 | `%ProgramData%\RIS5\keys\` | Klucze szyfrujące sekrety – **bez nich sekrety są nie do odczytania** |
 | `%ProgramData%\RIS5\logs\` | `ris-RRRRMMDD.clef` (log usługi), `jobs\<Grupa.Zadanie>\` (log każdego zadania) |
@@ -90,7 +90,7 @@ albo zatrzymaj usługę i skopiuj pliki. Konfiguracja bez sekretów (np. do repo
 Klucze sekretów są domyślnie chronione przez DPAPI komputera i nie działają na innym serwerze. Do wyboru:
 
 - **Certyfikat** (dla serwerów, które mogą być odtwarzane): ten sam certyfikat z kluczem prywatnym na obu serwerach, `Ris:Data:KeyCertificateThumbprint` ustawione *przed* zapisaniem sekretów, następnie kopia katalogu danych;
-- **Eksport i ponowne ustawienie sekretów**: `ris db export -o jobs.json` na starym serwerze, `ris db import jobs.json` i ponowne wpisanie sekretów (w *Instancjach D365* albo `ris db set-secret`) na nowym. Historia uruchomień zostaje na starym serwerze.
+- **Eksport i ponowne ustawienie sekretów**: `ris db export -o jobs.json` na starym serwerze, `ris db import jobs.json` i ponowne wpisanie sekretów (w *Rejestracjach aplikacji* albo `ris db set-secret`) na nowym. Historia uruchomień zostaje na starym serwerze.
 
 ## Prace serwisowe
 
@@ -103,9 +103,9 @@ Klucze sekretów są domyślnie chronione przez DPAPI komputera i nie działają
 | Polecenie | Do czego |
 |---|---|
 | `ris db export -o jobs.json` | Konfiguracja do pliku (sekrety jako `<SET-SECRET>`) |
-| `ris db import jobs.json [--paused]` | Dodanie/aktualizacja instancji D365, serwerów SFTP i zadań |
+| `ris db import jobs.json [--paused]` | Dodanie/aktualizacja rejestracji aplikacji, instancji D365, serwerów SFTP i zadań |
 | `ris access list` / `add <rola> <konto>` / `remove <rola> <konto>` | Dostęp (role) – jak na stronie *Dostęp* |
-| `ris db set-secret connection <nazwa>` | Ustawienie sekretu instancji D365 (wpisywany bez echa) |
+| `ris db set-secret app-registration <nazwa>` | Ustawienie sekretu rejestracji aplikacji (wpisywany bez echa); `connection <nazwa>` ustawia sekret domyślnej rejestracji instancji |
 | `ris convert-schedule Schedule.xml -o jobs.json` | Konwersja konfiguracji RIS 4.x |
 | `ris validate jobs.json` | Sprawdzenie pliku konfiguracji i folderów |
 | `ris run jobs.json --job <Grupa.Zadanie>` | Jednorazowe uruchomienie zadania z konsoli (testy) |

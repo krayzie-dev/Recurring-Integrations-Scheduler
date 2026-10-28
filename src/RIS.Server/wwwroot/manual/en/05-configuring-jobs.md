@@ -9,7 +9,7 @@
 | Step | Contents |
 |---|---|
 | **1. Job** | Type (card with a description and a flow diagram), name, group, description. For Import and Upload the *Also create the monitor job* switch. *Based on an existing job* copies all settings. |
-| **2. Dynamics 365** | D365 instance, data project or activity ID, company, import options. Buttons **Test connection** and **Show project entities**. |
+| **2. Dynamics 365** | D365 instance, app registration (empty = the default of the instance; another one when the job must run as another application – as in 4.x), data project or activity ID, company, import options. Buttons **Test connection** and **Show project entities**. |
 | **3. Files and folders** | Input, success and error folders, file selection and order, extraction, SFTP. Next to folders the **Check access** button (test as the service account: exists, read, write). |
 | **4. Schedule** | Schedule builder, time zone, missed runs, paused – see [Schedule](#schedule). |
 | **5. Advanced** | Status polling, request retries, pause on error, OData action paths. |
@@ -110,7 +110,7 @@ RIS downloads all messages from the queue, saves the packages and **acknowledges
 
 On the job list select jobs and choose **Bulk edit** (Admin role):
 
-- **Common fields** – D365 instance, group, description, time zone, missed runs, polling, retries, pause on error,
+- **Common fields** – D365 instance, app registration (set, or clear = the default of the instance), group, description, time zone, missed runs, polling, retries, pause on error,
 - **Schedule** – shift by ±N minutes, same cron or interval, *stagger starts* (next job every N minutes),
 - **Replace in paths** – e.g. `\\old-server\share` → `\\new-server\share` in all folders.
 

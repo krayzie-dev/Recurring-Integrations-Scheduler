@@ -68,7 +68,7 @@ Potrzebne, gdy zadania czytają lub zapisują pliki na udziałach sieciowych.
 
 | Rola | Może |
 |---|---|
-| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, dostęp, audyt, utrzymanie danych. |
+| **Admin** | Wszystko: zadania, rejestracje aplikacji, instancje D365, serwery SFTP, dostęp, audyt, utrzymanie danych. |
 | **Operator** | Uruchamiać, wstrzymywać i wznawiać zadania (także zbiorczo) oraz wszystko, co Viewer. |
 | **Viewer** | Tylko podgląd: pulpit, zadania, harmonogram, historia, szczegóły uruchomień, eksporty. |
 
@@ -134,11 +134,12 @@ RIS 5 instaluje się **obok** RIS 4.x na tym samym serwerze (osobna usługa, oso
 3. Uruchom instalator RIS 5 jako administrator na serwerze RIS 4.x. Instalator sam znajduje harmonogram 4.x (przez usługę 4.x i jej plik konfiguracji, więc także w niestandardowym folderze) i pokazuje stronę **Import z RIS 4.x**.
 4. Zadania są importowane jako **wstrzymane**. **Sekrety** 4.x (client secret, hasła SFTP) są odszyfrowywane na tym serwerze i zapisywane w RIS 5 – nie trafiają do żadnego pliku. Raport importu: `%ProgramData%\RIS5\import-4x\import.log` (lista ostrzeżeń i sekretów, których nie dało się przenieść) oraz `jobs.json` (konfiguracja bez sekretów).
    RIS 4.x zapisywał sekret w **każdym zadaniu osobno** – jeśli sekret aplikacji był odnawiany tylko w części zadań, zadania mają różne sekrety. Import bierze też sekrety z rejestracji aplikacji klienta 4.x (*Parameters → Azure App registrations*, plik `portable.config` obok `Schedule.xml` – tym sekretem klient 4.x wykonuje *Validate*), sprawdza wszystkie w Entra ID i zapisuje ten, który działa (raport podaje, z którego zadania pochodzi albo że żaden nie został przyjęty).
+   Każda aplikacja 4.x staje się jedną **rejestracją aplikacji** (z nazwą z klienta 4.x, np. `MCOV-TEST-02`, a bez `portable.config` – `APP-` i początek client id), a każdy adres AOS jedną **instancją D365**, której domyślną rejestracją jest ta używana przez większość jej zadań. Zadanie, które w 4.x logowało się inną aplikacją, dostaje ją jako własną rejestrację aplikacji.
 5. Instalacja cicha: `/IMPORT4X=1` (domyślnie). Dla konta domenowego podaj `/ACCOUNT` i `/PASSWORD` – bez nich użyte zostanie konto usługi 4.x, ale zwykłe konto domenowe wymaga hasła.
 
 **Sprawdzenie po instalacji**
 
-6. *Instancje D365* – **Testuj wszystkie**. Brakujące sekrety (wymienione w raporcie) wpisz ręcznie.
+6. *Rejestracje aplikacji* i *Instancje D365* – **Testuj wszystkie**. Brakujące sekrety (wymienione w raporcie) wpisz ręcznie w rejestracji aplikacji – raz dla wszystkich instancji i zadań.
 7. *Zadania* (filtr *Wstrzymane*) – przejrzyj zadania. **Godzina startu**: RIS 4.x nie zapisywał godziny startu harmonogramów „co N minut/godzin”, więc RIS 5 przyjmuje 00:00 – popraw zadania, które miały ruszać o innej porze (można zbiorczo: *Edycja zbiorcza → Harmonogram*).
 8. Przy folderach i szablonach pakietów użyj **Sprawdź dostęp** – test wykonuje się kontem usługi RIS 5.
 
@@ -147,4 +148,4 @@ RIS 5 instaluje się **obok** RIS 4.x na tym samym serwerze (osobna usługa, oso
 9. Dla każdego zadania (zadanie i jego **monitor razem**): zatrzymaj je w RIS 4.x → wznów w RIS 5 (*Wznów*) → po pierwszym uruchomieniu sprawdź historię. Monitor RIS 5 czyta pliki statusu zostawione przez import 4.x, więc nic, co jest w trakcie, nie zginie.
 10. **Uwaga:** wstrzymanie w RIS 4.x nie przetrwa restartu usługi 4.x (np. po łatkach Windows) – zadanie ruszy wtedy znowu i będzie działać równolegle z RIS 5. Po przełączeniu **usuń zadanie w RIS 4.x i zapisz harmonogram**, a po przełączeniu wszystkich zadań wyłącz usługę RIS 4.x (`Set-Service RecurringIntegrationsScheduler -StartupType Disabled`).
 
-Ręcznie (np. na innym serwerze): `ris db import-4x Schedule.xml --paused` (sekrety przenoszą się tylko na serwerze, na którym RIS 4.x je zaszyfrował; gdzie indziej ustaw je w *Instancjach D365*).
+Ręcznie (np. na innym serwerze): `ris db import-4x Schedule.xml --paused` (sekrety przenoszą się tylko na serwerze, na którym RIS 4.x je zaszyfrował; gdzie indziej ustaw je w *Rejestracjach aplikacji*).

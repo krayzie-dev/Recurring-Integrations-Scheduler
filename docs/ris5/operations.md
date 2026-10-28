@@ -191,7 +191,7 @@ Secret keys are protected by DPAPI of the machine by default and cannot be read 
 
 | Symptom | Check |
 |---|---|
-| Job fails with `RIS-AUTH-001` "Secret … is not set" | `ris db set-secret connection <name>` |
+| Job fails with `RIS-AUTH-001` "Secret … is not set" | `ris db set-secret app-registration <name>` (or `connection <instance>`) |
 | `RIS-CFG-001` on start or when reading configuration | `keys\` missing or from another machine/certificate |
 | 401 in the browser / curl | Windows authentication: use `--negotiate -u :`; the user needs a role in `Ris:Security:Roles` (403 otherwise) |
 | Changes from `ris db import` not visible | Wait `Ris:ConfigurationPollInterval` (30 s) or restart the service |

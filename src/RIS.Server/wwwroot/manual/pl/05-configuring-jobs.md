@@ -9,7 +9,7 @@
 | Krok | Zawartość |
 |---|---|
 | **1. Zadanie** | Typ (karta z opisem i schematem przepływu), nazwa, grupa, opis. Przy Imporcie i Wysyłce przełącznik *Utwórz też zadanie monitorujące*. Lista *Na podstawie istniejącego zadania* kopiuje wszystkie ustawienia. |
-| **2. Dynamics 365** | Instancja D365, projekt danych lub activity ID, firma, opcje importu. Przyciski **Testuj połączenie** i **Pokaż encje projektu**. |
+| **2. Dynamics 365** | Instancja D365, rejestracja aplikacji (puste = domyślna instancji; inna, gdy zadanie ma działać jako inna aplikacja – jak w 4.x), projekt danych lub activity ID, firma, opcje importu. Przyciski **Testuj połączenie** i **Pokaż encje projektu**. |
 | **3. Pliki i foldery** | Foldery wejścia, sukcesu i błędów, wybór i kolejność plików, rozpakowanie, SFTP. Przy folderach przycisk **Sprawdź dostęp** (test kontem usługi: istnienie, odczyt, zapis). |
 | **4. Harmonogram** | Konstruktor harmonogramu, strefa czasowa, przegapione terminy, wstrzymanie – patrz [Harmonogram](#schedule). |
 | **5. Zaawansowane** | Odpytywanie statusu (polling), ponawianie żądań, wstrzymanie po błędzie, ścieżki akcji OData. |
@@ -110,7 +110,7 @@ RIS pobiera wszystkie komunikaty z kolejki, zapisuje pakiety i **potwierdza odbi
 
 Na liście zadań zaznacz zadania i wybierz **Edycja zbiorcza** (rola Admin):
 
-- **Wspólne pola** – instancja D365, grupa, opis, strefa czasowa, przegapione terminy, polling, ponawianie, wstrzymanie po błędzie,
+- **Wspólne pola** – instancja D365, rejestracja aplikacji (ustaw albo wyczyść = domyślna instancji), grupa, opis, strefa czasowa, przegapione terminy, polling, ponawianie, wstrzymanie po błędzie,
 - **Harmonogram** – przesunięcie o ±N minut, ten sam cron lub interwał, *rozłożenie startów* (kolejne zadania co N minut),
 - **Zamiana w ścieżkach** – np. `\\stary-serwer\udział` → `\\nowy-serwer\udział` we wszystkich folderach.
 

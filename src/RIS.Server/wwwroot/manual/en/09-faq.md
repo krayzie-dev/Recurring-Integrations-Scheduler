@@ -7,7 +7,10 @@ Yes – it is a separate service (`RIS5`) with separate data. Import the 4.x job
 Encrypted in `ris.db` with the keys from `%ProgramData%\RIS5\keys`. They are never shown in the UI, returned by the API or written to the audit and logs. They can only be overwritten.
 
 ### How do I change an expiring secret?
-*D365 instances → edit the instance → paste the new value in Client secret → Test connection → Save*. Jobs use the new secret from their next run. The audit shows `*** (new value, hidden)`.
+*App registrations → edit the app registration → paste the new value in Client secret → Test → Save*. The secret is set **once** – from their next run every D365 instance and job that uses this app registration (column *Used by*) uses it. The audit shows `*** (new value, hidden)`.
+
+### Can a job sign in with another application than its D365 instance?
+Yes. In the job wizard, step *Dynamics 365*, choose the **App registration** field – empty means the default app registration of the instance. The same in *Bulk edit* (set or clear for many jobs). The import from 4.x does it for jobs that used another application than the other jobs of their instance.
 
 ### What happens when the server is down at a scheduled time?
 After start the service detects the missed run: with *Run once after start* it runs the job once, with *Skip* it waits for the next scheduled time. The schedule rhythm does not shift.
