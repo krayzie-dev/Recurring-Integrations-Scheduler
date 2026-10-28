@@ -82,8 +82,19 @@ public static class RisLsa {
             exit 0
         }
         "EventSource" {
+            # Own log "RIS5" under Applications and Services Logs (5.0.0-local.13 and older registered the source in Application).
             $source = "Recurring Integrations Scheduler 5"
-            if (-not [System.Diagnostics.EventLog]::SourceExists($source)) { New-EventLog -LogName Application -Source $source }
+            $logName = "RIS5"
+            if ([System.Diagnostics.EventLog]::SourceExists($source) -and [System.Diagnostics.EventLog]::LogNameFromSourceName($source, ".") -ne $logName) {
+                [System.Diagnostics.EventLog]::DeleteEventSource($source)
+            }
+            if (-not [System.Diagnostics.EventLog]::SourceExists($source)) {
+                [System.Diagnostics.EventLog]::CreateEventSource([System.Diagnostics.EventSourceCreationData]::new($source, $logName))
+            }
+            # 20 MB, oldest entries overwritten: the log never fills up.
+            $log = [System.Diagnostics.EventLog]::new($logName)
+            $log.MaximumKilobytes = 20480
+            $log.ModifyOverflowPolicy([System.Diagnostics.OverflowAction]::OverwriteAsNeeded, 0)
             exit 0
         }
         "StopService" {

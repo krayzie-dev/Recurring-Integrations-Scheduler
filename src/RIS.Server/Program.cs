@@ -116,6 +116,24 @@ app.MapGet("/api/v1/me", (System.Security.Claims.ClaimsPrincipal user) => Result
     roles = new[] { RisRoles.Viewer, RisRoles.Operator, RisRoles.Admin }.Where(user.IsInRole)
 })).RequireAuthorization();
 
+// Service start and stop also go to the Event Log (ids 1000 / 1001), so monitoring sees restarts.
+var lifecycle = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RIS.Server");
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    using (lifecycle.BeginScope(new Dictionary<string, object> { [RIS.Hosting.RisEventIds.EventLogProperty] = (int)RIS.Hosting.RisEventIds.ServiceStarted }))
+    {
+        lifecycle.LogInformation("RIS 5 {Version} started as {Account}, listening on {Urls}", ServerSetup.Version,
+            $@"{Environment.UserDomainName}\{Environment.UserName}", string.Join(", ", app.Urls));
+    }
+});
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    using (lifecycle.BeginScope(new Dictionary<string, object> { [RIS.Hosting.RisEventIds.EventLogProperty] = (int)RIS.Hosting.RisEventIds.ServiceStopping }))
+    {
+        lifecycle.LogInformation("RIS 5 {Version} is stopping; running jobs are interrupted", ServerSetup.Version);
+    }
+});
+
 app.Run();
 
 /// <summary>Entry point; public for WebApplicationFactory in tests.</summary>

@@ -27,10 +27,16 @@ public sealed class RisHostOptions
 
     public LogEventLevel MinimumLevel { get; set; } = LogEventLevel.Information;
 
-    /// <summary>Write Warning+ to Windows Event Log (source must exist; the installer creates it).</summary>
+    /// <summary>Write to the Windows Event Log (source must exist; the installer creates it in <see cref="EventLogName"/>).</summary>
     public bool EventLog { get; set; }
 
     public string EventLogSource { get; set; } = "Recurring Integrations Scheduler 5";
+
+    /// <summary>Own log under "Applications and Services Logs" (not mixed into Application).</summary>
+    public string EventLogName { get; set; } = "RIS5";
+
+    /// <summary>Lowest level written to the Event Log; service start/stop are always written.</summary>
+    public LogEventLevel EventLogMinimumLevel { get; set; } = LogEventLevel.Warning;
 
     public bool Console { get; set; } = true;
 
@@ -71,6 +77,9 @@ public static class RisHosting
             .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
             .MinimumLevel.Override("Polly", LogEventLevel.Warning)
             .MinimumLevel.Override("Quartz", LogEventLevel.Information)
+            // "Overriding address(es) ... Binding to endpoints defined via IConfiguration and/or UseKestrel()" on every start:
+            // expected, the HTTP/HTTPS endpoints are configured in code (ServerSetup.ConfigureHttps).
+            .MinimumLevel.Override("Microsoft.AspNetCore.Server.Kestrel", LogEventLevel.Error)
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", "RIS5")
             .WriteTo.File(new CompactJsonFormatter(), System.IO.Path.Combine(options.LogDirectory, "ris-.clef"),
@@ -86,8 +95,12 @@ public static class RisHosting
 
         if (options.EventLog && OperatingSystem.IsWindows())
         {
-            logger.WriteTo.EventLog(options.EventLogSource, manageEventSource: false, restrictedToMinimumLevel: LogEventLevel.Warning,
-                outputTemplate: "{JobKey} {RunId} {Message:lj}{NewLine}{Exception}");
+            var minimum = options.EventLogMinimumLevel;
+            logger.WriteTo.Logger(eventLog => eventLog
+                .Filter.ByIncludingOnly(e => e.Level >= minimum || e.Properties.ContainsKey(RisEventIds.EventLogProperty))
+                .WriteTo.EventLog(options.EventLogSource, options.EventLogName, manageEventSource: false,
+                    outputTemplate: "{Message:lj}{NewLine}{NewLine}Job: {JobKey}{NewLine}Run: {RunId}{NewLine}{Exception}",
+                    eventIdProvider: new RisEventIds()));
         }
 
         return logger;

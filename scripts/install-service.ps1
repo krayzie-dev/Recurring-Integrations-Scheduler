@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     - publishes src/RIS.Server to -InstallDirectory (unless -SkipPublish),
-    - creates the Event Log source "Recurring Integrations Scheduler 5",
+    - creates the Event Log source "Recurring Integrations Scheduler 5" in its own log RIS5,
     - creates the data directory (default %ProgramData%\RIS5) and grants the service account Modify rights,
     - creates (or updates) the service "RIS5" running as -Account and starts it.
 
@@ -50,8 +50,11 @@ if (-not $SkipPublish) {
 $exe = Join-Path $InstallDirectory "RIS.Server.exe"
 if (-not (Test-Path $exe)) { throw "$exe not found." }
 
+if ([System.Diagnostics.EventLog]::SourceExists($eventSource) -and [System.Diagnostics.EventLog]::LogNameFromSourceName($eventSource, ".") -ne "RIS5") {
+    [System.Diagnostics.EventLog]::DeleteEventSource($eventSource)
+}
 if (-not [System.Diagnostics.EventLog]::SourceExists($eventSource)) {
-    New-EventLog -LogName Application -Source $eventSource
+    New-EventLog -LogName RIS5 -Source $eventSource
     Write-Host "Event Log source '$eventSource' created."
 }
 

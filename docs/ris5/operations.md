@@ -150,7 +150,18 @@ Secret keys are protected by DPAPI of the machine by default and cannot be read 
 
 - `GET /health` – `Healthy` / `Degraded` / `Unhealthy`: scheduler running, databases and data directory available, and every
   job in `Ris:Health:RequiredJobs` succeeded within its limit.
-- Application Event Log, source "Recurring Integrations Scheduler 5": Warning and Error with error codes.
+- Windows Event Log: own log **RIS5** (Event Viewer → Applications and Services Logs → RIS5; 20 MB, oldest entries
+  overwritten), source "Recurring Integrations Scheduler 5". Warnings and errors (`Ris:EventLogMinimumLevel`, default
+  Warning) plus service start/stop. Stable event ids for monitoring:
+
+  | Id | Meaning |
+  |---|---|
+  | 1000 / 1001 | Service started (version, account, addresses) / stopping |
+  | 2000 | Job run failed or partly failed (summary with metrics) |
+  | 10000 + 100 × category + number | Error with a RIS code: categories CFG=1, AUTH=2, HTTP=3, EXP=4, IMP=5, UPL=6, DWN=7, MON=8, FS=9, SFTP=10, GEN=11 – e.g. RIS-HTTP-001 = 10301, RIS-IMP-004 = 10504 |
+  | 3000 / 4000 | Other warnings / errors |
+
+  Versions up to 5.0.0-local.13 wrote to the Application log; the setup moves the source to RIS5.
 - `GET /api/v1/jobs`: `consecutiveFailures` and `lastResult` per job.
 
 ## Troubleshooting
