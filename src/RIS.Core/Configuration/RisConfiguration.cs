@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using RIS.Core.Errors;
 using RIS.Core.Options;
 
 namespace RIS.Core.Configuration;
@@ -173,6 +174,8 @@ public sealed class JobDefinition
 /// </summary>
 public sealed class RisConfiguration
 {
+    public List<AppRegistrationOptions> AppRegistrations { get; set; } = [];
+
     public List<D365ConnectionOptions> Connections { get; set; } = [];
 
     public List<SftpServerOptions> SftpServers { get; set; } = [];
@@ -181,6 +184,79 @@ public sealed class RisConfiguration
 
     public D365ConnectionOptions? FindConnection(string name) =>
         Connections.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    public AppRegistrationOptions? FindAppRegistration(string? name) => string.IsNullOrEmpty(name)
+        ? null
+        : AppRegistrations.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Effective connection of a job: the D365 instance with the sign-in of the job's app registration, otherwise of the
+    /// instance's default one (or the instance's inline sign-in of an older configuration).
+    /// </summary>
+    /// <exception cref="RisException">RIS-CFG-002 when the instance or an app registration is not defined.</exception>
+    public D365ConnectionOptions ResolveConnection(string connection, string? appRegistration = null)
+    {
+        var instance = FindConnection(connection)
+                       ?? throw new RisException(ErrorCodes.ConnectionNotFound, $"D365 instance '{connection}' is not defined.");
+        var name = string.IsNullOrEmpty(appRegistration) ? instance.AppRegistration : appRegistration;
+        if (string.IsNullOrEmpty(name)) return instance;
+        var registration = FindAppRegistration(name)
+                           ?? throw new RisException(ErrorCodes.ConnectionNotFound, $"App registration '{name}' (used by D365 instance '{connection}') is not defined.");
+        return instance.With(registration);
+    }
+
+    /// <summary>
+    /// Moves the inline sign-in of D365 instances (configurations from before app registrations, RIS 4.x import) to app
+    /// registrations; instances with the same sign-in share one. Names: "APP-" and the start of the client id. Returns the
+    /// number of instances changed.
+    /// </summary>
+    public int Normalize()
+    {
+        var changed = 0;
+        foreach (var instance in Connections.Where(c => c.HasInlineSignIn))
+        {
+            var registration = AppRegistrations.FirstOrDefault(a => SameSignIn(a, instance));
+            if (registration is null)
+            {
+                var baseName = "APP-" + (instance.ClientId.Length > 8 ? instance.ClientId[..8] : instance.ClientId).ToUpperInvariant();
+                var name = baseName;
+                for (var i = 2; FindAppRegistration(name) is not null; i++) name = $"{baseName}-{i}";
+#pragma warning disable CS0618
+                registration = new AppRegistrationOptions
+                {
+                    Name = name, Tenant = instance.Tenant, Authority = instance.Authority, ClientId = instance.ClientId, AuthMode = instance.AuthMode,
+                    ClientSecret = instance.ClientSecret, CertificateThumbprint = instance.CertificateThumbprint,
+                    UserName = instance.UserName, UserPassword = instance.UserPassword
+                };
+#pragma warning restore CS0618
+                AppRegistrations.Add(registration);
+            }
+
+            instance.AppRegistration = registration.Name;
+            ClearSignIn(instance);
+            changed++;
+        }
+        return changed;
+    }
+
+    /// <summary>Removes the inline sign-in fields of an instance (they are in its app registration).</summary>
+    public static void ClearSignIn(D365ConnectionOptions instance)
+    {
+        instance.Tenant = string.Empty;
+        instance.ClientId = string.Empty;
+        instance.Authority = new Uri("https://login.microsoftonline.com");
+        instance.AuthMode = D365AuthMode.ClientSecret;
+        instance.ClientSecret = null;
+        instance.CertificateThumbprint = null;
+        instance.UserName = null;
+        instance.UserPassword = null;
+    }
+
+    private static bool SameSignIn(AppRegistrationOptions a, D365ConnectionOptions c) =>
+        string.Equals(a.Tenant, c.Tenant, StringComparison.OrdinalIgnoreCase) && a.Authority == c.Authority
+        && string.Equals(a.ClientId, c.ClientId, StringComparison.OrdinalIgnoreCase) && a.AuthMode == c.AuthMode
+        && a.ClientSecret == c.ClientSecret && string.Equals(a.CertificateThumbprint, c.CertificateThumbprint, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(a.UserName, c.UserName, StringComparison.OrdinalIgnoreCase) && a.UserPassword == c.UserPassword;
 
     public SftpServerOptions? FindSftpServer(string name) =>
         SftpServers.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));

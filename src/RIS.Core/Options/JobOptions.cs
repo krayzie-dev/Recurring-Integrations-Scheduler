@@ -52,9 +52,12 @@ public sealed class FileSelectionOptions
 [JsonDerivedType(typeof(ProcessingMonitorJobOptions), "ProcessingMonitor")]
 public abstract class JobOptionsBase : IValidatableObject
 {
-    /// <summary>Name of <see cref="D365ConnectionOptions"/> used by the job.</summary>
+    /// <summary>Name of <see cref="D365ConnectionOptions"/> (D365 instance) used by the job.</summary>
     [Required]
     public string Connection { get; set; } = string.Empty;
+
+    /// <summary>Name of the <see cref="AppRegistrationOptions"/> the job signs in with; empty = the default of the instance.</summary>
+    public string? AppRegistration { get; set; }
 
     /// <summary>Retry of single HTTP requests and file operations.</summary>
     public RetryOptions Retry { get; set; } = new();

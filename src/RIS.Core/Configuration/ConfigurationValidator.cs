@@ -14,6 +14,16 @@ public static class ConfigurationValidator
     {
         var errors = new List<string>();
 
+        var registrationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var registration in configuration.AppRegistrations)
+        {
+            ValidateObject(registration, $"AppRegistrations[{registration.Name}]", errors);
+            if (!registrationNames.Add(registration.Name))
+            {
+                errors.Add($"AppRegistrations[{registration.Name}]: duplicate app registration name.");
+            }
+        }
+
         var connectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var connection in configuration.Connections)
         {
@@ -21,6 +31,10 @@ public static class ConfigurationValidator
             if (!connectionNames.Add(connection.Name))
             {
                 errors.Add($"Connections[{connection.Name}]: duplicate connection name.");
+            }
+            if (!string.IsNullOrEmpty(connection.AppRegistration) && !registrationNames.Contains(connection.AppRegistration))
+            {
+                errors.Add($"Connections[{connection.Name}].AppRegistration: app registration '{connection.AppRegistration}' is not defined.");
             }
         }
 
@@ -47,6 +61,10 @@ public static class ConfigurationValidator
             if (job.Options is { } options && !connectionNames.Contains(options.Connection))
             {
                 errors.Add($"{path}.Options.Connection: connection '{options.Connection}' is not defined.");
+            }
+            if (job.Options is { AppRegistration: { Length: > 0 } registration } && !registrationNames.Contains(registration))
+            {
+                errors.Add($"{path}.Options.AppRegistration: app registration '{registration}' is not defined.");
             }
 
             foreach (var (member, transfer) in SftpTransfers(job.Options))

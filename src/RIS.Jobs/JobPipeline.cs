@@ -30,8 +30,8 @@ public sealed class JobPipeline(IServiceProvider services, IRisConfigurationStor
                 throw new RisException(ErrorCodes.ConfigurationInvalid, "Job configuration is invalid: " + string.Join("; ", errors));
             }
 
-            var connection = configuration.FindConnection(options.Connection)
-                             ?? throw new RisException(ErrorCodes.ConnectionNotFound, $"Connection '{options.Connection}' is not defined.");
+            // D365 instance with the sign-in of the job's app registration (or the instance's default one).
+            var connection = configuration.ResolveConnection(options.Connection, options.AppRegistration);
 
             logger.LogInformation("Job {JobKey} started (environment {Environment})", jobKey, connection.AosUri);
             var run = new JobRunContext
