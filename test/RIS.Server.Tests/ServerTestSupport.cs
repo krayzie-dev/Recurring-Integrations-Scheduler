@@ -15,7 +15,10 @@ using RIS.Hosting.Tests;
 
 namespace RIS.Server.Tests;
 
-/// <summary>Authenticates every request carrying "X-Test-User"; roles come from "X-Test-Roles" (comma separated).</summary>
+/// <summary>
+/// Authenticates every request carrying "X-Test-User"; roles come from "X-Test-Roles", Windows group SIDs (as in a Windows
+/// token, mapped to roles by RoleMap) from "X-Test-Groups" (both comma separated).
+/// </summary>
 public sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
@@ -30,6 +33,10 @@ public sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions>
         foreach (var role in Request.Headers["X-Test-Roles"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             identity.AddClaim(new Claim(ClaimTypes.Role, role));
+        }
+        foreach (var sid in Request.Headers["X-Test-Groups"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            identity.AddClaim(new Claim(ClaimTypes.GroupSid, sid));
         }
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
     }
@@ -46,6 +53,9 @@ public sealed class RisServerFactory : WebApplicationFactory<Program>
     public string DataDirectory { get; }
     public FakeD365 D365 { get; } = new();
 
+    /// <summary>Extra settings, e.g. "Ris:Security:Roles:Admin:0" (set before the first client is created).</summary>
+    public Dictionary<string, string> Settings { get; } = [];
+
     /// <summary>Extra service overrides (set before the first client is created).</summary>
     public Action<IServiceCollection>? OverrideServices { get; set; }
 
@@ -55,6 +65,7 @@ public sealed class RisServerFactory : WebApplicationFactory<Program>
         builder.UseSetting("Ris:Console", "false");
         builder.UseSetting("Ris:Security:WindowsAuthentication", "false");
         builder.UseSetting("Ris:Health:RequiredJobs:Tests.Daily", "1.02:00:00");
+        foreach (var (key, value) in Settings) builder.UseSetting(key, value);
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<ID365ClientFactory>(D365);

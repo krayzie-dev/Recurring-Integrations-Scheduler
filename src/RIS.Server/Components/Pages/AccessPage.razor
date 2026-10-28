@@ -1,0 +1,203 @@
+@page "/access"
+@attribute [Authorize(Policy = RisRoles.CanAdminister)]
+@inherits RisPageBase
+@inject AccessService Access
+@inject RoleMap Roles
+
+<PageTitle>RIS 5 – @T["Nav_Access"]</PageTitle>
+<MudText Typo="Typo.h5" Class="mb-1">@T["Nav_Access"]</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@T["Access_Intro"]</MudText>
+
+<MudGrid Spacing="3" Class="mb-3">
+    @foreach (var role in RoleMap.Roles)
+    {
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-3" Style="height: 100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@RoleIcon(role)" Color="@RoleColour(role)" />
+                    <MudText Typo="Typo.subtitle1"><b>@role</b></MudText>
+                    <MudSpacer />
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_members.Count(m => m.Role == role)</MudChip>
+                </MudStack>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">@T["Access_RoleHelp_" + role]</MudText>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@* Add a member *@
+<MudPaper Class="pa-3 mb-3 ris-filter-bar" Elevation="0" Outlined="true">
+    <MudSelect T="string" @bind-Value="_role" Label="@T["Access_Role"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="ris-filter-field">
+        @foreach (var role in RoleMap.Roles)
+        {
+            <MudSelectItem Value="role">@role</MudSelectItem>
+        }
+    </MudSelect>
+    <MudTextField T="string" @bind-Value="_member" Label="@T["Access_Member"]" Placeholder="@T["Access_MemberPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" OnKeyUp="@(e => e.Key == "Enter" ? AddAsync() : Task.CompletedTask)" Class="ris-filter-field ris-filter-search" Style="min-width: 320px" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="AddAsync" Disabled="_busy || string.IsNullOrWhiteSpace(_member)">@T["Access_Add"]</MudButton>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="flex: 1 1 260px">@T["Access_Kerberos"]</MudText>
+</MudPaper>
+
+<MudDataGrid T="RoleMember" Items="_members" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" Loading="Loading" SortMode="SortMode.Single" Class="mb-4">
+    <Columns>
+        <PropertyColumn Property="m => m.Role" Title="@T["Access_Role"]">
+            <CellTemplate><MudChip T="string" Size="Size.Small" Color="@RoleColour(context.Item.Role)" Variant="Variant.Outlined" Icon="@RoleIcon(context.Item.Role)" Class="ma-0">@context.Item.Role</MudChip></CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.Member" Title="@T["Access_Member"]">
+            <CellTemplate>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@(context.Item.IsGroup ? Icons.Material.Filled.Groups : Icons.Material.Filled.Person)" Size="Size.Small" title="@(context.Item.IsGroup ? T["Access_Group"] : T["Access_User"])" />
+                    <span title="@(context.Item.Sid is null ? null : "SID: " + context.Item.Sid)">@context.Item.Member</span>
+                    @if (context.Item.Sid is null)
+                    {
+                        <MudTooltip Text="@T["Access_NotFound"]"><MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" /></MudTooltip>
+                    }
+                </MudStack>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.Source" Title="@T["Access_Source"]">
+            <CellTemplate>
+                @if (context.Item.Source == RoleSource.Settings)
+                {
+                    <MudTooltip Text="@T["Access_SettingsLocked"]">
+                        <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Lock" Class="ma-0">@T["Access_Source_Settings"]</MudChip>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Web" Class="ma-0">@T["Access_Source_Application"]</MudChip>
+                }
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.AddedUtc" Title="@T["Access_AddedBy"]">
+            <CellTemplate>
+                @if (context.Item.AddedUtc is { } added)
+                {
+                    <div class="ris-two-lines">
+                        <span>@context.Item.AddedBy</span>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Prefs.Format(new DateTimeOffset(DateTime.SpecifyKind(added, DateTimeKind.Utc)))</MudText>
+                    </div>
+                }
+                else
+                {
+                    <span class="mud-text-secondary">–</span>
+                }
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn T="RoleMember" Title="@T["Common_Actions"]" Sortable="false" StickyRight="true">
+            <CellTemplate>
+                <div class="ris-actions">
+                    @if (context.Item.Source == RoleSource.Application)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Size="Size.Small" Color="Color.Error" title="@T["Common_Delete"]" OnClick="() => RemoveAsync(context.Item)" Disabled="_busy" />
+                    }
+                    else
+                    {
+                        <MudTooltip Text="@T["Access_SettingsLocked"]"><MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mud-text-secondary ma-1" /></MudTooltip>
+                    }
+                </div>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent><MudText Class="pa-4">@T["Access_None"]</MudText></NoRecordsContent>
+</MudDataGrid>
+
+@* The signed-in user: roles and what gives them *@
+<MudPaper Outlined="true" Class="pa-3">
+    <MudText Typo="Typo.subtitle1" Class="mb-2"><b>@T["Access_Yours"]</b> – @UserName</MudText>
+    @if (_mine.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["Access_NoRole"]</MudText>
+    }
+    else
+    {
+        @foreach (var match in _mine)
+        {
+            <div class="d-flex align-center gap-2 mb-1">
+                <MudChip T="string" Size="Size.Small" Color="@RoleColour(match.Role)" Variant="Variant.Outlined" Icon="@RoleIcon(match.Role)" Class="ma-0">@match.Role</MudChip>
+                <MudText Typo="Typo.body2">@T["Access_Via"] <b>@match.Member</b> (@(match.Source == RoleSource.Settings ? T["Access_Source_Settings"] : T["Access_Source_Application"]))</MudText>
+            </div>
+        }
+    }
+</MudPaper>
+
+@code {
+    protected override bool RefreshOnRuns => false;
+    protected override TimeSpan? RefreshInterval => null;
+
+    private IReadOnlyList<RoleMember> _members = [];
+    private IReadOnlyList<RoleMember> _mine = [];
+    private string _role = RisRoles.Operator;
+    private string? _member;
+    private bool _busy;
+
+    protected override async Task LoadAsync()
+    {
+        _members = (await Access.MembersAsync(Disposed))
+            .OrderBy(m => Array.IndexOf(RoleMap.Roles, m.Role)).ThenBy(m => m.Source).ThenBy(m => m.Member, StringComparer.CurrentCultureIgnoreCase).ToList();
+        if (AuthenticationState is not null) _mine = await Roles.MatchesAsync((await AuthenticationState).User, Disposed);
+    }
+
+    private async Task AddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_member) || _busy) return;
+        _busy = true;
+        try
+        {
+            var result = await Access.AddAsync(_role, _member, UserName, Disposed);
+            var name = result.Account?.Name ?? _member.Trim();
+            switch (result.Change)
+            {
+                case AccessChange.Done:
+                    Snackbar.Add(T["Access_Added", name, _role], Severity.Success);
+                    _member = null;
+                    break;
+                case AccessChange.UnknownAccount:
+                    Snackbar.Add(T["Access_UnknownAccount", name], Severity.Error);
+                    break;
+                case AccessChange.FromSettings:
+                    Snackbar.Add(T["Access_FromSettings", name, _role], Severity.Info);
+                    break;
+                default:
+                    Snackbar.Add(T["Access_AlreadyMember", name, _role], Severity.Info);
+                    break;
+            }
+            await LoadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RemoveAsync(RoleMember member)
+    {
+        if (!await ConfirmAsync(T["Access_RemoveTitle", member.Member, member.Role], T["Access_RemoveText"], T["Common_Delete"], Color.Error, (IReadOnlyList<string>)[member.Member])) return;
+        _busy = true;
+        try
+        {
+            var result = await Access.RemoveAsync(member.Role, member.Sid ?? member.Member, UserName, Disposed);
+            if (result.Succeeded) Snackbar.Add(T["Access_Removed", member.Member, member.Role], Severity.Success);
+            await LoadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static Color RoleColour(string role) => role switch
+    {
+        RisRoles.Admin => Color.Error,
+        RisRoles.Operator => Color.Warning,
+        _ => Color.Info
+    };
+
+    private static string RoleIcon(string role) => role switch
+    {
+        RisRoles.Admin => Icons.Material.Filled.AdminPanelSettings,
+        RisRoles.Operator => Icons.Material.Filled.PlayCircle,
+        _ => Icons.Material.Filled.Visibility
+    };
+}

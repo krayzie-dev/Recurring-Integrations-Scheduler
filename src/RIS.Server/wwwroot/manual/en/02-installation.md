@@ -66,7 +66,17 @@ Needed when jobs read or write files on network shares.
 
 ## Roles and permissions {#roles}
 
-Roles are in `%ProgramData%\RIS5\appsettings.json` (written by the installer):
+| Role | Can |
+|---|---|
+| **Admin** | Everything: jobs, D365 instances, SFTP servers, access, audit, data maintenance. |
+| **Operator** | Run, pause and resume jobs (also in bulk), plus everything a Viewer can. |
+| **Viewer** | Read only: dashboard, jobs, plan, history, run details, exports. |
+
+**After the installation roles are given on the *Access* page** (Admin role): choose the role, enter a group or user (`DOMAIN\RIS-Operators`, `DOMAIN\john.smith` or a SID) and click **Add**. RIS checks the account in Windows/AD; the change applies at the next page load – no service restart – and is recorded in the audit. Giving roles to **AD groups** and managing access through group membership is easiest. Details: [Access](06-daily-operations.md#access).
+
+> Adding a user to an AD group takes effect after they **sign in to Windows again** – the list of groups is read at sign-in.
+
+**Settings file.** Roles given in the installer (`/ADMINS`, `/OPERATORS`) are in `%ProgramData%\RIS5\appsettings.json` and are read-only on the *Access* page (lock icon) – so administrators cannot lock themselves out by accident. A change in the file needs a service restart:
 
 ```json
 {
@@ -74,15 +84,22 @@ Roles are in `%ProgramData%\RIS5\appsettings.json` (written by the installer):
     "Security": {
       "Roles": {
         "Admin": [ "S-1-5-32-544", "CONTOSO\\RIS-Admins" ],
-        "Operator": [ "CONTOSO\\RIS-Operators" ],
-        "Viewer": [ "CONTOSO\\Domain Users" ]
+        "Operator": [ "CONTOSO\\RIS-Operators" ]
       }
     }
   }
 }
 ```
 
-You can list groups, users or SIDs (`S-1-5-32-544` = local Administrators in every Windows language). Restart the service after a change.
+You can list groups, users or SIDs (`S-1-5-32-544` = local Administrators in every Windows language).
+
+**Command line** (on the server, as administrator – for scripts or when nobody has the Admin role any more):
+
+```powershell
+ris access list
+ris access add Operator "CONTOSO\RIS-Operators"
+ris access remove Operator "CONTOSO\RIS-Operators"
+```
 
 > **Note (UAC):** in a browser running on the server itself the Administrators group is "deny only" in your token. That is why the installer adds the installing user to the administrators. If you see the "No access" page, add your account by name.
 

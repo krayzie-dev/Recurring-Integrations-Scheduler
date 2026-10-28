@@ -285,6 +285,42 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         return (items, total);
     }
 
+    /// <summary>Raised after a role member was added or removed in this process (other processes: see <see cref="GetVersionAsync"/>).</summary>
+    public event Action? RolesChanged;
+
+    public async Task<IReadOnlyList<RoleMemberEntity>> GetRoleMembersAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        return await db.RoleMembers.AsNoTracking().OrderBy(m => m.Role).ThenBy(m => m.Member).ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Gives <paramref name="role"/> to a resolved Windows account (group or user). False when it already has it.</summary>
+    public async Task<bool> AddRoleMemberAsync(string role, string member, string sid, string? user, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        if (await db.RoleMembers.AnyAsync(m => m.Role == role && m.Sid == sid, cancellationToken)) return false;
+        var now = time.GetUtcNow().UtcDateTime;
+        db.RoleMembers.Add(new RoleMemberEntity { Role = role, Member = member, Sid = sid, AddedUtc = now, AddedBy = user });
+        db.Audit.Add(new AuditEntry { TimestampUtc = now, User = user, EntityType = "Access", EntityKey = $"{role}: {member}", Action = "Added", After = $"{member} ({sid})" });
+        await db.SaveChangesAsync(cancellationToken);
+        RolesChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>Removes a role member added in the UI or CLI, by account name or SID. False when there is none.</summary>
+    public async Task<bool> RemoveRoleMemberAsync(string role, string memberOrSid, string? user, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        var entity = await db.RoleMembers.FirstOrDefaultAsync(m => m.Role == role && (m.Sid == memberOrSid || m.Member == memberOrSid), cancellationToken);
+        if (entity is null) return false;
+        db.RoleMembers.Remove(entity);
+        db.Audit.Add(new AuditEntry { TimestampUtc = time.GetUtcNow().UtcDateTime, User = user, EntityType = "Access", EntityKey = $"{role}: {entity.Member}",
+            Action = "Removed", Before = $"{entity.Member} ({entity.Sid})" });
+        await db.SaveChangesAsync(cancellationToken);
+        RolesChanged?.Invoke();
+        return true;
+    }
+
     /// <summary>Tracked job entities of the given groups by (group, name), exact match as in the database.</summary>
     private static async Task<Dictionary<(string Group, string Name), JobDefinitionEntity>> JobsByKeyAsync(RisDbContext db, IEnumerable<string> groups,
         CancellationToken cancellationToken)

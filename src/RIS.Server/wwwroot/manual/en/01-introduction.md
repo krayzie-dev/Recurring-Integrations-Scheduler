@@ -38,9 +38,9 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 |---|---|
 | **Viewer** | View the dashboard, jobs, plan, history and run details; export lists. |
 | **Operator** | Everything a Viewer can, plus run, pause and resume jobs (also in bulk). |
-| **Admin** | Everything: jobs, D365 instances, SFTP servers, bulk edit, audit, data maintenance. |
+| **Admin** | Everything: jobs, D365 instances, SFTP servers, access (roles), bulk edit, audit, data maintenance. |
 
-Roles are assigned in the settings (the installer asks for administrators and operators) – see [Installation](02-installation.md#roles).
+Roles are given by an Admin on the *Access* page (and by the installer – administrators and operators) – see [Installation](02-installation.md#roles).
 
 ## What's new compared to RIS 4.x
 

@@ -24,7 +24,7 @@
 | `RIS-SFTP-001` | SFTP server unreachable, wrong credentials or remote folder. Use **Test connection** in *SFTP servers*. |
 | `RIS-CFG-003` / *Check access* fails for `\\server\…` | The service account has no access to the share – built-in accounts (LocalService) have no network access. Use a domain account or gMSA. |
 | `RIS-CFG-001` at startup, "key not found" | `keys\` missing or different (e.g. database moved to another server) – set the secrets again. |
-| "No access" page | Your account has no role. Add it (or its group) in `Ris:Security:Roles` and restart the service. On the server itself the Administrators group is not enough (UAC). |
+| "No access" page | Your account has no role. An Admin adds it (or its group) on the *Access* page; when nobody has the Admin role – `ris access add Admin "DOMAIN\account"` on the server. After being added to a new AD group, sign out of Windows and in again. On the server itself the Administrators group is not enough (UAC). |
 | "Lost connection to the RIS server" dialog | The service was restarted (e.g. upgrade). The page reloads by itself once the service is up. |
 | Installer: "Certificate not found in LocalMachine\My" | Thumbprint typed with spaces or from another store – the certificate must be in *Local Computer → Personal* and have a private key. |
 | Event log entries appear in *Application* | After an upgrade Windows moves the source to the RIS5 log only after a computer restart. |

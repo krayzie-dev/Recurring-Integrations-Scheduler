@@ -40,7 +40,7 @@ Domyślnie 30 dni (nieudane – 90 dni), maksymalnie 1000 uruchomień na zadanie
 Włącz HTTPS w instalatorze (`/RECONFIGURE=1 /HTTPSPORT=5443 /CERT=<odcisk>`) i otwórz `https://<serwer>:5443`. HTTP działa tylko lokalnie na serwerze.
 
 ### Jak dodać nowego operatora?
-Dopisz użytkownika lub (lepiej) grupę AD w `%ProgramData%\RIS5\appsettings.json` w `Ris:Security:Roles:Operator` i uruchom usługę ponownie. Najprościej zarządzać rolami przez członkostwo w grupach AD.
+*Dostęp* → rola **Operator** → wpisz użytkownika lub (lepiej) grupę AD → **Dodaj**. Działa od następnego odświeżenia strony, bez restartu. Najprościej zarządzać dostępem przez członkostwo w grupach AD – patrz [Role i uprawnienia](02-installation.md#roles).
 
 ### Czy mogę zautomatyzować obsługę (skrypty, CI)?
 Tak – REST API `/api/v1` (logowanie Windows, te same role): lista zadań, uruchomienie, wstrzymanie, historia, eksport konfiguracji. Opis: `/openapi/v1.json` na serwerze.

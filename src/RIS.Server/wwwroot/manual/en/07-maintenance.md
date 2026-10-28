@@ -104,6 +104,7 @@ Secret keys are protected by the machine's DPAPI by default and do not work on a
 |---|---|
 | `ris db export -o jobs.json` | Configuration to a file (secrets as `<SET-SECRET>`) |
 | `ris db import jobs.json [--paused]` | Add/update D365 instances, SFTP servers and jobs |
+| `ris access list` / `add <role> <account>` / `remove <role> <account>` | Access (roles) – as on the *Access* page |
 | `ris db set-secret connection <name>` | Set the secret of a D365 instance (typed without echo) |
 | `ris convert-schedule Schedule.xml -o jobs.json` | Convert a RIS 4.x configuration |
 | `ris validate jobs.json` | Check a configuration file and its folders |

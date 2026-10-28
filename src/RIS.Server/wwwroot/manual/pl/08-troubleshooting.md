@@ -24,7 +24,7 @@
 | `RIS-SFTP-001` | Serwer SFTP niedostępny, złe dane logowania albo folder zdalny. Użyj **Testuj połączenie** w *Serwerach SFTP*. |
 | `RIS-CFG-003` / *Sprawdź dostęp* nie przechodzi dla `\\serwer\…` | Konto usługi nie ma dostępu do udziału – konta wbudowane (LocalService) nie mają dostępu sieciowego. Użyj konta domenowego lub gMSA. |
 | `RIS-CFG-001` przy starcie, „klucz nie do odczytania” | Brak lub inne `keys\` (np. po przeniesieniu bazy na inny serwer) – ustaw sekrety ponownie. |
-| Strona „Brak dostępu” | Twoje konto nie ma roli. Dopisz je (lub jego grupę) w `Ris:Security:Roles` i uruchom usługę ponownie. Na samym serwerze grupa Administratorzy nie wystarcza (UAC). |
+| Strona „Brak dostępu” | Twoje konto nie ma roli. Admin dodaje je (lub jego grupę) na stronie *Dostęp*; gdy nikt nie ma roli Admin – `ris access add Admin "DOMENA\konto"` na serwerze. Po dodaniu do nowej grupy AD wyloguj się z Windows i zaloguj ponownie. Na samym serwerze grupa Administratorzy nie wystarcza (UAC). |
 | Okno „Utracono połączenie z serwerem RIS” | Usługa była restartowana (np. aktualizacja). Strona przeładuje się sama po starcie usługi. |
 | Instalator: „Certificate not found in LocalMachine\My” | Odcisk wpisany ze spacjami lub z innego magazynu – certyfikat musi być w *Komputer lokalny → Osobisty* i mieć klucz prywatny. |
 | Wpisy dziennika zdarzeń są w logu *Application* | Po aktualizacji Windows przenosi źródło do logu RIS5 dopiero po restarcie komputera. |

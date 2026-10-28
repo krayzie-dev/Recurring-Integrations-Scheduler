@@ -104,6 +104,7 @@ Klucze sekretów są domyślnie chronione przez DPAPI komputera i nie działają
 |---|---|
 | `ris db export -o jobs.json` | Konfiguracja do pliku (sekrety jako `<SET-SECRET>`) |
 | `ris db import jobs.json [--paused]` | Dodanie/aktualizacja instancji D365, serwerów SFTP i zadań |
+| `ris access list` / `add <rola> <konto>` / `remove <rola> <konto>` | Dostęp (role) – jak na stronie *Dostęp* |
 | `ris db set-secret connection <nazwa>` | Ustawienie sekretu instancji D365 (wpisywany bez echa) |
 | `ris convert-schedule Schedule.xml -o jobs.json` | Konwersja konfiguracji RIS 4.x |
 | `ris validate jobs.json` | Sprawdzenie pliku konfiguracji i folderów |

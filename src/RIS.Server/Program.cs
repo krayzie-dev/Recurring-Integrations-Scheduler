@@ -37,6 +37,8 @@ builder.Services.AddRisServer(builder.Configuration, configureHost: host =>
 
 var security = builder.Configuration.GetSection("Ris:Security").Get<SecurityOptions>() ?? new SecurityOptions();
 builder.Services.AddSingleton(security);
+builder.Services.AddSingleton<RoleMap>();
+builder.Services.AddSingleton<RIS.Server.Services.AccessService>();
 builder.Services.AddSingleton<IClaimsTransformation, WindowsRoleClaimsTransformation>();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, RisAuthorizationResultHandler>();
 var authentication = builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme);
@@ -111,6 +113,7 @@ if (!health.AllowAnonymous) healthEndpoint.RequireAuthorization(RisRoles.CanView
 app.MapJobsApi();
 app.MapConfigApi();
 app.MapExportApi();
+app.MapAccessApi();
 app.MapGet("/api/v1/me", (System.Security.Claims.ClaimsPrincipal user) => Results.Ok(new
 {
     name = user.Identity?.Name,

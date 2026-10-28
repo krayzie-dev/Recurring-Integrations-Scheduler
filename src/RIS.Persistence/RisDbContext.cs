@@ -68,12 +68,28 @@ public sealed class AuditEntry
     public string? After { get; set; }
 }
 
+/// <summary>
+/// Windows group or user given a RIS role in the UI (page "Access") or with "ris access". Roles from the settings file
+/// (Ris:Security:Roles, written by the installer) are not stored here and cannot be removed in the UI.
+/// </summary>
+public sealed class RoleMemberEntity
+{
+    public int Id { get; set; }
+    public required string Role { get; set; }
+    /// <summary>Account as entered and resolved, e.g. CONTOSO\RIS-Operators, or a SID.</summary>
+    public required string Member { get; set; }
+    public required string Sid { get; set; }
+    public DateTime AddedUtc { get; set; }
+    public string? AddedBy { get; set; }
+}
+
 public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbContext(options)
 {
     public DbSet<ConnectionEntity> Connections => Set<ConnectionEntity>();
     public DbSet<SftpServerEntity> SftpServers => Set<SftpServerEntity>();
     public DbSet<JobDefinitionEntity> Jobs => Set<JobDefinitionEntity>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
+    public DbSet<RoleMemberEntity> RoleMembers => Set<RoleMemberEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +117,14 @@ public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbCon
         {
             e.ToTable("Audit");
             e.HasIndex(a => a.TimestampUtc);
+        });
+        modelBuilder.Entity<RoleMemberEntity>(e =>
+        {
+            e.ToTable("RoleMembers");
+            e.HasIndex(m => new { m.Role, m.Sid }).IsUnique();
+            e.Property(m => m.Role).UseCollation("NOCASE");
+            e.Property(m => m.Sid).UseCollation("NOCASE");
+            e.Property(m => m.Member).UseCollation("NOCASE");
         });
     }
 }

@@ -66,7 +66,17 @@ Potrzebne, gdy zadania czytają lub zapisują pliki na udziałach sieciowych.
 
 ## Role i uprawnienia {#roles}
 
-Role są w pliku `%ProgramData%\RIS5\appsettings.json` (zapisuje go instalator):
+| Rola | Może |
+|---|---|
+| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, dostęp, audyt, utrzymanie danych. |
+| **Operator** | Uruchamiać, wstrzymywać i wznawiać zadania (także zbiorczo) oraz wszystko, co Viewer. |
+| **Viewer** | Tylko podgląd: pulpit, zadania, harmonogram, historia, szczegóły uruchomień, eksporty. |
+
+**Po instalacji role nadaje się na stronie *Dostęp*** (rola Admin): wybierz rolę, wpisz grupę lub użytkownika (`DOMENA\RIS-Operatorzy`, `DOMENA\jan.kowalski` albo SID) i kliknij **Dodaj**. RIS sprawdza konto w Windows/AD, zmiana działa od następnego odświeżenia strony – bez restartu usługi – i trafia do audytu. Najwygodniej nadawać role **grupom AD**, a dostępem zarządzać przez członkostwo w grupach. Szczegóły: [Dostęp](06-daily-operations.md#access).
+
+> Dodanie użytkownika do grupy AD zadziała po jego **ponownym zalogowaniu do Windows** – lista grup jest odczytywana przy logowaniu.
+
+**Plik ustawień.** Role podane w instalatorze (`/ADMINS`, `/OPERATORS`) są w `%ProgramData%\RIS5\appsettings.json` i na stronie *Dostęp* są tylko do odczytu (ikona kłódki) – dzięki temu administratorzy nie mogą przypadkiem odciąć sobie dostępu. Zmiana w pliku wymaga restartu usługi:
 
 ```json
 {
@@ -74,17 +84,24 @@ Role są w pliku `%ProgramData%\RIS5\appsettings.json` (zapisuje go instalator):
     "Security": {
       "Roles": {
         "Admin": [ "S-1-5-32-544", "CONTOSO\\RIS-Admins" ],
-        "Operator": [ "CONTOSO\\RIS-Operators" ],
-        "Viewer": [ "CONTOSO\\Domain Users" ]
+        "Operator": [ "CONTOSO\\RIS-Operators" ]
       }
     }
   }
 }
 ```
 
-Można podawać grupy, użytkowników albo SID-y (`S-1-5-32-544` = lokalni Administratorzy w każdej wersji językowej Windows). Po zmianie uruchom usługę ponownie.
+Można podawać grupy, użytkowników albo SID-y (`S-1-5-32-544` = lokalni Administratorzy w każdej wersji językowej Windows).
 
-> **Uwaga (UAC):** w przeglądarce uruchomionej na samym serwerze grupa Administratorzy jest w tokenie „tylko do odmowy”. Dlatego instalator dopisuje do administratorów konto instalującego użytkownika. Jeśli widzisz stronę „Brak dostępu”, dopisz swoje konto po nazwie.
+**Linia poleceń** (na serwerze, jako administrator – do skryptów albo gdy nikt nie ma już roli Admin):
+
+```powershell
+ris access list
+ris access add Operator "CONTOSO\RIS-Operators"
+ris access remove Operator "CONTOSO\RIS-Operators"
+```
+
+> **Uwaga (UAC):** w przeglądarce uruchomionej na samym serwerze grupa Administratorzy jest w tokenie „tylko do odmowy”. Dlatego instalator dopisuje do administratorów konto instalującego użytkownika. Jeśli widzisz stronę „Brak dostępu”, dodaj swoje konto po nazwie.
 
 ## Aktualizacja
 

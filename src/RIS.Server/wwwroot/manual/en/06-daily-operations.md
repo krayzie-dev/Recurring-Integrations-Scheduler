@@ -57,6 +57,19 @@ The same chart for actual runs: colour = result (success, failure, cancelled, ru
 
 ![Run list filters: text "Sales" and result "Failed"](img/history-filter.png)
 
+## Access {#access}
+
+*Access* (Admin role) shows who has which role and lets you give or take a role without restarting the service.
+
+![Access: roles, members and your own access](img/access.png)
+
+- **Role cards** – what Admin, Operator and Viewer can do and how many members they have.
+- **Adding** – role, group or user (`DOMAIN\group`, `DOMAIN\user` or a SID), **Add**. The account is checked in Windows/AD; an unknown account, a duplicate or an entry that is already in the settings file are rejected with a message.
+- **Table** – role, group or user (icon: group/person, SID in the tooltip), source (*Settings file* – read-only, *Application*), who added it and when, *Actions* (remove, with confirmation).
+- **Your access** – your roles and what gives them (group, account, settings file or application).
+
+Every change is recorded in the audit (object *Access*). The same from the command line: `ris access list | add | remove`.
+
 ## Audit
 
 *Audit* (Admin role) records every configuration change: who, when, what. Expanding an entry shows the **changed fields** (before – struck through, after – highlighted); switches *All fields* and *JSON*. Secrets are never stored – a secret change shows as `*** (new value, hidden)`.

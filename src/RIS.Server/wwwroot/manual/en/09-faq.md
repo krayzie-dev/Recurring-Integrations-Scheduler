@@ -40,7 +40,7 @@ Job list → select all (or filter by D365 instance) → *Pause* with a reason �
 Enable HTTPS in the installer (`/RECONFIGURE=1 /HTTPSPORT=5443 /CERT=<thumbprint>`) and open `https://<server>:5443`. HTTP works only locally on the server.
 
 ### How do I add a new operator?
-Add the user or (better) an AD group in `%ProgramData%\RIS5\appsettings.json` under `Ris:Security:Roles:Operator` and restart the service. Managing roles through AD group membership is easiest.
+*Access* → role **Operator** → enter the user or (better) an AD group → **Add**. It applies at the next page load, without a restart. Managing access through AD group membership is easiest – see [Roles and permissions](02-installation.md#roles).
 
 ### Can I automate operations (scripts, CI)?
 Yes – the REST API `/api/v1` (Windows sign-in, same roles): job list, run, pause, history, configuration export. Description: `/openapi/v1.json` on the server.

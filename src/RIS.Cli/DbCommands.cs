@@ -211,7 +211,7 @@ internal static class DbCommands
         }
     }
 
-    private static string CurrentUser() => $@"{Environment.UserDomainName}\{Environment.UserName} (ris cli)";
+    public static string CurrentUser() => $@"{Environment.UserDomainName}\{Environment.UserName} (ris cli)";
 
     private static string? ReadSecret(string prompt)
     {

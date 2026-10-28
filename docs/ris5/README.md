@@ -92,6 +92,8 @@ ris db export -o jobs.json             [--data <dir>]   secrets replaced by <SET
 ris db set-secret connection CONTOSO-PROD              value read without echo (or from stdin)
 ris db set-secret sftp "Contoso SFTP"
 ris run --db --job <name> [--dry-run]                  job from ris.db, in-memory scheduler (quartz.db untouched)
+ris access list | add <Admin|Operator|Viewer> <DOMAIN\group|user|SID> | remove <role> <account>
+                                       roles given in the application (page Access); appsettings.json roles stay read-only
 ```
 
 `--decrypt-secrets` works only on the 4.x server where secrets were encrypted (DPAPI LocalMachine). `ris db` runs on the

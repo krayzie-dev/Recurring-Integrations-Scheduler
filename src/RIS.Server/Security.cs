@@ -6,9 +6,9 @@ namespace RIS.Server;
 
 public static class RisRoles
 {
-    public const string Viewer = "Viewer";
-    public const string Operator = "Operator";
-    public const string Admin = "Admin";
+    public const string Viewer = RIS.Hosting.AccessRoles.Viewer;
+    public const string Operator = RIS.Hosting.AccessRoles.Operator;
+    public const string Admin = RIS.Hosting.AccessRoles.Admin;
 
     /// <summary>Authorization policy names; a higher role includes the lower ones.</summary>
     public const string CanView = "CanView";
@@ -26,61 +26,28 @@ public sealed class SecurityOptions
 }
 
 /// <summary>
-/// Adds RIS role claims to Windows users based on their group membership (group SIDs in the Windows token) or user name.
+/// Adds RIS role claims to Windows users based on their group membership (group SIDs in the Windows token) or user name,
+/// using the members of the settings file and of the "Access" page (<see cref="RoleMap"/>).
+/// SIDs work on every Windows language (BUILTIN\Administrators is "BUILTIN\Administratorzy" on Polish Windows).
 /// </summary>
-public sealed class WindowsRoleClaimsTransformation : IClaimsTransformation
+public sealed class WindowsRoleClaimsTransformation(RoleMap roles) : IClaimsTransformation
 {
-    private readonly Dictionary<string, (HashSet<string> Sids, HashSet<string> Names)> _roles = new(StringComparer.OrdinalIgnoreCase);
-
-    public WindowsRoleClaimsTransformation(SecurityOptions options, ILogger<WindowsRoleClaimsTransformation> logger)
+    public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
-        foreach (var (role, members) in options.Roles)
+        if (principal.Identity is not { IsAuthenticated: true } || principal.HasClaim(c => c.Type == "ris.roles-mapped"))
         {
-            var sids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var names = new HashSet<string>(members, StringComparer.OrdinalIgnoreCase);
-            foreach (var member in members)
-            {
-                // SIDs work on every Windows language (BUILTIN\Administrators is "BUILTIN\Administratorzy" on Polish Windows).
-                if (member.StartsWith("S-1-", StringComparison.OrdinalIgnoreCase))
-                {
-                    sids.Add(member);
-                    continue;
-                }
-                if (!OperatingSystem.IsWindows()) continue;
-                try
-                {
-                    sids.Add(new NTAccount(member).Translate(typeof(SecurityIdentifier)).Value);
-                }
-                catch (IdentityNotMappedException)
-                {
-                    logger.LogWarning("Windows account or group {Member} configured for role {Role} was not found", member, role);
-                }
-            }
-            _roles[role] = (sids, names);
-        }
-    }
-
-    public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
-    {
-        if (principal.Identity is not { IsAuthenticated: true } identity || principal.HasClaim(c => c.Type == "ris.roles-mapped"))
-        {
-            return Task.FromResult(principal);
+            return principal;
         }
 
-        var groupSids = principal.FindAll(ClaimTypes.GroupSid).Select(c => c.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var userSid = principal.FindFirst(ClaimTypes.PrimarySid)?.Value;
         var mapped = new ClaimsIdentity();
         mapped.AddClaim(new Claim("ris.roles-mapped", "true"));
-        foreach (var (role, (sids, names)) in _roles)
+        foreach (var role in (await roles.MatchesAsync(principal)).Select(m => m.Role).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            if (sids.Overlaps(groupSids) || (userSid is not null && sids.Contains(userSid)) || names.Contains(identity.Name ?? string.Empty))
-            {
-                mapped.AddClaim(new Claim(ClaimTypes.Role, role));
-            }
+            mapped.AddClaim(new Claim(ClaimTypes.Role, role));
         }
 
         principal.AddIdentity(mapped);
-        return Task.FromResult(principal);
+        return principal;
     }
 }
 

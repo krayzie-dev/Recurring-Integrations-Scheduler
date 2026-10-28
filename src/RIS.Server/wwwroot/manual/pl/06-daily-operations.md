@@ -57,6 +57,19 @@ Ten sam wykres dla rzeczywistych uruchomień: kolor = wynik (sukces, błąd, prz
 
 ![Filtry listy uruchomień: tekst „Sales” i wynik „Błąd”](img/history-filter.png)
 
+## Dostęp {#access}
+
+*Dostęp* (rola Admin) pokazuje, kto ma którą rolę, i pozwala ją nadać lub odebrać bez restartu usługi.
+
+![Dostęp: role, członkowie i własne uprawnienia](img/access.png)
+
+- **Karty ról** – co może Admin, Operator i Viewer oraz liczba członków.
+- **Dodawanie** – rola, grupa lub użytkownik (`DOMENA\grupa`, `DOMENA\użytkownik` albo SID), **Dodaj**. Konto jest sprawdzane w Windows/AD; nieznane konto, duplikat albo wpis, który już jest w pliku ustawień, są odrzucane z komunikatem.
+- **Tabela** – rola, grupa lub użytkownik (ikona: grupa/osoba, SID w podpowiedzi), źródło (*Plik ustawień* – tylko do odczytu, *Aplikacja*), kto i kiedy dodał, *Akcje* (usuń, z potwierdzeniem).
+- **Twoje uprawnienia** – Twoje role i to, przez co je masz (grupa, konto, plik ustawień lub aplikacja).
+
+Każda zmiana trafia do audytu (obiekt *Access*). To samo z linii poleceń: `ris access list | add | remove`.
+
 ## Audyt
 
 *Audyt* (rola Admin) zapisuje każdą zmianę konfiguracji: kto, kiedy, co. Po rozwinięciu wpisu widać **zmienione pola** (przed – przekreślone, po – wyróżnione); przełączniki *Wszystkie pola* i *JSON*. Sekrety nigdy nie są zapisywane – zmiana sekretu jest widoczna jako `*** (nowa wartość, ukryta)`.

@@ -334,6 +334,33 @@ public sealed partial class ConverterTests
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
     }
 
+    [TestMethod]
+    public async Task Cli_Access_AddListRemove()
+    {
+        var data = Directory.CreateTempSubdirectory("ris-cli-access-").FullName;
+        Task<int> Run(params string[] args) => Cli.Program.BuildCommand().Parse([.. args, "--data", data]).InvokeAsync();
+
+        Assert.AreEqual(0, await Run("access", "add", "Viewer", "S-1-5-32-545"));
+        Assert.AreEqual(0, await Run("access", "add", "viewer", "S-1-5-32-545"), "Again: already has the role, nothing changes.");
+        Assert.AreEqual(1, await Run("access", "add", "Viewer", @"NO-SUCH-DOMAIN\nobody-ris5"));
+        Assert.AreEqual(0, await Run("access", "list"));
+
+        var persistence = new PersistenceOptions { DataDirectory = data };
+        await using (var services = new ServiceCollection().AddLogging().AddRisPersistence(persistence).BuildServiceProvider())
+        {
+            var members = await services.GetRequiredService<ConfigurationRepository>().GetRoleMembersAsync();
+            Assert.AreEqual(1, members.Count);
+            Assert.AreEqual("Viewer", members[0].Role);
+            Assert.AreEqual("S-1-5-32-545", members[0].Sid);
+        }
+
+        Assert.AreEqual(0, await Run("access", "remove", "Viewer", "S-1-5-32-545"));
+        Assert.AreEqual(2, await Run("access", "remove", "Viewer", "S-1-5-32-545"), "Nothing to remove.");
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(data, recursive: true); } catch (IOException) { }
+    }
+
     private static bool Contains(byte[] haystack, byte[] needle) =>
         haystack.AsSpan().IndexOf(needle) >= 0;
 }

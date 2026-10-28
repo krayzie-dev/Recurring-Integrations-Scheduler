@@ -643,4 +643,33 @@
   <data name="Gantt_ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
   <data name="Gantt_ZoomReset" xml:space="preserve"><value>Default scale (100%)</value></data>
   <data name="Gantt_ZoomFit" xml:space="preserve"><value>Fit to the page width</value></data>
+  <data name="Nav_Access" xml:space="preserve"><value>Access</value></data>
+  <data name="Access_Intro" xml:space="preserve"><value>Who can use RIS. Give roles to AD groups (recommended) or users. Changes apply at the next page load or API call, without restarting the service.</value></data>
+  <data name="Access_RoleHelp_Admin" xml:space="preserve"><value>Everything: jobs, D365 instances, SFTP servers, access, audit and data maintenance.</value></data>
+  <data name="Access_RoleHelp_Operator" xml:space="preserve"><value>Runs, pauses and resumes jobs (also in bulk); sees everything a Viewer sees.</value></data>
+  <data name="Access_RoleHelp_Viewer" xml:space="preserve"><value>Read only: dashboard, jobs, plan, history, run details and exports.</value></data>
+  <data name="Access_Role" xml:space="preserve"><value>Role</value></data>
+  <data name="Access_Member" xml:space="preserve"><value>Group or user</value></data>
+  <data name="Access_MemberPlaceholder" xml:space="preserve"><value>DOMAIN\group, DOMAIN\user or SID</value></data>
+  <data name="Access_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Access_Group" xml:space="preserve"><value>Group</value></data>
+  <data name="Access_User" xml:space="preserve"><value>User</value></data>
+  <data name="Access_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Access_Source_Settings" xml:space="preserve"><value>Settings file</value></data>
+  <data name="Access_Source_Application" xml:space="preserve"><value>Application</value></data>
+  <data name="Access_AddedBy" xml:space="preserve"><value>Added by</value></data>
+  <data name="Access_SettingsLocked" xml:space="preserve"><value>Given in %ProgramData%\RIS5\appsettings.json (installer) – change it in the file and restart the service. Cannot be removed here, so administrators cannot lock themselves out.</value></data>
+  <data name="Access_NotFound" xml:space="preserve"><value>Not found in Windows/AD</value></data>
+  <data name="Access_Added" xml:space="preserve"><value>{0} added to the role {1}.</value></data>
+  <data name="Access_Removed" xml:space="preserve"><value>{0} removed from the role {1}.</value></data>
+  <data name="Access_UnknownAccount" xml:space="preserve"><value>Windows/AD has no account or group "{0}".</value></data>
+  <data name="Access_AlreadyMember" xml:space="preserve"><value>{0} already has the role {1}.</value></data>
+  <data name="Access_FromSettings" xml:space="preserve"><value>{0} has the role {1} in the settings file.</value></data>
+  <data name="Access_RemoveTitle" xml:space="preserve"><value>Remove {0} from the role {1}?</value></data>
+  <data name="Access_RemoveText" xml:space="preserve"><value>Its members lose the role at their next page load.</value></data>
+  <data name="Access_Yours" xml:space="preserve"><value>Your access</value></data>
+  <data name="Access_Via" xml:space="preserve"><value>through</value></data>
+  <data name="Access_NoRole" xml:space="preserve"><value>No role.</value></data>
+  <data name="Access_None" xml:space="preserve"><value>No role members.</value></data>
+  <data name="Access_Kerberos" xml:space="preserve"><value>Adding a user to an AD group takes effect after they sign in to Windows again (the list of groups is read at sign-in).</value></data>
 </root>

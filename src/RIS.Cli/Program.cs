@@ -36,6 +36,7 @@ public static class Program
         root.Subcommands.Add(ListCommand());
         root.Subcommands.Add(RunCommand());
         root.Subcommands.Add(DbCommands.Build());
+        root.Subcommands.Add(AccessCommands.Build());
         return root;
     }
 

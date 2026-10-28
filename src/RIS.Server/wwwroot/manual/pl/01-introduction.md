@@ -38,9 +38,9 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 |---|---|
 | **Viewer** | Oglądać pulpit, zadania, harmonogram, historię i szczegóły uruchomień, eksportować listy. |
 | **Operator** | To co Viewer oraz uruchamiać, wstrzymywać i wznawiać zadania (także zbiorczo). |
-| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, edycja zbiorcza, audyt, utrzymanie danych. |
+| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, dostęp (role), edycja zbiorcza, audyt, utrzymanie danych. |
 
-Role przypisuje się w ustawieniach (instalator pyta o administratorów i operatorów) – patrz [Instalacja](02-installation.md#roles).
+Role nadaje Admin na stronie *Dostęp* (oraz instalator – administratorów i operatorów) – patrz [Instalacja](02-installation.md#roles).
 
 ## Co nowego względem RIS 4.x
 

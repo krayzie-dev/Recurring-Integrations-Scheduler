@@ -717,4 +717,33 @@
   <data name="Gantt_ZoomOut" xml:space="preserve"><value>Pomniejsz skalę</value></data>
   <data name="Gantt_ZoomReset" xml:space="preserve"><value>Domyślna skala (100%)</value></data>
   <data name="Gantt_ZoomFit" xml:space="preserve"><value>Dopasuj do szerokości strony</value></data>
+  <data name="Nav_Access" xml:space="preserve"><value>Dostęp</value></data>
+  <data name="Access_Intro" xml:space="preserve"><value>Kto może korzystać z RIS. Role nadawaj grupom AD (zalecane) lub użytkownikom. Zmiany działają od następnego odświeżenia strony lub wywołania API, bez restartu usługi.</value></data>
+  <data name="Access_RoleHelp_Admin" xml:space="preserve"><value>Wszystko: zadania, instancje D365, serwery SFTP, dostęp, audyt i utrzymanie danych.</value></data>
+  <data name="Access_RoleHelp_Operator" xml:space="preserve"><value>Uruchamia, wstrzymuje i wznawia zadania (także zbiorczo); widzi to co Viewer.</value></data>
+  <data name="Access_RoleHelp_Viewer" xml:space="preserve"><value>Tylko podgląd: pulpit, zadania, harmonogram, historia, szczegóły uruchomień i eksporty.</value></data>
+  <data name="Access_Role" xml:space="preserve"><value>Rola</value></data>
+  <data name="Access_Member" xml:space="preserve"><value>Grupa lub użytkownik</value></data>
+  <data name="Access_MemberPlaceholder" xml:space="preserve"><value>DOMENA\grupa, DOMENA\użytkownik lub SID</value></data>
+  <data name="Access_Add" xml:space="preserve"><value>Dodaj</value></data>
+  <data name="Access_Group" xml:space="preserve"><value>Grupa</value></data>
+  <data name="Access_User" xml:space="preserve"><value>Użytkownik</value></data>
+  <data name="Access_Source" xml:space="preserve"><value>Źródło</value></data>
+  <data name="Access_Source_Settings" xml:space="preserve"><value>Plik ustawień</value></data>
+  <data name="Access_Source_Application" xml:space="preserve"><value>Aplikacja</value></data>
+  <data name="Access_AddedBy" xml:space="preserve"><value>Dodał(a)</value></data>
+  <data name="Access_SettingsLocked" xml:space="preserve"><value>Nadane w %ProgramData%\RIS5\appsettings.json (instalator) – zmień w pliku i uruchom usługę ponownie. Nie da się tego usunąć tutaj, więc administratorzy nie odetną sobie dostępu.</value></data>
+  <data name="Access_NotFound" xml:space="preserve"><value>Nie znaleziono w Windows/AD</value></data>
+  <data name="Access_Added" xml:space="preserve"><value>Dodano {0} do roli {1}.</value></data>
+  <data name="Access_Removed" xml:space="preserve"><value>Usunięto {0} z roli {1}.</value></data>
+  <data name="Access_UnknownAccount" xml:space="preserve"><value>W Windows/AD nie ma konta ani grupy „{0}”.</value></data>
+  <data name="Access_AlreadyMember" xml:space="preserve"><value>{0} ma już rolę {1}.</value></data>
+  <data name="Access_FromSettings" xml:space="preserve"><value>{0} ma rolę {1} w pliku ustawień.</value></data>
+  <data name="Access_RemoveTitle" xml:space="preserve"><value>Usunąć {0} z roli {1}?</value></data>
+  <data name="Access_RemoveText" xml:space="preserve"><value>Jego członkowie stracą tę rolę przy następnym odświeżeniu strony.</value></data>
+  <data name="Access_Yours" xml:space="preserve"><value>Twoje uprawnienia</value></data>
+  <data name="Access_Via" xml:space="preserve"><value>przez</value></data>
+  <data name="Access_NoRole" xml:space="preserve"><value>Brak roli.</value></data>
+  <data name="Access_None" xml:space="preserve"><value>Brak członków ról.</value></data>
+  <data name="Access_Kerberos" xml:space="preserve"><value>Dodanie użytkownika do grupy AD zadziała po jego ponownym zalogowaniu do Windows (lista grup jest odczytywana przy logowaniu).</value></data>
 </root>
