@@ -76,6 +76,15 @@ Needed when jobs read or write files on network shares.
 
 > Adding a user to an AD group takes effect after they **sign in to Windows again** – the list of groups is read at sign-in.
 
+**Local groups of the server** – when you cannot create AD groups or want to give access on this server only, create a local group and add domain accounts to it (PowerShell as administrator):
+
+```powershell
+New-LocalGroup -Name RIS-Operators -Description "RIS 5 operators"
+Add-LocalGroupMember -Group RIS-Operators -Member CONTOSO\john.smith, CONTOSO\Accounting
+```
+
+On the *Access* page start typing in the *Group or user* field – it suggests the local groups of the server. You can enter `SERVER\RIS-Operators`, `.\RIS-Operators` or just the name. A change of membership in a local group takes effect after reopening the browser (no need to sign out of Windows). With several RIS servers AD groups are more convenient – one group for all servers.
+
 **Settings file.** Roles given in the installer (`/ADMINS`, `/OPERATORS`) are in `%ProgramData%\RIS5\appsettings.json` and are read-only on the *Access* page (lock icon) – so administrators cannot lock themselves out by accident. A change in the file needs a service restart:
 
 ```json

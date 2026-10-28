@@ -745,5 +745,5 @@
   <data name="Access_Via" xml:space="preserve"><value>przez</value></data>
   <data name="Access_NoRole" xml:space="preserve"><value>Brak roli.</value></data>
   <data name="Access_None" xml:space="preserve"><value>Brak członków ról.</value></data>
-  <data name="Access_Kerberos" xml:space="preserve"><value>Dodanie użytkownika do grupy AD zadziała po jego ponownym zalogowaniu do Windows (lista grup jest odczytywana przy logowaniu).</value></data>
+  <data name="Access_Kerberos" xml:space="preserve"><value>Grupy lokalne serwera: SERWER\Grupa albo sama nazwa (podpowiedzi w polu). Zmiana członkostwa działa po ponownym otwarciu przeglądarki dla grupy lokalnej, po ponownym zalogowaniu do Windows dla grupy AD.</value></data>
 </root>

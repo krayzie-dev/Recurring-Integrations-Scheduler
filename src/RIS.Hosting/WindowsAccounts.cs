@@ -36,8 +36,66 @@ public static class WindowsAccounts
             if (!OperatingSystem.IsWindows()) return new WindowsAccount(sid.Value, sid.Value, true);
             return LookupSid(sid) ?? new WindowsAccount(sid.Value, sid.Value, true);
         }
-        return OperatingSystem.IsWindows() ? LookupName(account) : null;
+        if (!OperatingSystem.IsWindows()) return null;
+        // Local groups of this server: Windows accepts built-in groups as ".\Name" but not "SERVER\Name", and other local
+        // groups the other way round - every form works when the lookup is repeated with the bare name.
+        return LookupName(account) ?? (LocalName(account) is { } name ? LookupName(name) : null);
     }
+
+    /// <summary>The name after ".\" or "&lt;this computer&gt;\", otherwise null.</summary>
+    private static string? LocalName(string account)
+    {
+        var slash = account.IndexOf('\\');
+        if (slash <= 0 || slash == account.Length - 1) return null;
+        var prefix = account[..slash];
+        return prefix == "." || string.Equals(prefix, Environment.MachineName, StringComparison.OrdinalIgnoreCase) ? account[(slash + 1)..] : null;
+    }
+
+    /// <summary>Local groups of this computer (name as Windows writes it, comment), for suggestions on the "Access" page.</summary>
+    public static IReadOnlyList<(string Name, string? Comment)> LocalGroups()
+    {
+        if (!OperatingSystem.IsWindows()) return [];
+        var result = new List<(string Name, string? Comment)>();
+        nint resume = 0;
+        int status;
+        do
+        {
+            status = NetLocalGroupEnum(null, 1, out var buffer, -1, out var read, out _, ref resume);
+            if (status != 0 && status != ErrorMoreData) break;
+            try
+            {
+                var size = Marshal.SizeOf<LocalGroupInfo1>();
+                for (var i = 0; i < read; i++)
+                {
+                    var info = Marshal.PtrToStructure<LocalGroupInfo1>(buffer + i * size);
+                    if (info.Name is null) continue;
+                    // Canonical name from the SID: BUILTIN\Administrators, SERVER\RIS-Operators.
+                    result.Add((LookupName(info.Name)?.Name ?? info.Name, string.IsNullOrWhiteSpace(info.Comment) ? null : info.Comment));
+                }
+            }
+            finally
+            {
+                if (buffer != 0) NetApiBufferFree(buffer);
+            }
+        } while (status == ErrorMoreData);
+        return result.OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    private const int ErrorMoreData = 234;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct LocalGroupInfo1
+    {
+        public string? Name;
+        public string? Comment;
+    }
+
+    [DllImport("netapi32.dll", CharSet = CharSet.Unicode)]
+    private static extern int NetLocalGroupEnum(string? serverName, int level, out nint buffer, int preferredMaxLength, out int entriesRead,
+        out int totalEntries, ref nint resumeHandle);
+
+    [DllImport("netapi32.dll")]
+    private static extern int NetApiBufferFree(nint buffer);
 
     private static WindowsAccount? LookupName(string account)
     {

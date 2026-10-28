@@ -671,5 +671,5 @@
   <data name="Access_Via" xml:space="preserve"><value>through</value></data>
   <data name="Access_NoRole" xml:space="preserve"><value>No role.</value></data>
   <data name="Access_None" xml:space="preserve"><value>No role members.</value></data>
-  <data name="Access_Kerberos" xml:space="preserve"><value>Adding a user to an AD group takes effect after they sign in to Windows again (the list of groups is read at sign-in).</value></data>
+  <data name="Access_Kerberos" xml:space="preserve"><value>Local groups of this server: SERVER\Group or just the name (suggested in the field). A change of membership takes effect after reopening the browser for a local group, after signing in to Windows again for an AD group.</value></data>
 </root>

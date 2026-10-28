@@ -76,6 +76,15 @@ Potrzebne, gdy zadania czytają lub zapisują pliki na udziałach sieciowych.
 
 > Dodanie użytkownika do grupy AD zadziała po jego **ponownym zalogowaniu do Windows** – lista grup jest odczytywana przy logowaniu.
 
+**Grupy lokalne serwera** – gdy nie możesz tworzyć grup w AD albo chcesz nadać dostęp tylko na tym serwerze, utwórz grupę lokalną i dodaj do niej konta domenowe (PowerShell jako administrator):
+
+```powershell
+New-LocalGroup -Name RIS-Operatorzy -Description "Operatorzy RIS 5"
+Add-LocalGroupMember -Group RIS-Operatorzy -Member CONTOSO\jan.kowalski, CONTOSO\Księgowość
+```
+
+Na stronie *Dostęp* zacznij pisać w polu *Grupa lub użytkownik* – pole podpowiada grupy lokalne serwera. Można wpisać `SERWER\RIS-Operatorzy`, `.\RIS-Operatorzy` albo samą nazwę. Zmiana członkostwa w grupie lokalnej działa po ponownym otwarciu przeglądarki (bez wylogowania z Windows). Przy wielu serwerach RIS wygodniejsze są grupy AD – jedna grupa dla wszystkich serwerów.
+
 **Plik ustawień.** Role podane w instalatorze (`/ADMINS`, `/OPERATORS`) są w `%ProgramData%\RIS5\appsettings.json` i na stronie *Dostęp* są tylko do odczytu (ikona kłódki) – dzięki temu administratorzy nie mogą przypadkiem odciąć sobie dostępu. Zmiana w pliku wymaga restartu usługi:
 
 ```json

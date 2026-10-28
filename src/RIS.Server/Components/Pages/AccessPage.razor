@@ -3,6 +3,7 @@
 @inherits RisPageBase
 @inject AccessService Access
 @inject RoleMap Roles
+@using RIS.Hosting
 
 <PageTitle>RIS 5 – @T["Nav_Access"]</PageTitle>
 <MudText Typo="Typo.h5" Class="mb-1">@T["Nav_Access"]</MudText>
@@ -33,8 +34,20 @@
             <MudSelectItem Value="role">@role</MudSelectItem>
         }
     </MudSelect>
-    <MudTextField T="string" @bind-Value="_member" Label="@T["Access_Member"]" Placeholder="@T["Access_MemberPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                  Immediate="true" OnKeyUp="@(e => e.Key == "Enter" ? AddAsync() : Task.CompletedTask)" Class="ris-filter-field ris-filter-search" Style="min-width: 320px" />
+    @* Any AD group, user or SID can be typed; local groups of this server are suggested. *@
+    <MudAutocomplete T="string" @bind-Value="_member" Label="@T["Access_Member"]" Placeholder="@T["Access_MemberPlaceholder"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                     SearchFunc="SuggestAsync" CoerceText="false" CoerceValue="true" Strict="false" OpenOnFocus="true" MaxItems="50" DebounceInterval="150"
+                     Clearable="true" Class="ris-filter-field ris-filter-search" Style="min-width: 320px">
+        <ItemTemplate Context="name">
+            <div class="ris-two-lines">
+                <span><MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Class="mr-1" Style="vertical-align: middle" />@name</span>
+                @if (_localGroups.FirstOrDefault(g => g.Name == name).Comment is { } comment)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary ris-ellipsis" Style="max-width: 380px" title="@comment">@comment</MudText>
+                }
+            </div>
+        </ItemTemplate>
+    </MudAutocomplete>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="AddAsync" Disabled="_busy || string.IsNullOrWhiteSpace(_member)">@T["Access_Add"]</MudButton>
     <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="flex: 1 1 260px">@T["Access_Kerberos"]</MudText>
 </MudPaper>
@@ -131,6 +144,17 @@
     private string _role = RisRoles.Operator;
     private string? _member;
     private bool _busy;
+    private IReadOnlyList<(string Name, string? Comment)> _localGroups = [];
+
+    protected override void OnInitialized()
+    {
+        try { _localGroups = WindowsAccounts.LocalGroups(); }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { _localGroups = []; }
+    }
+
+    /// <summary>Local groups of this server that contain the typed text (all of them for an empty field).</summary>
+    private Task<IEnumerable<string>> SuggestAsync(string? text, CancellationToken cancellationToken) =>
+        Task.FromResult(_localGroups.Select(g => g.Name).Where(n => string.IsNullOrWhiteSpace(text) || n.Contains(text.Trim(), StringComparison.CurrentCultureIgnoreCase)));
 
     protected override async Task LoadAsync()
     {
