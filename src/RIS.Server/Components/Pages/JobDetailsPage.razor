@@ -23,7 +23,7 @@ else
     <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 pt-0" />
     <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-2">
         <MudText Typo="Typo.h5">@job.Name</MudText>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@T["JobType_" + job.Type]</MudChip>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="@($"ris-type-chip {Shared.Gantt.TypeCss(Enum.Parse<JobType>(job.Type))}")">@T["JobType_" + job.Type]</MudChip>
         <StateChip Job="job" />
         <MudSpacer />
         @if (CanOperate)

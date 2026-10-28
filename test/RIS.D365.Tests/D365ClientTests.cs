@@ -116,19 +116,6 @@ public sealed class D365ClientTests : IDisposable
     }
 
     [TestMethod]
-    public async Task Download_DoesNotSendAuthorizationHeader()
-    {
-        _server.Given(Request.Create().WithPath("/blob/package.zip").UsingGet())
-            .RespondWith(Response.Create().WithBody("zip-bytes"));
-
-        await using var stream = await _client.OpenDownloadAsync(new Uri(_server.Url + "/blob/package.zip?sig=secret"), CancellationToken.None);
-        using var reader = new StreamReader(stream);
-
-        Assert.AreEqual("zip-bytes", await reader.ReadToEndAsync());
-        Assert.IsFalse(_server.LogEntries.Single().RequestMessage!.Headers!.ContainsKey("Authorization"));
-    }
-
-    [TestMethod]
     public async Task AzureWriteUrl_ParsesBlobInfo()
     {
         _server.Given(Request.Create().WithPath(ActionPrefix + "GetAzureWriteUrl").UsingPost())
@@ -196,6 +183,31 @@ public sealed class D365ClientTests : IDisposable
         StringAssert.Contains(masked, "client_secret=***");
         Assert.IsFalse(masked.Contains("abc", StringComparison.Ordinal));
         Assert.IsFalse(masked.Contains("xyz", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Download_FromAos_SendsToken_FromBlobStorage_DoesNot()
+    {
+        // Real case (org0516c10d, 28.10.2026): dequeue returned https://<aos>/api/connector/download/...; without the token 401.
+        _server.Given(Request.Create().WithPath("/api/connector/download/activity").UsingGet())
+            .RespondWith(Response.Create().WithBody("package"));
+        _server.Given(Request.Create().WithPath("/blob/export.zip").UsingGet())
+            .RespondWith(Response.Create().WithBody("blob"));
+        var aos = new Uri(_server.Url!);
+
+        await using (var stream = await _client.OpenDownloadAsync(new Uri(aos, "/api/connector/download/activity?correlation-id=1"), CancellationToken.None))
+        {
+            Assert.AreEqual("package", await new StreamReader(stream).ReadToEndAsync());
+        }
+        var blobUrl = new UriBuilder(aos) { Host = aos.Host == "localhost" ? "127.0.0.1" : "localhost", Path = "/blob/export.zip", Query = "sig=secret" }.Uri;
+        await using (var stream = await _client.OpenDownloadAsync(blobUrl, CancellationToken.None))
+        {
+            Assert.AreEqual("blob", await new StreamReader(stream).ReadToEndAsync());
+        }
+
+        var requests = _server.LogEntries.Select(e => e.RequestMessage!).ToList();
+        Assert.IsTrue(requests.Single(r => r.Path == "/api/connector/download/activity").Headers!.ContainsKey("Authorization"));
+        Assert.IsFalse(requests.Single(r => r.Path == "/blob/export.zip").Headers!.ContainsKey("Authorization"), "SAS URLs must not get the token.");
     }
 
     [TestMethod]

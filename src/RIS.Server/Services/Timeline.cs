@@ -20,7 +20,8 @@ public enum TimelineItemKind
 public sealed record TimelineItem(DateTimeOffset StartUtc, DateTimeOffset EndUtc, TimelineItemKind Kind, string? Status = null,
     string? RunId = null, string? Label = null, int Count = 1);
 
-public sealed record TimelineRow(string Key, string Label, string GroupLabel, string? Link, IReadOnlyList<TimelineItem> Items);
+/// <summary>Row of a Gantt chart; <paramref name="Type"/> colours the outline of its bars (null for jobs no longer configured).</summary>
+public sealed record TimelineRow(string Key, string Label, string GroupLabel, string? Link, IReadOnlyList<TimelineItem> Items, RIS.Core.Configuration.JobType? Type = null);
 
 public sealed record Timeline(DateTimeOffset FromUtc, DateTimeOffset ToUtc, IReadOnlyList<TimelineRow> Rows, bool Truncated = false);
 
@@ -55,7 +56,7 @@ public sealed class SchedulePlanService(IRisConfigurationStore store, IScheduler
             var fires = FireTimes(trigger, fromUtc, toUtc);
             durations.TryGetValue(job.Key, out var duration);
             rows.Add(new TimelineRow(job.Key, job.Name, GroupLabel(job, grouping), JobLink(job.Group, job.Name),
-                BuildItems(fires, duration, bandThreshold, paused)));
+                BuildItems(fires, duration, bandThreshold, paused), job.Type));
         }
         return new Timeline(fromUtc, toUtc, Sort(rows));
     }
@@ -150,7 +151,7 @@ public sealed class HistoryTimelineService(IRisConfigurationStore store, JobQuer
             var reference = JobRef.Parse(key);
             var groupLabel = configured.TryGetValue(key, out var job) ? SchedulePlanService.GroupLabel(job, grouping) : reference.Group;
             return new TimelineRow(key, reference.Name, groupLabel, configured.ContainsKey(key) ? SchedulePlanService.JobLink(reference.Group, reference.Name) : null,
-                items.TryGetValue(key, out var list) ? list.OrderBy(i => i.StartUtc).ToList() : []);
+                items.TryGetValue(key, out var list) ? list.OrderBy(i => i.StartUtc).ToList() : [], job?.Type);
         });
         return new Timeline(fromUtc, toUtc, SchedulePlanService.Sort(rows), Truncated: runs.Count >= MaxRuns);
     }
@@ -166,7 +167,8 @@ public sealed class GanttLayout
     public const double RowHeight = 22;
     public const double HeaderHeight = 40;
     public const double GroupHeight = 22;
-    public const double MinBarWidth = 4;
+    // Wide enough to show the status fill inside the 2 px outline of the job type.
+    public const double MinBarWidth = 6;
 
     public GanttLayout(DateTimeOffset fromUtc, DateTimeOffset toUtc, double timeWidth, TimeZoneInfo zone)
     {

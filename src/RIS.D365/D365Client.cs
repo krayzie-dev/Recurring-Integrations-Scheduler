@@ -65,7 +65,7 @@ public interface IPackageApiClient
     /// <summary>Entities of a data project in execution order (empty when the project does not exist).</summary>
     Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string definitionGroupId, CancellationToken cancellationToken);
 
-    /// <summary>Downloads content from a URL returned by D365 (SAS URL, no Authorization header).</summary>
+    /// <summary>Downloads content from a URL returned by D365: SAS URL of blob storage, or a location on the AOS (with the token).</summary>
     Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken);
 }
 
@@ -201,8 +201,11 @@ internal sealed class D365Client(HttpClient http, D365ConnectionOptions connecti
 
     public async Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken)
     {
+        // Package API returns SAS URLs of blob storage (no token); Recurring Integrations return a download location on the
+        // AOS itself (api/connector/download/...), which needs the token like any D365 request (4.x did the same).
+        var authorize = string.Equals(url.Host, connection.AosUri?.Host, StringComparison.OrdinalIgnoreCase);
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var response = await SendAsync("Download", request, authorize: false, noRetry: false, cancellationToken, HttpCompletionOption.ResponseHeadersRead);
+        var response = await SendAsync("Download", request, authorize, noRetry: false, cancellationToken, HttpCompletionOption.ResponseHeadersRead);
         return new ResponseStream(await response.Content.ReadAsStreamAsync(cancellationToken), response, request);
     }
 

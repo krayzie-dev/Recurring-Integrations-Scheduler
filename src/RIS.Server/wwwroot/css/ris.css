@@ -61,3 +61,32 @@
 .ris-diff-changed .ris-diff-before, .ris-diff-removed .ris-diff-before { background: rgba(244, 67, 54, .14); text-decoration: line-through; text-decoration-color: rgba(244, 67, 54, .7); }
 .ris-diff-changed .ris-diff-after, .ris-diff-added .ris-diff-after { background: rgba(76, 175, 80, .18); }
 .ris-diff-same td { opacity: .6; }
+
+/* Job type colours: outline of Gantt bars and a mark next to the job, while the fill keeps showing the status. */
+:root {
+    --ris-type-export: #ab47bc; --ris-type-import: #ff9800; --ris-type-upload: #fdd835;
+    --ris-type-download: #ec407a; --ris-type-executionmonitor: #8d6e63; --ris-type-processingmonitor: #5c6bc0;
+}
+.gantt .bar.t-export, .gantt .t-export { --ris-type: var(--ris-type-export); }
+.gantt .bar.t-import, .gantt .t-import { --ris-type: var(--ris-type-import); }
+.gantt .bar.t-upload, .gantt .t-upload { --ris-type: var(--ris-type-upload); }
+.gantt .bar.t-download, .gantt .t-download { --ris-type: var(--ris-type-download); }
+.gantt .bar.t-executionmonitor, .gantt .t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
+.gantt .bar.t-processingmonitor, .gantt .t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }
+.gantt .bar[class*=" t-"] { stroke: var(--ris-type); stroke-width: 2; }
+.gantt .bar.legend-type { fill: transparent; }
+.gantt .type-mark { fill: var(--ris-type); }
+.ris-type { border-left: 4px solid var(--ris-type, transparent); padding-left: 6px; }
+.ris-type.t-export { --ris-type: var(--ris-type-export); }
+.ris-type.t-import { --ris-type: var(--ris-type-import); }
+.ris-type.t-upload { --ris-type: var(--ris-type-upload); }
+.ris-type.t-download { --ris-type: var(--ris-type-download); }
+.ris-type.t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
+.ris-type.t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }
+.ris-type-chip { border-color: var(--ris-type) !important; border-width: 2px !important; }
+.ris-type-chip.t-export { --ris-type: var(--ris-type-export); }
+.ris-type-chip.t-import { --ris-type: var(--ris-type-import); }
+.ris-type-chip.t-upload { --ris-type: var(--ris-type-upload); }
+.ris-type-chip.t-download { --ris-type: var(--ris-type-download); }
+.ris-type-chip.t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
+.ris-type-chip.t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }

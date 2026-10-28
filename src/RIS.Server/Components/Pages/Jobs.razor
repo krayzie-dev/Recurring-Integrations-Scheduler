@@ -107,7 +107,7 @@
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Type" Title="@T["Job_Type"]">
-            <CellTemplate>@T["JobType_" + context.Item.Type]</CellTemplate>
+            <CellTemplate><span class="@($"ris-type {Shared.Gantt.TypeCss(Enum.Parse<JobType>(context.Item.Type))}")">@T["JobType_" + context.Item.Type]</span></CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Connection" Title="@T["Job_Connection"]" />
         <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]">

@@ -16,6 +16,17 @@
         <g><text x="@(position + 28)" y="14">@T[key]</text></g>
     }
 </svg>
+@* Job types: outline of the bars (the fill shows the status). *@
+<svg class="gantt" height="22" width="100%">
+    @{ var tx = 0; }
+    @foreach (var type in Enum.GetValues<JobType>())
+    {
+        var position = tx;
+        tx += 150;
+        <rect class="@($"bar legend-type {Gantt.TypeCss(type)}")" x="@(position + 1)" y="5" width="22" height="10" rx="2" />
+        <g><text x="@(position + 28)" y="14">@T["JobType_" + type]</text></g>
+    }
+</svg>
 
 @code {
     [Parameter] public bool History { get; set; }

@@ -54,6 +54,10 @@ else
                 {
                     <rect class="row-alt" x="0" y="@F(rowY)" width="@F(width)" height="@F(GanttLayout.RowHeight)" />
                 }
+                @if (data.Type is { } type)
+                {
+                    <rect class="@($"type-mark {TypeCss(type)}")" x="4" y="@F(rowY + 6)" width="6" height="10" rx="2"><title>@T["JobType_" + type]</title></rect>
+                }
                 @if (data.Link is not null)
                 {
                     <a href="@data.Link"><text x="16" y="@F(rowY + 15)">@Short(data.Label)<title>@data.Key</title></text></a>
@@ -78,7 +82,7 @@ else
                     if (geo.Bar(item.StartUtc, item.EndUtc) is not { } bar) continue;
                     var band = item.Kind is TimelineItemKind.Band or TimelineItemKind.BandPaused;
                     var inset = band ? 6 : 4;
-                    <rect class="bar @Css(item)" x="@F(bar.X)" y="@F(rowY + inset)" width="@F(bar.Width)" height="@F(GanttLayout.RowHeight - 2 * inset)"
+                    <rect class="@($"bar {Css(item)} {TypeCss(data.Type)}")" x="@F(bar.X)" y="@F(rowY + inset)" width="@F(bar.Width)" height="@F(GanttLayout.RowHeight - 2 * inset)"
                           rx="2" @onclick="() => OnItemClick.InvokeAsync(item)">
                         <title>@Tooltip(data, item, geo)</title>
                     </rect>
@@ -122,6 +126,9 @@ else
         }
         return result;
     }
+
+    /// <summary>CSS class of the job type colour (outline of bars, mark before the name).</summary>
+    public static string TypeCss(JobType? type) => type is null ? "" : "t-" + type.Value.ToString().ToLowerInvariant();
 
     private static string Css(TimelineItem item) => item.Kind switch
     {
