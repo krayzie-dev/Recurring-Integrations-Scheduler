@@ -53,13 +53,10 @@ else
     protected override async Task LoadAsync()
     {
         IReadOnlyCollection<Quartz.JobRunResult>? results = _failedOnly ? [Quartz.JobRunResult.Failed] : null;
-        _timeline = await Timelines.HistoryAsync(_window.FromUtc, _window.UntilUtc, _grouping, Matches, results);
-        _runs = (await Queries.HistoryAsync(new HistoryFilter(FromUtc: _window.FromUtc, ToUtc: _window.UntilUtc, Results: results,
-                Take: HistoryTimelineService.MaxRuns)))
-            .Where(r => Matches(r.Job)).ToList();
+        var view = await Timelines.HistoryAsync(_window.FromUtc, _window.UntilUtc, _grouping, _search, results, Disposed);
+        _timeline = view.Timeline;
+        _runs = view.Runs;
     }
-
-    private bool Matches(string job) => string.IsNullOrWhiteSpace(_search) || job.Contains(_search, StringComparison.OrdinalIgnoreCase);
 
     private async Task SetWindowAsync(TimelineWindow window) { _window = window; await LoadAsync(); }
     private async Task SetGroupingAsync(TimelineGrouping grouping) { _grouping = grouping; await LoadAsync(); }

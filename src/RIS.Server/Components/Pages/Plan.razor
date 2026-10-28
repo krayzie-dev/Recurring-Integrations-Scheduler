@@ -19,6 +19,10 @@
 else
 {
     <MudText Typo="Typo.caption" Class="mud-text-secondary ris-no-print">@T["Plan_Hint"]</MudText>
+    @if (_timeline.Truncated)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@T["Plan_Truncated", SchedulePlanService.MaxFiresPerJob]</MudAlert>
+    }
     <Gantt Id="plan-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidth" HourStep="_window.HourStep"
            DayFormat="@_window.DayFormat" OnItemClick="OpenJob" />
 }

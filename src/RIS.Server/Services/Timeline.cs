@@ -25,6 +25,9 @@ public sealed record TimelineRow(string Key, string Label, string GroupLabel, st
 
 public sealed record Timeline(DateTimeOffset FromUtc, DateTimeOffset ToUtc, IReadOnlyList<TimelineRow> Rows, bool Truncated = false);
 
+/// <summary>History of a window: the chart and the runs started in the window (for the table), from one query.</summary>
+public sealed record HistoryView(Timeline Timeline, IReadOnlyList<RunDetails> Runs);
+
 public enum TimelineGrouping
 {
     Group,
@@ -39,26 +42,53 @@ public enum TimelineGrouping
 /// </summary>
 public sealed class SchedulePlanService(IRisConfigurationStore store, ISchedulerFactory schedulers, JobQueryService queries)
 {
-    private const int MaxFiresPerJob = 5000;
+    /// <summary>A job running every minute has 10 080 runs in a week; more is cut and reported (Timeline.Truncated).</summary>
+    public const int MaxFiresPerJob = 20_000;
+
+    private static readonly TimeSpan DurationsCacheTime = TimeSpan.FromMinutes(10);
+    private static readonly SemaphoreSlim DurationsLock = new(1, 1);
+    private static (DateTimeOffset LoadedAt, IReadOnlyDictionary<string, TimeSpan> Values)? _durations;
 
     public async Task<Timeline> PlanAsync(DateTimeOffset fromUtc, DateTimeOffset toUtc, TimeSpan bandThreshold, TimelineGrouping grouping,
         Func<JobDefinition, bool>? filter = null, CancellationToken ct = default)
     {
+        // One query for all trigger states; fire times come from the trigger built from the definition (same schedule,
+        // computed in memory) instead of reading every trigger from the database.
         var scheduler = await schedulers.GetScheduler(ct);
-        var durations = await queries.MedianDurationsAsync(ct: ct);
+        var paused = (await scheduler.QueryTriggers(new TriggerQuery { State = TriggerState.Paused, Take = PagedQuery.All }, ct)).Items
+            .Where(t => t.Key.Name == t.JobKey.Name + " trigger").Select(t => t.JobKey).ToHashSet();
+        var durations = await DurationsAsync(ct);
+        var now = DateTimeOffset.UtcNow;
+        var truncated = false;
         var rows = new List<TimelineRow>();
         foreach (var job in store.Current.Jobs.Where(j => filter?.Invoke(j) ?? true))
         {
-            var trigger = await queries.RegularTriggerAsync(scheduler, job, ct);
-            var paused = trigger is not null && await scheduler.GetTriggerState(trigger.Key, ct) == TriggerState.Paused
-                         || job.Schedule.Paused || job.Options?.IndefinitePause == true;
-            trigger ??= (ITrigger)RisJobScheduling.BuildTrigger(job, DateTimeOffset.UtcNow);
-            var fires = FireTimes(trigger, fromUtc, toUtc);
+            var isPaused = paused.Contains(new JobKey(job.Name, job.Group)) || job.Schedule.Paused || job.Options?.IndefinitePause == true;
+            var fires = FireTimes(RisJobScheduling.BuildTrigger(job, now), fromUtc, toUtc);
+            truncated |= fires.Count >= MaxFiresPerJob;
             durations.TryGetValue(job.Key, out var duration);
             rows.Add(new TimelineRow(job.Key, job.Name, GroupLabel(job, grouping), JobLink(job.Group, job.Name),
-                BuildItems(fires, duration, bandThreshold, paused), job.Type));
+                BuildItems(fires, duration, bandThreshold, isPaused), job.Type));
         }
-        return new Timeline(fromUtc, toUtc, Sort(rows));
+        return new Timeline(fromUtc, toUtc, Sort(rows), truncated);
+    }
+
+    /// <summary>Median durations change slowly: read the history at most every 10 minutes, not on every refresh of every viewer.</summary>
+    private async Task<IReadOnlyDictionary<string, TimeSpan>> DurationsAsync(CancellationToken ct)
+    {
+        if (_durations is { } cached && DateTimeOffset.UtcNow - cached.LoadedAt < DurationsCacheTime) return cached.Values;
+        await DurationsLock.WaitAsync(ct);
+        try
+        {
+            if (_durations is { } again && DateTimeOffset.UtcNow - again.LoadedAt < DurationsCacheTime) return again.Values;
+            var values = await queries.MedianDurationsAsync(ct: ct);
+            _durations = (DateTimeOffset.UtcNow, values);
+            return values;
+        }
+        finally
+        {
+            DurationsLock.Release();
+        }
     }
 
     /// <summary>Fire times of the trigger within [from, to).</summary>
@@ -117,11 +147,14 @@ public sealed class HistoryTimelineService(IRisConfigurationStore store, JobQuer
 {
     public const int MaxRuns = 5000;
 
-    public async Task<Timeline> HistoryAsync(DateTimeOffset fromUtc, DateTimeOffset toUtc, TimelineGrouping grouping,
-        Func<string, bool>? jobFilter = null, IReadOnlyCollection<JobRunResult>? results = null, CancellationToken ct = default)
+    public async Task<HistoryView> HistoryAsync(DateTimeOffset fromUtc, DateTimeOffset toUtc, TimelineGrouping grouping,
+        string? search = null, IReadOnlyCollection<JobRunResult>? results = null, CancellationToken ct = default)
     {
+        bool Matches(string job) => string.IsNullOrWhiteSpace(search) || job.Contains(search, StringComparison.OrdinalIgnoreCase);
+        Func<string, bool>? jobFilter = string.IsNullOrWhiteSpace(search) ? null : Matches;
         // Runs that started before the window but were still running in it are included (up to one day back).
-        var runs = await queries.HistoryAsync(new HistoryFilter(FromUtc: fromUtc.AddDays(-1), ToUtc: toUtc, Results: results, Take: MaxRuns), ct);
+        var runs = await queries.HistoryAsync(new HistoryFilter(FromUtc: fromUtc.AddDays(-1), ToUtc: toUtc, Results: results,
+            Contains: string.IsNullOrWhiteSpace(search) ? null : search, Take: MaxRuns), ct);
         var missed = results is null ? await queries.MissedRunsAsync(fromUtc, toUtc, ct: ct) : [];
         var now = DateTimeOffset.UtcNow;
 
@@ -153,7 +186,8 @@ public sealed class HistoryTimelineService(IRisConfigurationStore store, JobQuer
             return new TimelineRow(key, reference.Name, groupLabel, configured.ContainsKey(key) ? SchedulePlanService.JobLink(reference.Group, reference.Name) : null,
                 items.TryGetValue(key, out var list) ? list.OrderBy(i => i.StartUtc).ToList() : [], job?.Type);
         });
-        return new Timeline(fromUtc, toUtc, SchedulePlanService.Sort(rows), Truncated: runs.Count >= MaxRuns);
+        return new HistoryView(new Timeline(fromUtc, toUtc, SchedulePlanService.Sort(rows), Truncated: runs.Count >= MaxRuns),
+            runs.Where(r => r.FiredAtUtc >= fromUtc).ToList());
     }
 }
 

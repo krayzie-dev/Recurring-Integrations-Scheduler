@@ -90,6 +90,10 @@ else
                 <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Description" OnClick="@(() => ExportHistoryAsync("csv"))">@T["Export_Csv"]</MudButton>
             </MudStack>
             <HistoryTable Runs="_history" OnOpen="id => _drawer!.OpenAsync(id)" ShowJob="false" />
+            @if (_hasMore)
+            {
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ExpandMore" Class="mt-2" OnClick="MoreAsync">@T["History_More", HistoryPage]</MudButton>
+            }
         </MudTabPanel>
 
         <MudTabPanel Text="@T["Job_TabDefinition"]" Icon="@Icons.Material.Filled.Code">
@@ -107,6 +111,17 @@ else
 
     private JobDetails? _details;
     private IReadOnlyList<RunDetails> _history = [];
+    private bool _hasMore;
+    private const int HistoryPage = 200;
+
+    /// <summary>Next page of older runs (history is newest first).</summary>
+    private async Task MoreAsync()
+    {
+        if (_details is null) return;
+        var page = await Queries.HistoryAsync(new HistoryFilter(_details.Definition.Group, _details.Definition.Name, Take: HistoryPage + 1, Skip: _history.Count));
+        _hasMore = page.Count > HistoryPage;
+        _history = _history.Concat(page.Take(HistoryPage)).ToList();
+    }
     private string _definitionJson = "";
     private int _tab;
     private RunDrawer? _drawer;
@@ -118,7 +133,11 @@ else
     {
         _details = await Queries.GetAsync(Group, Name);
         if (_details is null) return;
-        _history = await Queries.HistoryAsync(new HistoryFilter(_details.Definition.Group, _details.Definition.Name, Take: 200));
+        // Refresh keeps what was loaded with "older runs" (at least one page).
+        var take = Math.Max(HistoryPage, _history.Count);
+        var page = await Queries.HistoryAsync(new HistoryFilter(_details.Definition.Group, _details.Definition.Name, Take: take + 1));
+        _hasMore = page.Count > take;
+        _history = page.Take(take).ToList();
         _definitionJson = System.Text.Json.JsonSerializer.Serialize(_details.Definition, RisJson.Options);
         _breadcrumbs = [new(T["Nav_Jobs"], "/jobs"), new(_details.Summary.Group, $"/jobs?group={Uri.EscapeDataString(_details.Summary.Group)}"), new(_details.Summary.Name, null, disabled: true)];
     }

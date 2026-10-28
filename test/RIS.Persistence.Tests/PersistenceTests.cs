@@ -229,6 +229,29 @@ public sealed class PersistenceTests
     }
 
     [TestMethod]
+    public async Task QueryAudit_PagesNewestFirst_AndSearchesInTheDatabase()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "alice");
+        for (var i = 0; i < 4; i++)
+        {
+            var job = Job();
+            job.Name = $"Job {i}";
+            job.Description = i == 2 ? "needle_100%" : null;
+            await _repository.SaveJobAsync(job, "bob");
+        }
+
+        var (first, total) = await _repository.QueryAuditAsync(0, 2, null);
+        Assert.AreEqual(5, total);
+        CollectionAssert.AreEqual(new[] { "Export jobs.Job 3", "Export jobs.Job 2" }, first.Select(e => e.EntityKey).ToArray());
+        var (second, _) = await _repository.QueryAuditAsync(2, 2, null);
+        CollectionAssert.AreEqual(new[] { "Export jobs.Job 1", "Export jobs.Job 0" }, second.Select(e => e.EntityKey).ToArray());
+
+        Assert.AreEqual(1, (await _repository.QueryAuditAsync(0, 50, "alice")).Total);
+        Assert.AreEqual("Export jobs.Job 2", (await _repository.QueryAuditAsync(0, 50, "needle_100%")).Items.Single().EntityKey, "Searches before/after JSON; _ and % are literal.");
+        Assert.AreEqual(0, (await _repository.QueryAuditAsync(0, 50, "needle_1000")).Total);
+    }
+
+    [TestMethod]
     public async Task DeleteJobs_OneTransaction_RejectedAsAWhole()
     {
         await _repository.SaveConnectionAsync(Connection(), "tester");

@@ -89,8 +89,13 @@ public static class ConfigApi
             await repository.ImportAsync(configuration, User(user), ct);
             return Results.NoContent();
         });
-        api.MapGet("/audit", async (int? take, ConfigurationRepository repository, CancellationToken ct) =>
-            Results.Ok(await repository.GetAuditAsync(Math.Clamp(take ?? 200, 1, 5000), ct)));
+        // Newest first; page with skip/take, filter with search. X-Total-Count: all matching entries.
+        api.MapGet("/audit", async (int? skip, int? take, string? search, ConfigurationRepository repository, HttpContext http, CancellationToken ct) =>
+        {
+            var (items, total) = await repository.QueryAuditAsync(skip ?? 0, Math.Clamp(take ?? 200, 1, 5000), search, ct);
+            http.Response.Headers["X-Total-Count"] = total.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return Results.Ok(items);
+        });
 
         // Checks run by the service account (what jobs will use).
         api.MapPost("/test/d365", async (D365TestRequest request, ConnectionTestService tests, CancellationToken ct) =>

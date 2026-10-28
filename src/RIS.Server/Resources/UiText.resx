@@ -625,4 +625,6 @@
   <data name="Maint_SettingsHelp" xml:space="preserve"><value>Change them in %ProgramData%\RIS5\appsettings.json and restart the service. Current values:</value></data>
   <data name="Maint_Done" xml:space="preserve"><value>Cleanup finished.</value></data>
   <data name="Maint_DoneWithErrors" xml:space="preserve"><value>Cleanup finished with errors – see below.</value></data>
+  <data name="Plan_Truncated" xml:space="preserve"><value>A job has more than {0} runs in this window; the rest is not shown. Use the day view.</value></data>
+  <data name="History_More" xml:space="preserve"><value>Show {0} older runs</value></data>
 </root>

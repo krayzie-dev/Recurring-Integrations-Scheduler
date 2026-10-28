@@ -25,6 +25,9 @@ public sealed class RisHostOptions
 
     public int LogRetentionDays { get; set; } = 30;
 
+    /// <summary>Per-job log files kept open at the same time; more jobs than this means files are closed and reopened.</summary>
+    public int JobLogFilesOpen { get; set; } = 2000;
+
     public LogEventLevel MinimumLevel { get; set; } = LogEventLevel.Information;
 
     /// <summary>Write to the Windows Event Log (source must exist; the installer creates it in <see cref="EventLogName"/>).</summary>
@@ -86,7 +89,7 @@ public static class RisHosting
                 rollingInterval: RollingInterval.Day, retainedFileCountLimit: options.LogRetentionDays, shared: true)
             .WriteTo.Map("JobKey", "_scheduler", (jobKey, sink) => sink.File(new CompactJsonFormatter(),
                 System.IO.Path.Combine(options.LogDirectory, "jobs", SafeFileName(jobKey), "job-.clef"),
-                rollingInterval: RollingInterval.Day, retainedFileCountLimit: options.LogRetentionDays, shared: true), sinkMapCountLimit: 500);
+                rollingInterval: RollingInterval.Day, retainedFileCountLimit: options.LogRetentionDays, shared: true), sinkMapCountLimit: options.JobLogFilesOpen);
 
         if (options.Console)
         {

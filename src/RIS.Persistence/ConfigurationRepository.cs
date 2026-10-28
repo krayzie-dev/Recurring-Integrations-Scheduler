@@ -263,6 +263,26 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         return await db.Audit.AsNoTracking().OrderByDescending(a => a.Id).Take(take).ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// One page of the audit, newest first, filtered in the database (user, object, name, action, before/after JSON);
+    /// <paramref name="total"/> counts all matching entries.
+    /// </summary>
+    public async Task<(IReadOnlyList<AuditEntry> Items, int Total)> QueryAuditAsync(int skip, int take, string? search, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        var query = db.Audit.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            query = query.Where(a => EF.Functions.Like(a.User ?? "", pattern, "\\") || EF.Functions.Like(a.EntityType, pattern, "\\")
+                                     || EF.Functions.Like(a.EntityKey, pattern, "\\") || EF.Functions.Like(a.Action, pattern, "\\")
+                                     || EF.Functions.Like(a.Before ?? "", pattern, "\\") || EF.Functions.Like(a.After ?? "", pattern, "\\"));
+        }
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.OrderByDescending(a => a.Id).Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 50_000)).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     /// <summary>Number of audit entries and the oldest one (maintenance page).</summary>
     public async Task<(int Count, DateTime? OldestUtc)> GetAuditStatsAsync(CancellationToken cancellationToken = default)
     {

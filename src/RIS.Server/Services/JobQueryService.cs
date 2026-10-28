@@ -43,7 +43,7 @@ public sealed record MissedRun(string Job, DateTimeOffset ScheduledUtc, string R
 
 public sealed record HistoryFilter(
     string? Group = null, string? Name = null, DateTimeOffset? FromUtc = null, DateTimeOffset? ToUtc = null,
-    IReadOnlyCollection<JobRunResult>? Results = null, string? Contains = null, int Take = 500);
+    IReadOnlyCollection<JobRunResult>? Results = null, string? Contains = null, int Take = 500, int Skip = 0);
 
 public sealed record StatisticsBucket(DateTimeOffset StartUtc, int Succeeded, int Failed, int Other);
 
@@ -104,6 +104,7 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
             FiredFrom = filter.FromUtc,
             FiredBefore = filter.ToUtc,
             Results = filter.Results,
+            Skip = Math.Max(0, filter.Skip),
             Take = Math.Clamp(filter.Take, 1, 5000)
         }, ct);
         return page.Items.Select(e => ToRun(e, includeLog: false)).ToList();
@@ -121,11 +122,19 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
     }
 
     /// <summary>Missed runs recorded by the scheduler (newest first), optionally from a point in time.</summary>
-    public async Task<IReadOnlyList<MissedRun>> MissedRunsAsync(DateTimeOffset? fromUtc = null, DateTimeOffset? toUtc = null, int take = 1000, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MissedRun>> MissedRunsAsync(DateTimeOffset? fromUtc = null, DateTimeOffset? toUtc = null, int take = 5000, CancellationToken ct = default)
     {
         var scheduler = await schedulers.GetScheduler(ct);
-        var page = await history.QueryMisfires(new MisfireHistoryQuery { SchedulerName = scheduler.SchedulerName, Take = take }, ct);
-        return page.Items
+        // Newest first and no time filter in the query: read pages until they are older than the window (or the limit).
+        var items = new List<MisfireHistoryEntry>();
+        const int pageSize = 500;
+        while (items.Count < take)
+        {
+            var page = await history.QueryMisfires(new MisfireHistoryQuery { SchedulerName = scheduler.SchedulerName, Skip = items.Count, Take = pageSize }, ct);
+            items.AddRange(page.Items);
+            if (!page.HasMore || fromUtc is not null && page.Items.LastOrDefault()?.ScheduledFireTimeUtc < fromUtc) break;
+        }
+        return items
             .Where(m => m.JobKey is not null && m.ScheduledFireTimeUtc is not null)
             .Where(m => (fromUtc is null || m.ScheduledFireTimeUtc >= fromUtc) && (toUtc is null || m.ScheduledFireTimeUtc < toUtc))
             .Select(m => new MissedRun($"{m.JobKey!.Group}.{m.JobKey.Name}", m.ScheduledFireTimeUtc!.Value, m.Reason.ToString()))

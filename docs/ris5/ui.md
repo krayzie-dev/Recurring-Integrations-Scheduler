@@ -30,10 +30,11 @@ Links: `/culture/set?culture=pl-PL`, `/prefs/set?theme=Dark&zone=Utc` (both acce
 | Jobs `/jobs` | Search and filters (group, type, connection, failing/paused/running), multi-select, bulk actions, exports. `?filter=failing`, `?group=…`, `?connection=…` |
 | Job `/jobs/{group}/{name}` | Overview (schedule, next 5 runs, last result), history (export), definition JSON; actions. |
 | Schedule `/plan` | Gantt chart of planned runs, week or day. |
+| Data maintenance `/maintenance` | What is stored (run history, audit, logs, backups), how much, the oldest item, retention settings, last/next cleanup, "Clean up now" (Admin). |
 | History `/history` | Gantt chart of executed runs (colour by result, running, missed runs) + table; click opens run details. |
 | Run `/runs/{runId}` | Result, duration, D365 execution/message id, error code with description, metrics, captured job log; run again. |
 | Connections, SFTP servers | List with sign-in method, secret / certificate status, last test ("Test" per row, "Test all") and jobs using it (link filters the job list). The form shows only the fields of the chosen method – D365: client secret **or** certificate (picked from the server certificate store or pasted); SFTP: password **or** private key – and removes the other method's credentials on save. Secrets are write-only (empty = keep the saved one). "Test connection" in the form checks the unsaved values with the service account. Delete refused while in use. |
-| Audit | Every configuration change: who, when and what – a table of the changed fields (before struck through, after highlighted; "All fields" and "JSON" switches). Secrets are never stored: `***` when one is stored, `*** (new)` in the change that set it. Search, export. |
+| Audit | Every configuration change: who, when and what – a table of the changed fields (before struck through, after highlighted; "All fields" and "JSON" switches). Secrets are never stored: `***` when one is stored, `*** (new)` in the change that set it. Pages and search run in the database (50 per page); export takes all matching entries. |
 
 ## Gantt charts
 

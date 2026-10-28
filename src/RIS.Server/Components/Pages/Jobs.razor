@@ -186,6 +186,7 @@
     protected override async Task LoadAsync()
     {
         _all = (await Queries.ListAsync()).ToList();
+        _scheduleTexts = Store.Current.Jobs.ToDictionary(j => j.Key, j => ScheduleBuilder.Describe(j.Schedule, T), StringComparer.OrdinalIgnoreCase);
         // Keep selected jobs that still exist (refresh replaces the instances).
         var keys = _selected.Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _selected = _all.Where(j => keys.Contains(j.Key)).ToHashSet(_comparer);
@@ -210,9 +211,10 @@
         _selected = _selected.Where(s => _filtered.Contains(s, _comparer)).ToHashSet(_comparer);
     }
 
-    /// <summary>Schedule in words in the user's language (the technical form is in the tooltip).</summary>
-    private string ScheduleText(JobSummary job) =>
-        Store.Current.FindJob(job.Key) is { } definition ? ScheduleBuilder.Describe(definition.Schedule, T) : job.Schedule;
+    /// <summary>Schedule in words in the user's language (the technical form is in the tooltip); computed once per load.</summary>
+    private string ScheduleText(JobSummary job) => _scheduleTexts.TryGetValue(job.Key, out var text) ? text : job.Schedule;
+
+    private Dictionary<string, string> _scheduleTexts = new(StringComparer.OrdinalIgnoreCase);
 
     private bool Contains(string? value) => value?.Contains(_search!, StringComparison.OrdinalIgnoreCase) == true;
 

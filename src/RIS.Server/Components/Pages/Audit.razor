@@ -10,7 +10,7 @@
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudText Typo="Typo.h5">@T["Nav_Audit"]</MudText>
     <MudSpacer />
-    <MudTextField T="string" @bind-Value="_search" @bind-Value:after="ApplyFilter" Placeholder="@T["Common_Search"]" Immediate="true" DebounceInterval="250"
+    <MudTextField T="string" @bind-Value="_search" @bind-Value:after="SearchAsync" Placeholder="@T["Common_Search"]" Immediate="true" DebounceInterval="250"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Style="max-width: 320px" />
     <MudMenu Icon="@Icons.Material.Filled.Download" title="@T["Common_Export"]" Dense="true">
         <MudMenuItem Icon="@Icons.Material.Filled.TableView" OnClick="@(() => ExportAsync("xlsx"))">@T["Export_Xlsx"]</MudMenuItem>
@@ -18,7 +18,8 @@
     </MudMenu>
 </MudStack>
 
-<MudDataGrid T="AuditEntry" Items="_filtered" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" Loading="Loading" RowsPerPage="50">
+@* Server-side paging: only one page (with its before/after JSON) is read and sent to the browser. *@
+<MudDataGrid @ref="_grid" T="AuditEntry" ServerData="LoadPageAsync" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" RowsPerPage="50">
     <Columns>
         <HierarchyColumn T="AuditEntry" ButtonDisabledFunc="e => e.Before is null && e.After is null" />
         <PropertyColumn Property="e => e.TimestampUtc" Title="@T["Audit_Time"]">
@@ -90,24 +91,22 @@
 @code {
     protected override bool RefreshOnRuns => false;
 
-    private IReadOnlyList<AuditEntry> _all = [];
-    private IReadOnlyList<AuditEntry> _filtered = [];
+    private MudDataGrid<AuditEntry>? _grid;
     private string? _search;
     private bool _allFields, _json;
 
     protected override TimeSpan? RefreshInterval => null;
 
-    protected override async Task LoadAsync()
+    /// <summary>The grid loads its pages itself; configuration changes reload the current page.</summary>
+    protected override Task LoadAsync() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+
+    private async Task<GridData<AuditEntry>> LoadPageAsync(GridState<AuditEntry> state, CancellationToken cancellationToken)
     {
-        _all = await Repository.GetAuditAsync(5000);
-        ApplyFilter();
+        var (items, total) = await Repository.QueryAuditAsync(state.Page * state.PageSize, state.PageSize, _search, cancellationToken);
+        return new GridData<AuditEntry> { Items = items, TotalItems = total };
     }
 
-    private void ApplyFilter() =>
-        _filtered = string.IsNullOrWhiteSpace(_search)
-            ? _all
-            : _all.Where(e => new[] { e.User, e.EntityType, e.EntityKey, e.Action, e.Before, e.After }
-                .Any(v => v?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true)).ToList();
+    private Task SearchAsync() => _grid?.ReloadServerData() ?? Task.CompletedTask;
 
     /// <summary>Label of the field in the user's language (last part of the path, e.g. "timeout"), when there is one.</summary>
     private string? FieldLabel(string path)
@@ -126,5 +125,10 @@
         _ => value
     };
 
-    private async Task ExportAsync(string format) => await ExportService.DownloadAsync(JS, Exports.Audit(_filtered, format, Prefs.Zone));
+    /// <summary>All entries matching the search (up to 50 000), not only the page on screen.</summary>
+    private async Task ExportAsync(string format)
+    {
+        var (items, _) = await Repository.QueryAuditAsync(0, 50_000, _search, Disposed);
+        await ExportService.DownloadAsync(JS, Exports.Audit(items, format, Prefs.Zone));
+    }
 }

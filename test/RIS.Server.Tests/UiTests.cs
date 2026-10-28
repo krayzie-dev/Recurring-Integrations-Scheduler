@@ -152,7 +152,14 @@ public sealed class UiTests
         StringAssert.Contains(connections, "Set");
         Assert.IsFalse(connections.Contains("secret\"") || connections.Contains(">secret<"), "Secret value never rendered.");
         StringAssert.Contains(await GetPageAsync("/sftp-servers", "Admin", "en-US"), "New SFTP server");
-        StringAssert.Contains(await GetPageAsync("/audit", "Admin", "en-US"), "Created");
+        // The audit grid pages on the server (rows come after the interactive circuit starts): the page itself, and the
+        // entries through the same query via the API (one page, total in X-Total-Count, no secrets).
+        StringAssert.Contains(await GetPageAsync("/audit", "Admin", "en-US"), "Audit");
+        var audit = await _factory.Client("Admin").GetAsync("/api/v1/audit?take=1");
+        var auditText = await audit.Content.ReadAsStringAsync();
+        StringAssert.Contains(auditText, "Created");
+        Assert.IsTrue(int.Parse(audit.Headers.GetValues("X-Total-Count").Single()) >= 2);
+        Assert.IsFalse(auditText.Contains("\"secret\"", StringComparison.Ordinal));
 
         // Operator: no access to configuration pages.
         var operatorClient = _factory.Client("Operator");

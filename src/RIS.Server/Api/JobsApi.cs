@@ -20,14 +20,15 @@ public static class JobsApi
         api.MapGet("/jobs", async (JobQueryService queries, CancellationToken ct) => Results.Ok(await queries.ListAsync(ct)));
         api.MapGet("/jobs/{group}/{name}", async (string group, string name, JobQueryService queries, CancellationToken ct) =>
             await queries.GetAsync(group, name, ct) is { } details ? Results.Ok(details) : NotFound(group, name));
-        api.MapGet("/jobs/{group}/{name}/history", async (string group, string name, int? take, DateTimeOffset? from, DateTimeOffset? to,
+        // History is newest first; page with skip/take (take up to 5000).
+        api.MapGet("/jobs/{group}/{name}/history", async (string group, string name, int? skip, int? take, DateTimeOffset? from, DateTimeOffset? to,
             JobQueryService queries, CancellationToken ct) =>
             queries.Find(group, name) is null
                 ? NotFound(group, name)
-                : Results.Ok(await queries.HistoryAsync(new HistoryFilter(group, name, from, to, Take: take ?? 50), ct)));
-        api.MapGet("/history", async (DateTimeOffset? from, DateTimeOffset? to, string? result, string? job, int? take,
+                : Results.Ok(await queries.HistoryAsync(new HistoryFilter(group, name, from, to, Take: take ?? 50, Skip: skip ?? 0), ct)));
+        api.MapGet("/history", async (DateTimeOffset? from, DateTimeOffset? to, string? result, string? job, int? skip, int? take,
             JobQueryService queries, CancellationToken ct) =>
-            Results.Ok(await queries.HistoryAsync(new HistoryFilter(FromUtc: from, ToUtc: to, Results: ParseResults(result), Contains: job, Take: take ?? 500), ct)));
+            Results.Ok(await queries.HistoryAsync(new HistoryFilter(FromUtc: from, ToUtc: to, Results: ParseResults(result), Contains: job, Take: take ?? 500, Skip: skip ?? 0), ct)));
         api.MapGet("/runs/{runId}", async (string runId, JobQueryService queries, CancellationToken ct) =>
             await queries.GetRunAsync(runId, ct) is { } run
                 ? Results.Ok(run)

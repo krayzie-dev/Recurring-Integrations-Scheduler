@@ -67,7 +67,7 @@ else
                     <g><text x="16" y="@F(rowY + 15)" class="axis">@Short(data.Label)<title>@data.Key</title></text></g>
                 }
 
-                @foreach (var item in data.Items)
+                @foreach (var item in Merge(data.Items, geo))
                 {
                     if (item.Kind == TimelineItemKind.Missed)
                     {
@@ -140,6 +140,40 @@ else
         _ => (item.Status ?? "").ToLowerInvariant()
     };
 
+    /// <summary>
+    /// Runs (and running) whose bars touch at the current scale and have the same result become one bar with a count: a job
+    /// running every minute is ~10 000 bars in a week, which the browser would have to draw (and Blazor send) one by one.
+    /// Clicking the merged bar opens the newest run in it.
+    /// </summary>
+    private static IEnumerable<TimelineItem> Merge(IReadOnlyList<TimelineItem> items, GanttLayout geo)
+    {
+        TimelineItem? pending = null;
+        double pendingEnd = 0;
+        foreach (var item in items)
+        {
+            var mergeable = item.Kind is TimelineItemKind.Run && geo.Bar(item.StartUtc, item.EndUtc) is not null;
+            if (pending is not null && mergeable && Css(pending) == Css(item) && geo.X(item.StartUtc) <= pendingEnd + 1)
+            {
+                pending = pending with { EndUtc = item.EndUtc > pending.EndUtc ? item.EndUtc : pending.EndUtc, Count = pending.Count + item.Count, RunId = item.RunId, Label = null };
+                pendingEnd = Math.Max(pendingEnd, geo.Bar(item.StartUtc, item.EndUtc)!.Value.X + geo.Bar(item.StartUtc, item.EndUtc)!.Value.Width);
+                continue;
+            }
+            if (pending is not null) yield return pending;
+            if (mergeable)
+            {
+                pending = item;
+                var bar = geo.Bar(item.StartUtc, item.EndUtc)!.Value;
+                pendingEnd = bar.X + bar.Width;
+            }
+            else
+            {
+                pending = null;
+                yield return item;
+            }
+        }
+        if (pending is not null) yield return pending;
+    }
+
     private string Tooltip(TimelineRow row, TimelineItem item, GanttLayout geo)
     {
         var time = $"{geo.Label(item.StartUtc, "g")} – {geo.Label(item.EndUtc, "t")}";
@@ -147,6 +181,7 @@ else
         {
             TimelineItemKind.Band or TimelineItemKind.BandPaused => $"{row.Key}\n{time}\n{T["Gantt_Every", item.Label ?? ""]} · {T["Gantt_Runs", item.Count]}",
             TimelineItemKind.Planned or TimelineItemKind.PlannedPaused => $"{row.Key}\n{time}" + (item.EndUtc > item.StartUtc ? $"\n{T["Gantt_EstimatedDuration", Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)]}" : ""),
+            _ when item.Count > 1 => $"{row.Key}\n{time}\n{T["Gantt_Runs", item.Count]} · {T["Result_" + (item.Status ?? "")]}",
             _ => $"{row.Key}\n{time} ({Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)})\n{T["Result_" + (item.Status ?? "")]}" + (item.Label is null ? "" : $" {item.Label}")
         };
     }
