@@ -132,6 +132,24 @@ public sealed class PersistenceTests
     }
 
     [TestMethod]
+    public async Task Audit_MarksSecretChanges_WithoutValues_AndIsReadable()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");                 // created with a secret
+        await _repository.SaveConnectionAsync(Connection("replaced-secret"), "tester"); // secret replaced
+        var unchanged = Connection(secret: "");
+        await _repository.SaveConnectionAsync(unchanged, "tester");                     // saved without a new secret
+
+        var audit = (await _repository.GetAuditAsync()).OrderBy(a => a.TimestampUtc).ThenBy(a => a.Id).ToList();
+        Assert.AreEqual(3, audit.Count);
+        StringAssert.Contains(audit[0].After, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretChanged}\"");
+        StringAssert.Contains(audit[1].Before, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretStored}\"");
+        StringAssert.Contains(audit[1].After, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretChanged}\"");
+        StringAssert.Contains(audit[2].After, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretStored}\"");
+        Assert.IsTrue(audit.All(a => !(a.Before + a.After).Contains("secret-value") && !(a.Before + a.After).Contains("replaced-secret")));
+        Assert.IsTrue(audit.All(a => !(a.Before + a.After).Contains(@"\u00")), @"No \u escapes in audit JSON.");
+    }
+
+    [TestMethod]
     public async Task Audit_DoesNotContainSecrets_AndExportUsesPlaceholders()
     {
         await _repository.SaveConnectionAsync(Connection(), "tester");

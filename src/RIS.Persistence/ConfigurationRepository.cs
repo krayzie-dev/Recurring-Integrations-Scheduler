@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RIS.Core.Configuration;
@@ -68,7 +69,8 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
             var entity = await db.Connections.FirstOrDefaultAsync(c => c.Name == connection.Name, cancellationToken);
-            var before = entity is null ? null : Json(WithoutSecrets(ToOptions(entity)));
+            var before = entity is null ? null : AuditJson(entity);
+            string?[] previousSecrets = [entity?.ProtectedClientSecret, entity?.ProtectedUserPassword];
             if (entity is null)
             {
                 entity = new ConnectionEntity { Name = connection.Name, AosUri = "", Tenant = "", Authority = "", ClientId = "" };
@@ -77,14 +79,15 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
 
             Apply(entity, connection);
             Replace(configuration.Connections, c => c.Name, ToOptions(entity));
-            audit("Connection", connection.Name, before is null ? "Created" : "Updated", before, Json(WithoutSecrets(connection)));
+            audit("Connection", connection.Name, before is null ? "Created" : "Updated", before, AuditJson(entity, previousSecrets));
         });
 
     public Task SaveSftpServerAsync(SftpServerOptions server, string? user, CancellationToken cancellationToken = default) =>
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
             var entity = await db.SftpServers.FirstOrDefaultAsync(s => s.Name == server.Name, cancellationToken);
-            var before = entity is null ? null : Json(WithoutSecrets(ToOptions(entity)));
+            var before = entity is null ? null : AuditJson(entity);
+            string?[] previousSecrets = [entity?.ProtectedPassword, entity?.ProtectedKeyPassphrase];
             if (entity is null)
             {
                 entity = new SftpServerEntity { Name = server.Name, Host = "", UserName = "" };
@@ -93,7 +96,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
 
             Apply(entity, server);
             Replace(configuration.SftpServers, s => s.Name, ToOptions(entity));
-            audit("SftpServer", server.Name, before is null ? "Created" : "Updated", before, Json(WithoutSecrets(server)));
+            audit("SftpServer", server.Name, before is null ? "Created" : "Updated", before, AuditJson(entity, previousSecrets));
         });
 
     public Task SaveJobAsync(JobDefinition job, string? user, CancellationToken cancellationToken = default) =>
@@ -145,7 +148,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             var entity = await db.Connections.FirstOrDefaultAsync(c => c.Name == name, cancellationToken) ?? throw NotFound("Connection", name);
             db.Connections.Remove(entity);
             configuration.Connections.RemoveAll(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
-            audit("Connection", name, "Deleted", Json(WithoutSecrets(ToOptions(entity))), null);
+            audit("Connection", name, "Deleted", AuditJson(entity), null);
         });
 
     public Task DeleteSftpServerAsync(string name, string? user, CancellationToken cancellationToken = default) =>
@@ -154,7 +157,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             var entity = await db.SftpServers.FirstOrDefaultAsync(s => s.Name == name, cancellationToken) ?? throw NotFound("SFTP server", name);
             db.SftpServers.Remove(entity);
             configuration.SftpServers.RemoveAll(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
-            audit("SftpServer", name, "Deleted", Json(WithoutSecrets(ToOptions(entity))), null);
+            audit("SftpServer", name, "Deleted", AuditJson(entity), null);
         });
 
     public Task DeleteJobAsync(string group, string name, string? user, CancellationToken cancellationToken = default) =>
@@ -408,9 +411,35 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         KeyPassphrase = string.IsNullOrEmpty(s.KeyPassphrase) ? null : SecretPlaceholder.Value
     };
 
-    private static string Json<T>(T value) => JsonSerializer.Serialize(value, RisJson.Options);
+    /// <summary>Audit JSON: readable (no < escapes, national characters as they are).</summary>
+    private static readonly JsonSerializerOptions AuditJsonOptions = new(RisJson.Options) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
-    private static string JobJson(JobDefinition job) => JsonSerializer.Serialize(new { job.Schedule, job.Options, job.Description, job.PairedJob }, RisJson.Options);
+    /// <summary>Secret in audit entries: never the value, only whether one is stored and whether this change set it.</summary>
+    public const string AuditSecretStored = "***";
+    public const string AuditSecretChanged = "*** (new)";
+
+    private static string? AuditSecret(string? stored, string?[]? previous, int index) =>
+        stored is null ? null : previous is not null && previous[index] != stored ? AuditSecretChanged : AuditSecretStored;
+
+    /// <summary>Connection as stored; with <paramref name="previous"/> (encrypted secrets before the change) changed secrets are marked.</summary>
+    private string AuditJson(ConnectionEntity entity, string?[]? previous = null)
+    {
+        var options = ToOptions(entity);
+        options.ClientSecret = AuditSecret(entity.ProtectedClientSecret, previous, 0);
+        options.UserPassword = AuditSecret(entity.ProtectedUserPassword, previous, 1);
+        return JsonSerializer.Serialize(options, AuditJsonOptions);
+    }
+
+    /// <inheritdoc cref="AuditJson(ConnectionEntity, string?[])"/>
+    private string AuditJson(SftpServerEntity entity, string?[]? previous = null)
+    {
+        var options = ToOptions(entity);
+        options.Password = AuditSecret(entity.ProtectedPassword, previous, 0);
+        options.KeyPassphrase = AuditSecret(entity.ProtectedKeyPassphrase, previous, 1);
+        return JsonSerializer.Serialize(options, AuditJsonOptions);
+    }
+
+    private static string JobJson(JobDefinition job) => JsonSerializer.Serialize(new { job.Schedule, job.Options, job.Description, job.PairedJob }, AuditJsonOptions);
 
     private static void Replace<T>(List<T> list, Func<T, string> key, T item)
     {

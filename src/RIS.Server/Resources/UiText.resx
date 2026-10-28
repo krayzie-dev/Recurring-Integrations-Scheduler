@@ -579,4 +579,9 @@
   <data name="Sftp_InUseTitle" xml:space="preserve"><value>SFTP server {0} is in use</value></data>
   <data name="Sftp_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs transfer files through it. First change the SFTP server in these jobs (or delete the jobs):</value></data>
   <data name="Reference_ShowJobs" xml:space="preserve"><value>Show jobs</value></data>
+  <data name="Audit_Field" xml:space="preserve"><value>Field</value></data>
+  <data name="Audit_AllFields" xml:space="preserve"><value>All fields</value></data>
+  <data name="Audit_NoFieldChanges" xml:space="preserve"><value>No field changed (e.g. only the secret was set, or the object was saved unchanged).</value></data>
+  <data name="Audit_SecretStored" xml:space="preserve"><value>*** (hidden)</value></data>
+  <data name="Audit_SecretChanged" xml:space="preserve"><value>*** (new value, hidden)</value></data>
 </root>

@@ -55,3 +55,9 @@
 .components-reconnect-failed .ris-reconnect-failed, .components-reconnect-resume-failed .ris-reconnect-failed,
 .components-reconnect-rejected .ris-reconnect-rejected { display: block; }
 .components-reconnect-failed .ris-reconnect-spinner, .components-reconnect-resume-failed .ris-reconnect-spinner { display: none; }
+
+/* Audit diff: changed / added / removed fields. */
+.ris-diff td { vertical-align: top; word-break: break-word; }
+.ris-diff-changed .ris-diff-before, .ris-diff-removed .ris-diff-before { background: rgba(244, 67, 54, .14); text-decoration: line-through; text-decoration-color: rgba(244, 67, 54, .7); }
+.ris-diff-changed .ris-diff-after, .ris-diff-added .ris-diff-after { background: rgba(76, 175, 80, .18); }
+.ris-diff-same td { opacity: .6; }

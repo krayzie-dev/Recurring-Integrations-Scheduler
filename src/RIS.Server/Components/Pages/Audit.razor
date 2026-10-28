@@ -30,16 +30,59 @@
         <PropertyColumn Property="e => e.Action" Title="@T["Audit_Action"]" />
     </Columns>
     <ChildRowContent>
-        <MudGrid Spacing="2" Class="pa-2">
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2">@T["Audit_Before"]</MudText>
-                <pre class="ris-log ris-mono">@Pretty(context.Item.Before)</pre>
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2">@T["Audit_After"]</MudText>
-                <pre class="ris-log ris-mono">@Pretty(context.Item.After)</pre>
-            </MudItem>
-        </MudGrid>
+        @{ var changes = AuditDiff.Compare(context.Item.Before, context.Item.After); }
+        <div class="pa-2">
+            @if (changes is not null)
+            {
+                <MudStack Row="true" Spacing="4" Class="mb-1">
+                    <MudSwitch T="bool" @bind-Value="_allFields" Color="Color.Primary" Label="@T["Audit_AllFields"]" Disabled="_json" />
+                    <MudSwitch T="bool" @bind-Value="_json" Color="Color.Primary" Label="JSON" />
+                </MudStack>
+            }
+            @if (changes is null || _json)
+            {
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2">@T["Audit_Before"]</MudText>
+                        <pre class="ris-log ris-mono">@AuditDiff.Pretty(context.Item.Before)</pre>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2">@T["Audit_After"]</MudText>
+                        <pre class="ris-log ris-mono">@AuditDiff.Pretty(context.Item.After)</pre>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                var rows = changes.Where(c => _allFields || c.Kind != AuditChangeKind.Same).ToList();
+                @if (rows.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["Audit_NoFieldChanges"]</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Bordered="true" Elevation="0" Class="ris-diff">
+                        <thead><tr><th>@T["Audit_Field"]</th><th>@T["Audit_Before"]</th><th>@T["Audit_After"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var change in rows)
+                            {
+                                <tr class="@($"ris-diff-{change.Kind.ToString().ToLowerInvariant()}")">
+                                    <td>
+                                        @if (FieldLabel(change.Path) is { } label)
+                                        {
+                                            <div>@label</div>
+                                        }
+                                        <div class="ris-mono mud-text-secondary" style="font-size: .75rem">@change.Path</div>
+                                    </td>
+                                    <td class="ris-mono ris-diff-before">@Value(change.Before)</td>
+                                    <td class="ris-mono ris-diff-after">@Value(change.After)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            }
+        </div>
     </ChildRowContent>
     <PagerContent><MudDataGridPager T="AuditEntry" PageSizeOptions="[50, 100, 500]" /></PagerContent>
 </MudDataGrid>
@@ -48,6 +91,7 @@
     private IReadOnlyList<AuditEntry> _all = [];
     private IReadOnlyList<AuditEntry> _filtered = [];
     private string? _search;
+    private bool _allFields, _json;
 
     protected override TimeSpan? RefreshInterval => null;
 
@@ -63,19 +107,22 @@
             : _all.Where(e => new[] { e.User, e.EntityType, e.EntityKey, e.Action, e.Before, e.After }
                 .Any(v => v?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true)).ToList();
 
-    private static string Pretty(string? json)
+    /// <summary>Label of the field in the user's language (last part of the path, e.g. "timeout"), when there is one.</summary>
+    private string? FieldLabel(string path)
     {
-        if (string.IsNullOrEmpty(json)) return "–";
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(json);
-            return System.Text.Json.JsonSerializer.Serialize(document.RootElement, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return json;
-        }
+        var name = path[(path.LastIndexOf('.') + 1)..];
+        if (name.Length == 0) return null;
+        var label = T["Field_" + char.ToUpperInvariant(name[0]) + name[1..]];
+        return label.ResourceNotFound ? null : label.Value;
     }
+
+    private string Value(string? value) => value switch
+    {
+        null => "–",
+        ConfigurationRepository.AuditSecretChanged => T["Audit_SecretChanged"],
+        ConfigurationRepository.AuditSecretStored => T["Audit_SecretStored"],
+        _ => value
+    };
 
     private async Task ExportAsync(string format) => await ExportService.DownloadAsync(JS, Exports.Audit(_filtered, format, Prefs.Zone));
 }
