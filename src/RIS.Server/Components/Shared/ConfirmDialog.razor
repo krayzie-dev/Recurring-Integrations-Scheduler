@@ -12,10 +12,14 @@
                 }
             </MudList>
         }
+        @if (CheckboxText is not null)
+        {
+            <MudCheckBox @bind-Value="_checked" Color="Color.Primary" Label="@CheckboxText" Class="ml-n2 mt-2" />
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
-        <MudButton Color="ConfirmColor" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(true))">@ConfirmText</MudButton>
+        <MudButton Color="ConfirmColor" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(_checked))">@ConfirmText</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -26,4 +30,9 @@
     [Parameter] public string ConfirmText { get; set; } = "OK";
     [Parameter] public Color ConfirmColor { get; set; } = Color.Primary;
     [Parameter] public IReadOnlyList<string> Items { get; set; } = [];
+
+    /// <summary>Optional checkbox (ticked); its value is the dialog result.</summary>
+    [Parameter] public string? CheckboxText { get; set; }
+
+    private bool _checked = true;
 }

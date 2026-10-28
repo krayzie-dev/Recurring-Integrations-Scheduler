@@ -772,4 +772,10 @@
   <data name="PauseReason_KeptAfterChange" xml:space="preserve"><value>przez operatora (zachowane po zmianie zadania)</value></data>
   <data name="PauseReason_Error" xml:space="preserve"><value>po nieudanym uruchomieniu (Wstrzymaj po błędzie)</value></data>
   <data name="State_RunningPaused" xml:space="preserve"><value>Teraz działa (uruchomione ręcznie); zadanie pozostaje wstrzymane: {0}</value></data>
+  <data name="Paired_MonitorPaused" xml:space="preserve"><value>Połączony monitor {0} jest wstrzymany: wyniki tego zadania nie są sprawdzane.</value></data>
+  <data name="Paired_JobPaused" xml:space="preserve"><value>Ten monitor jest wstrzymany, a jego zadanie {0} działa: wyniki nie są sprawdzane.</value></data>
+  <data name="Paired_PauseToo" xml:space="preserve"><value>Wstrzymaj też połączone zadania ({0})</value></data>
+  <data name="Paired_ResumeTitle" xml:space="preserve"><value>Wznów zadania ({0})</value></data>
+  <data name="Paired_ResumeText" xml:space="preserve"><value>Połączone zadania (monitory) wybranych zadań są wstrzymane. Gdy monitor zostaje wstrzymany, wyniki zadania nie są sprawdzane.</value></data>
+  <data name="Paired_ResumeToo" xml:space="preserve"><value>Wznów też połączone zadania ({0})</value></data>
 </root>

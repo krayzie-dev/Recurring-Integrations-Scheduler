@@ -698,4 +698,10 @@
   <data name="PauseReason_KeptAfterChange" xml:space="preserve"><value>by an operator (kept after the job was changed)</value></data>
   <data name="PauseReason_Error" xml:space="preserve"><value>after a failed run (Pause on error)</value></data>
   <data name="State_RunningPaused" xml:space="preserve"><value>Running now (started manually); the job stays paused: {0}</value></data>
+  <data name="Paired_MonitorPaused" xml:space="preserve"><value>The linked monitor {0} is paused: results of this job are not checked.</value></data>
+  <data name="Paired_JobPaused" xml:space="preserve"><value>This monitor is paused while its job {0} runs: results are not checked.</value></data>
+  <data name="Paired_PauseToo" xml:space="preserve"><value>Pause the linked jobs too ({0})</value></data>
+  <data name="Paired_ResumeTitle" xml:space="preserve"><value>Resume jobs ({0})</value></data>
+  <data name="Paired_ResumeText" xml:space="preserve"><value>Linked jobs (monitors) of the selected jobs are paused. A job whose monitor stays paused does not get its results checked.</value></data>
+  <data name="Paired_ResumeToo" xml:space="preserve"><value>Resume the linked jobs too ({0})</value></data>
 </root>

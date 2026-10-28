@@ -20,6 +20,7 @@ Pages refresh by themselves when a job starts or finishes.
 - The *Last run* column shows the result and time and, after several failures in a row, a red marker (e.g. ×3). The run and pause buttons are in the *Actions* column, always visible at the right edge.
 - The coloured bar at the type marks the job type (the same colours as the bar borders in the charts).
 - **Bulk actions** after selecting: *Run now*, *Pause* (with a reason visible to everyone), *Resume*, *Bulk edit*, *Delete*.
+- **A job and its monitor together**: when an import or upload is paused or resumed, RIS offers to do the same with its linked monitor (ticked by default) – and the other way round. A broken-link icon next to the state means the job runs while its monitor is paused (or the other way round): the results of the job are not checked then.
 - The download icon exports the visible or selected jobs to Excel, CSV or JSON (definitions without secrets).
 
 ## Job page

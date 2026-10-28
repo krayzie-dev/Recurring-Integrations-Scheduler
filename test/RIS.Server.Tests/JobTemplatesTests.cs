@@ -44,6 +44,28 @@ public sealed class JobTemplatesTests
         var saved = await repository.LoadAsync();
         Assert.AreEqual("Vendor invoices – monitor", saved.FindJob("Import jobs.Vendor invoices")!.PairedJob);
         Assert.AreEqual(JobType.ExecutionMonitor, saved.FindJob("Import jobs.Vendor invoices – monitor")!.Type);
+
+        // Monitor paused while the import runs: both rows warn (results not checked); paused together - no warning.
+        using var scope = factory.Services.CreateScope();
+        var queries = scope.ServiceProvider.GetRequiredService<JobQueryService>();
+        var operations = scope.ServiceProvider.GetRequiredService<JobOperationsService>();
+        async Task<IReadOnlyList<JobSummary>> PairAsync()
+        {
+            for (var i = 0; ; i++)
+            {
+                var pair = (await queries.ListAsync()).Where(j => j.Group == "Import jobs").OrderBy(j => j.Name).ToList();
+                if (pair.All(j => j.State != "NotScheduled") || i > 50) return pair;
+                await Task.Delay(200);
+            }
+        }
+        Assert.IsTrue((await PairAsync()).All(j => !j.MonitorPausedAlone), "Both scheduled and running.");
+        await operations.PauseAsync([new JobRef("Import jobs", "Vendor invoices – monitor")], "test", "test");
+        var summaries = await PairAsync();
+        Assert.AreEqual("Import jobs.Vendor invoices – monitor", summaries[0].PairedKey);
+        Assert.IsTrue(summaries.All(j => j.MonitorPausedAlone), string.Join("; ", summaries.Select(j => $"{j.Key} {j.State} {j.PairedPaused}")));
+
+        await operations.PauseAsync([new JobRef("Import jobs", "Vendor invoices")], "test", "test");
+        Assert.IsTrue((await PairAsync()).All(j => !j.MonitorPausedAlone));
     }
 
     [TestMethod]

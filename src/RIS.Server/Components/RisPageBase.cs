@@ -101,20 +101,53 @@ public abstract class RisPageBase : ComponentBase, IDisposable
 
     protected async Task PauseJobsAsync(IReadOnlyList<JobRef> jobs)
     {
+        var linked = await LinkedAsync(jobs, pausedOnes: false);
         var dialog = await Dialogs.ShowAsync<Shared.PauseDialog>(Localizer["Action_Pause"],
-            new DialogParameters<Shared.PauseDialog> { { d => d.Jobs, jobs.Select(j => j.Key).ToList() } },
+            new DialogParameters<Shared.PauseDialog> { { d => d.Jobs, jobs.Select(j => j.Key).ToList() }, { d => d.Linked, linked } },
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
         var result = await dialog.Result;
-        if (result is null || result.Canceled) return;
-        ShowResults(await Operations.PauseAsync(jobs, result.Data as string, UserName), "Action_Paused");
+        if (result is null || result.Canceled || result.Data is not Shared.PauseDialog.PauseChoice choice) return;
+        ShowResults(await Operations.PauseAsync(WithLinked(jobs, choice.IncludeLinked ? linked : []), choice.Reason, UserName), "Action_Paused");
         await ReloadAsync();
     }
 
     protected async Task ResumeJobsAsync(IReadOnlyList<JobRef> jobs)
     {
-        ShowResults(await Operations.ResumeAsync(jobs, UserName), "Action_Resumed");
+        // Import/upload and its monitor go together: a resumed job whose monitor stays paused would never get its results checked.
+        var linked = await LinkedAsync(jobs, pausedOnes: true);
+        var includeLinked = false;
+        if (linked.Count > 0)
+        {
+            var dialog = await Dialogs.ShowAsync<Shared.ConfirmDialog>(Localizer["Paired_ResumeTitle", jobs.Count], new DialogParameters<Shared.ConfirmDialog>
+            {
+                { d => d.Title, Localizer["Paired_ResumeTitle", jobs.Count] },
+                { d => d.Message, Localizer["Paired_ResumeText"] },
+                { d => d.ConfirmText, Localizer["Action_Resume"] },
+                { d => d.ConfirmColor, Color.Success },
+                { d => d.Items, linked },
+                { d => d.CheckboxText, Localizer["Paired_ResumeToo", linked.Count].Value }
+            }, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+            var result = await dialog.Result;
+            if (result is null || result.Canceled) return;
+            includeLinked = result.Data is true;
+        }
+        ShowResults(await Operations.ResumeAsync(WithLinked(jobs, includeLinked ? linked : []), UserName), "Action_Resumed");
         await ReloadAsync();
     }
+
+    /// <summary>Linked jobs of the selection that are not selected and are paused (<paramref name="pausedOnes"/>) or not paused.</summary>
+    private async Task<IReadOnlyList<string>> LinkedAsync(IReadOnlyList<JobRef> jobs, bool pausedOnes)
+    {
+        var selected = jobs.Select(j => j.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var all = (await Queries.ListAsync(Disposed)).ToDictionary(s => s.Key, StringComparer.OrdinalIgnoreCase);
+        return jobs.Select(j => all.GetValueOrDefault(j.Key)?.PairedKey)
+            .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(k => !selected.Contains(k) && all.TryGetValue(k, out var paired) && paired.IsPaused == pausedOnes && paired.State != "NotScheduled")
+            .ToList();
+    }
+
+    private static IReadOnlyList<JobRef> WithLinked(IReadOnlyList<JobRef> jobs, IReadOnlyList<string> linked) =>
+        linked.Count == 0 ? jobs : [.. jobs, .. linked.Select(JobRef.Parse)];
 
     protected async Task<bool> DeleteJobsAsync(IReadOnlyList<JobRef> jobs)
     {

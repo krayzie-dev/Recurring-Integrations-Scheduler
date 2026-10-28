@@ -20,6 +20,7 @@ Strony odświeżają się same, gdy zadanie startuje lub się kończy.
 - Kolumna *Ostatnie uruchomienie* pokazuje wynik i czas, a przy kilku błędach z rzędu – czerwony znacznik (np. ×3). Przyciski uruchomienia i wstrzymania są w kolumnie *Akcje*, zawsze widocznej przy prawej krawędzi.
 - Kolorowy pasek przy typie oznacza typ zadania (te same kolory co ramki pasków na wykresach).
 - **Akcje zbiorcze** po zaznaczeniu: *Uruchom teraz*, *Wstrzymaj* (z powodem widocznym dla wszystkich), *Wznów*, *Edycja zbiorcza*, *Usuń*.
+- **Zadanie i jego monitor razem**: przy wstrzymaniu albo wznowieniu Importu lub Wysyłki RIS proponuje zrobić to samo z połączonym monitorem (pole zaznaczone domyślnie) – i odwrotnie. Ikona przerwanego łańcucha obok stanu oznacza, że zadanie działa, a jego monitor jest wstrzymany (albo odwrotnie): wyniki zadania nie są wtedy sprawdzane.
 - Ikona pobierania eksportuje widoczne lub zaznaczone zadania do Excela, CSV albo JSON (definicje bez sekretów).
 
 ## Strona zadania

@@ -8,11 +8,16 @@
                 <MudListItem T="string" Icon="@Icons.Material.Filled.ChevronRight">@job</MudListItem>
             }
         </MudList>
+        @if (Linked.Count > 0)
+        {
+            <MudCheckBox @bind-Value="_includeLinked" Color="Color.Primary" Label="@T["Paired_PauseToo", Linked.Count]" Class="ml-n2" />
+            <MudText Typo="Typo.body2" Class="mud-text-secondary ml-8 mb-2">@string.Join(", ", Linked)</MudText>
+        }
         <MudTextField @bind-Value="_reason" Label="@T["Pause_Reason"]" Placeholder="@T["Pause_ReasonHint"]" AutoFocus="true" Immediate="true" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="() => Dialog.Cancel()">@T["Common_Cancel"]</MudButton>
-        <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(_reason))">@T["Action_Pause"]</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="() => Dialog.Close(DialogResult.Ok(new PauseChoice(_reason, _includeLinked)))">@T["Action_Pause"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -20,5 +25,11 @@
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
     [Parameter] public IReadOnlyList<string> Jobs { get; set; } = [];
 
+    /// <summary>Linked jobs (monitors) not selected and still running: paused too unless unticked.</summary>
+    [Parameter] public IReadOnlyList<string> Linked { get; set; } = [];
+
     private string? _reason;
+    private bool _includeLinked = true;
+
+    public sealed record PauseChoice(string? Reason, bool IncludeLinked);
 }

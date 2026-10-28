@@ -1,7 +1,15 @@
 @* Scheduler state of a job; running jobs and pause reasons are shown too. *@
-<MudTooltip Text="@Tooltip" Disabled="string.IsNullOrEmpty(Tooltip)">
-    <MudChip T="string" Size="Size.Small" Color="Colour" Variant="Variant.Outlined" Icon="@Icon" Class="ma-0">@T["State_" + Key]</MudChip>
-</MudTooltip>
+<span class="ris-nowrap">
+    <MudTooltip Text="@Tooltip" Disabled="string.IsNullOrEmpty(Tooltip)">
+        <MudChip T="string" Size="Size.Small" Color="Colour" Variant="Variant.Outlined" Icon="@Icon" Class="ma-0">@T["State_" + Key]</MudChip>
+    </MudTooltip>
+    @if (Job.MonitorPausedAlone)
+    {
+        <MudTooltip Text="@T[Job.IsMonitor ? "Paired_JobPaused" : "Paired_MonitorPaused", Job.PairedKey!]">
+            <MudIcon Icon="@Icons.Material.Filled.LinkOff" Color="Color.Warning" Size="Size.Small" Class="ml-1" Style="vertical-align: middle" />
+        </MudTooltip>
+    }
+</span>
 
 @code {
     [Parameter, EditorRequired] public RIS.Server.Services.JobSummary Job { get; set; } = null!;

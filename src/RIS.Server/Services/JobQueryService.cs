@@ -11,9 +11,14 @@ public sealed record JobSummary(
     string Key, string Group, string Name, string Type, string? Description, string? Connection, string Schedule, string State,
     DateTimeOffset? NextRunUtc, DateTimeOffset? PreviousRunUtc,
     string? LastResult, string? LastSummary, DateTimeOffset? LastRunUtc, DateTimeOffset? LastSucceededUtc, int ConsecutiveFailures,
-    string? PauseReason, string? PausedBy, bool Running)
+    string? PauseReason, string? PausedBy, bool Running, string? PairedKey = null, bool PairedPaused = false)
 {
     public bool IsPaused => State == nameof(TriggerState.Paused);
+
+    public bool IsMonitor => Type is nameof(RIS.Core.Configuration.JobType.ExecutionMonitor) or nameof(RIS.Core.Configuration.JobType.ProcessingMonitor);
+
+    /// <summary>An active import/upload whose linked monitor is paused, or that paused monitor: results of the job are not checked.</summary>
+    public bool MonitorPausedAlone => PairedKey is not null && State != "NotScheduled" && (IsMonitor ? IsPaused && !PairedPaused : !IsPaused && PairedPaused);
 }
 
 public sealed record JobDetails(JobSummary Summary, JobDefinition Definition, IReadOnlyList<DateTimeOffset> UpcomingRunsUtc);
@@ -64,7 +69,7 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
             .GroupBy(s => s.Job).ToDictionary(g => g.Key, g => g.First());
         var runningKeys = running.Current.Select(r => r.Key).ToHashSet();
 
-        return store.Current.Jobs.OrderBy(j => j.Group).ThenBy(j => j.Name).Select(job =>
+        var summaries = store.Current.Jobs.OrderBy(j => j.Group).ThenBy(j => j.Name).Select(job =>
         {
             var key = new JobKey(job.Name, job.Group);
             var trigger = triggers.GetValueOrDefault(key);
@@ -73,7 +78,15 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
             return Summary(job, state, trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc, statuses.GetValueOrDefault(key),
                 pause?.Reason, pause?.RequestedBy, runningKeys.Contains(key));
         }).ToList();
+        var paused = summaries.Where(s => s.IsPaused).Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return summaries.Select(s => s.PairedKey is null ? s : s with { PairedPaused = paused.Contains(s.PairedKey) }).ToList();
     }
+
+    /// <summary>Key of the linked job (monitor of an import/upload or the other way round); jobs refer to it by name, the same group first.</summary>
+    private string? PairedKey(JobDefinition job) =>
+        job.PairedJob is null ? null
+        : (store.Current.Jobs.FirstOrDefault(j => j.Group == job.Group && string.Equals(j.Name, job.PairedJob, StringComparison.OrdinalIgnoreCase))
+           ?? store.Current.Jobs.FirstOrDefault(j => string.Equals(j.Name, job.PairedJob, StringComparison.OrdinalIgnoreCase)))?.Key;
 
     public JobDefinition? Find(string group, string name) =>
         store.Current.Jobs.FirstOrDefault(j => string.Equals(j.Group, group, StringComparison.OrdinalIgnoreCase) && string.Equals(j.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -182,16 +195,22 @@ public sealed class JobQueryService(IRisConfigurationStore store, ISchedulerFact
         var state = trigger is null ? "NotScheduled" : (await scheduler.GetTriggerState(trigger.Key, ct)).ToString();
         var pause = trigger is not null && state == nameof(TriggerState.Paused) ? await scheduler.GetTriggerPause(trigger.Key, ct) : null;
         var status = await history.GetJobRunStatus(scheduler.SchedulerName, key, ct);
-        return Summary(job, state, trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc, status, pause?.Reason, pause?.RequestedBy,
+        var summary = Summary(job, state, trigger?.NextFireTimeUtc, trigger?.PreviousFireTimeUtc, status, pause?.Reason, pause?.RequestedBy,
             running.Current.Any(r => r.Key.Equals(key)));
+        if (summary.PairedKey is not null && store.Current.FindJob(summary.PairedKey) is { } paired
+            && await RegularTriggerAsync(scheduler, paired, ct) is { } pairedTrigger)
+        {
+            summary = summary with { PairedPaused = await scheduler.GetTriggerState(pairedTrigger.Key, ct) == TriggerState.Paused };
+        }
+        return summary;
     }
 
-    private static JobSummary Summary(JobDefinition job, string state, DateTimeOffset? next, DateTimeOffset? previous, JobRunStatus? status,
+    private JobSummary Summary(JobDefinition job, string state, DateTimeOffset? next, DateTimeOffset? previous, JobRunStatus? status,
         string? pauseReason, string? pausedBy, bool isRunning) =>
         new(job.Key, job.Group, job.Name, job.Type.ToString(), job.Description, job.Options?.Connection, Describe(job.Schedule), state,
             next, previous,
             status?.LastResult.ToString(), status?.LastSummary, status?.LastFiredAtUtc, status?.LastSucceededAtUtc, status?.ConsecutiveFailures ?? 0,
-            pauseReason, pausedBy, isRunning);
+            pauseReason, pausedBy, isRunning, PairedKey(job));
 
     private static RunDetails ToRun(ExecutionHistoryEntry e, bool includeLog) => new(
         e.FireInstanceId ?? "", e.EntryId ?? "", $"{e.JobGroup}.{e.JobName}", e.FiredAtUtc, e.Duration, e.EffectiveResult.ToString(), e.Summary,
