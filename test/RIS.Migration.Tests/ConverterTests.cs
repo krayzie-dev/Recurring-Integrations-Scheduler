@@ -141,10 +141,15 @@ public sealed partial class ConverterTests
         var configuration = result.Configuration;
 
         Assert.AreEqual(3, configuration.Jobs.Count, string.Join(Environment.NewLine, result.Warnings));
-        Assert.AreEqual(1, configuration.Connections.Count, "Same environment and app must become one connection.");
+        Assert.AreEqual(1, configuration.Connections.Count, "Same environment must become one D365 instance.");
         Assert.AreEqual("CONTOSO-PROD", configuration.Connections[0].Name);
         Assert.AreEqual(new Uri("https://contoso-prod.operations.dynamics.com"), configuration.Connections[0].AosUri);
-        Assert.AreEqual("<SET-SECRET>", configuration.Connections[0].ClientSecret);
+        Assert.AreEqual(1, configuration.AppRegistrations.Count, "Same app must become one app registration.");
+        Assert.AreEqual("APP-AAAAAAAA", configuration.AppRegistrations[0].Name);
+        Assert.AreEqual("<SET-SECRET>", configuration.AppRegistrations[0].ClientSecret);
+        Assert.AreEqual("APP-AAAAAAAA", configuration.Connections[0].AppRegistration, "Default app registration of the instance.");
+        Assert.IsFalse(configuration.Connections[0].HasInlineSignIn);
+        Assert.IsTrue(configuration.Jobs.All(j => j.Options!.AppRegistration is null), "Jobs use the default of their instance.");
 
         var export = configuration.FindJob("CustInvoicejour interface D365_AX2012")!;
         var exportOptions = (ExportJobOptions)export.Options!;
@@ -360,9 +365,9 @@ public sealed partial class ConverterTests
         var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = true })
             .Convert(XDocument.Parse(WithClientSecrets(Dpapi("old-secret"), Dpapi("new-secret"), Dpapi("new-secret"))));
 
-        var connection = result.Configuration.Connections.Single();
-        Assert.AreEqual("new-secret", connection.ClientSecret, "The secret carried by most jobs.");
-        var candidates = result.ClientSecretCandidates[connection.Name];
+        var registration = result.Configuration.AppRegistrations.Single();
+        Assert.AreEqual("new-secret", registration.ClientSecret, "The secret carried by most jobs.");
+        var candidates = result.ClientSecretCandidates[registration.Name];
         CollectionAssert.AreEqual(new[] { "new-secret", "old-secret" }, candidates.Select(c => c.Value).ToList());
         Assert.AreEqual(2, candidates[0].Jobs.Count);
         Assert.IsTrue(result.Warnings.Any(w => w.Contains("2 different client secrets") && !w.Contains("secret\"") && !w.Contains("new-secret")),
@@ -454,6 +459,31 @@ public sealed partial class ConverterTests
         Assert.AreEqual("renewed-secret", await StoredSecretAsync(data), "portable.config next to Schedule.xml is read and its secret comes first.");
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+    }
+
+    [TestMethod]
+    public void AppRegistrations_NamedAfterThe4xClient_JobWithAnotherApp_KeepsItsOwn()
+    {
+        // The third job signs in with another app registration than the other two jobs of the same environment.
+        var xml = WithTriggers();
+        var last = xml.LastIndexOf("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", StringComparison.Ordinal);
+        Assert.IsTrue(last > 0);
+        xml = xml[..last] + "11111111-2222-3333-4444-555555555555" + xml[(last + 36)..];
+        var result = new ScheduleXmlConverter(new ConversionOptions
+        {
+            AppRegistrationNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["AAAAAAAA-bbbb-cccc-dddd-eeeeeeeeeeee"] = "CONTOSO APP" }
+        }).Convert(XDocument.Parse(xml));
+        var configuration = result.Configuration;
+
+        CollectionAssert.AreEquivalent(new[] { "CONTOSO APP", "APP-11111111" }, configuration.AppRegistrations.Select(a => a.Name).ToList());
+        var instance = configuration.Connections.Single();
+        Assert.AreEqual("CONTOSO APP", instance.AppRegistration, "The app registration of most jobs is the default, named as in the 4.x client.");
+        var own = configuration.Jobs.Where(j => j.Options!.AppRegistration is not null).ToList();
+        Assert.AreEqual(1, own.Count);
+        Assert.AreEqual("APP-11111111", own[0].Options!.AppRegistration);
+        Assert.AreEqual("11111111-2222-3333-4444-555555555555", configuration.ResolveConnection(own[0].Options!.Connection, own[0].Options!.AppRegistration).ClientId);
+        Assert.AreEqual(0, ConfigurationValidator.Validate(configuration).Count(e => e.Contains("pp registration", StringComparison.OrdinalIgnoreCase)),
+            string.Join(Environment.NewLine, ConfigurationValidator.Validate(configuration)));
     }
 
     private static async Task<string?> StoredSecretAsync(string data)

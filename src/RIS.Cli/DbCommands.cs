@@ -50,7 +50,7 @@ internal static partial class DbCommands
         var file = new Argument<FileInfo>("config") { Description = "jobs.json (e.g. output of convert-schedule)" };
         var data = DataOption();
         var paused = new Option<bool>("--paused") { Description = "Import all jobs paused (parallel run with 4.x: visible, but not started until resumed)" };
-        var command = new Command("import", "Add or update connections, SFTP servers and jobs from a file. Placeholder secrets keep stored values.") { file, data, paused };
+        var command = new Command("import", "Add or update app registrations, D365 instances, SFTP servers and jobs from a file. Placeholder secrets keep stored values.") { file, data, paused };
         command.SetAction(async (parse, ct) =>
         {
             var configuration = RisJson.LoadConfiguration(parse.GetValue(file)!.FullName);
@@ -62,13 +62,16 @@ internal static partial class DbCommands
             return await ChangeAsync(async () =>
             {
                 await services.GetRequiredService<ConfigurationRepository>().ImportAsync(configuration, CurrentUser(), ct);
-                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s)." + (parse.GetValue(paused) ? " Jobs are paused." : ""));
-                var missing = configuration.Connections.Where(c => SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(c.UserPassword))
-                    .Select(c => c.Name).ToList();
+                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.AppRegistrations.Count} app registration(s), {configuration.Connections.Count} D365 instance(s), " +
+                                  $"{configuration.SftpServers.Count} SFTP server(s)." + (parse.GetValue(paused) ? " Jobs are paused." : ""));
+#pragma warning disable CS0618
+                var missing = configuration.AppRegistrations.Where(a => a.AuthMode != D365AuthMode.Certificate && SecretPlaceholder.IsPlaceholderOrEmpty(a.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(a.UserPassword))
+                    .Select(a => a.Name).ToList();
+#pragma warning restore CS0618
                 if (missing.Count > 0)
                 {
-                    Console.WriteLine("Connections without a secret in the file (stored value kept, if any): " + string.Join(", ", missing) +
-                                      ". Set with: ris db set-secret connection <name>");
+                    Console.WriteLine("App registrations without a secret in the file (stored value kept, if any): " + string.Join(", ", missing) +
+                                      ". Set with: ris db set-secret app-registration <name>");
                 }
             });
         });
@@ -87,7 +90,7 @@ internal static partial class DbCommands
         var paused = new Option<bool>("--paused") { Description = "Import all jobs paused (switch them one by one from 4.x)" };
         var noSecrets = new Option<bool>("--no-secrets") { Description = "Do not decrypt the 4.x secrets (set them later)" };
         var report = new Option<DirectoryInfo?>("--report") { Description = "Folder for jobs.json (without secrets) of the converted configuration" };
-        var secretsOnly = new Option<bool>("--secrets-only") { Description = "Only set the secrets of D365 instances and SFTP servers that already exist in RIS 5 (jobs are not touched)" };
+        var secretsOnly = new Option<bool>("--secrets-only") { Description = "Only set the secrets of app registrations and SFTP servers that already exist in RIS 5 (jobs are not touched)" };
         var noCheck = new Option<bool>("--no-secret-check") { Description = "Do not try the client secrets against Entra ID (offline)" };
         var clientSettings = new Option<FileInfo?>("--client-settings") { Description = "Settings of the 4.x client with the app registrations (default: portable.config next to Schedule.xml)" };
         var command = new Command("import-4x", "Convert RIS 4.x Schedule.xml and import it, with the 4.x secrets when run on the 4.x server")
@@ -95,12 +98,18 @@ internal static partial class DbCommands
         command.SetAction(async (parse, ct) =>
         {
             var source = parse.GetValue(schedule)!;
-            var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = !parse.GetValue(noSecrets) }).Convert(XDocument.Load(source.FullName));
+            var settingsFile = parse.GetValue(clientSettings)?.FullName ?? Path.Combine(source.DirectoryName ?? ".", ClientSettingsReader.FileName);
+            var clientRegistrations = ReadClientSettings(settingsFile);
+            var result = new ScheduleXmlConverter(new ConversionOptions
+            {
+                DecryptSecrets = !parse.GetValue(noSecrets),
+                AppRegistrationNames = clientRegistrations.Where(r => r.IsService).GroupBy(r => r.ClientId, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase)
+            }).Convert(XDocument.Load(source.FullName));
             var configuration = result.Configuration;
             if (!parse.GetValue(noSecrets))
             {
-                var settingsFile = parse.GetValue(clientSettings)?.FullName ?? Path.Combine(source.DirectoryName ?? ".", ClientSettingsReader.FileName);
-                AddAppRegistrationSecrets(result, settingsFile);
+                AddAppRegistrationSecrets(result, clientRegistrations);
                 if (!parse.GetValue(noCheck)) await ChooseClientSecretsAsync(result, ct);
             }
             if (parse.GetValue(secretsOnly)) return await SetSecretsOnlyAsync(configuration, parse.GetValue(data), ct);
@@ -130,74 +139,89 @@ internal static partial class DbCommands
             return await ChangeAsync(async () =>
             {
                 await services.GetRequiredService<ConfigurationRepository>().ImportAsync(configuration, CurrentUser(), ct);
-                var missing = configuration.Connections.Where(c => SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(c.UserPassword)
-                                                                   && string.IsNullOrEmpty(c.CertificateThumbprint)).Select(c => "connection " + c.Name)
+#pragma warning disable CS0618
+                var missing = configuration.AppRegistrations.Where(a => SecretPlaceholder.IsPlaceholderOrEmpty(a.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(a.UserPassword)
+                                                                        && string.IsNullOrEmpty(a.CertificateThumbprint)).Select(a => "app registration " + a.Name)
+#pragma warning restore CS0618
                     .Concat(configuration.SftpServers.Where(s => !s.UseKey && SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)).Select(s => "SFTP server " + s.Name))
                     .ToList();
-                var migrated = configuration.Connections.Count + configuration.SftpServers.Count - missing.Count;
-                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s)" +
-                                  (parse.GetValue(paused) ? ", all jobs paused" : "") + $". Secrets taken over from 4.x: {migrated}.");
+                var migrated = configuration.AppRegistrations.Count + configuration.SftpServers.Count - missing.Count;
+                var overrides = configuration.Jobs.Count(j => !string.IsNullOrEmpty(j.Options?.AppRegistration));
+                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.AppRegistrations.Count} app registration(s), {configuration.Connections.Count} D365 instance(s), " +
+                                  $"{configuration.SftpServers.Count} SFTP server(s)" + (parse.GetValue(paused) ? ", all jobs paused" : "") + $". Secrets taken over from 4.x: {migrated}.");
+                foreach (var instance in configuration.Connections) Console.WriteLine($"D365 instance {instance.Name}: default app registration {instance.AppRegistration}.");
+                if (overrides > 0) Console.WriteLine($"Jobs with their own app registration (not the default of their instance): {overrides}.");
                 if (missing.Count > 0)
                 {
-                    Console.WriteLine("Secrets to set in RIS 5 (Connections / SFTP servers, or ris db set-secret): " + string.Join(", ", missing));
+                    Console.WriteLine("Secrets to set in RIS 5 (App registrations / SFTP servers, or ris db set-secret): " + string.Join(", ", missing));
                 }
             });
         });
         return command;
     }
 
-    /// <summary>
-    /// 4.x jobs of one connection may carry different client secrets (renewed only in some jobs): each one is tried against
-    /// Entra ID (client credentials token) and the first one accepted is used. Secrets are never printed.
-    /// </summary>
-    /// <summary>
-    /// The 4.x client validates instances with its app registrations (portable.config): their secret is the one users keep up to
-    /// date, while every job carries its own, possibly outdated copy. Registrations with the client id of a connection come first.
-    /// </summary>
-    private static void AddAppRegistrationSecrets(ConversionResult result, string settingsFile)
+    /// <summary>App registrations of the 4.x client (portable.config); empty when there is no such file.</summary>
+    private static IReadOnlyList<AppRegistration> ReadClientSettings(string settingsFile)
     {
-        if (!File.Exists(settingsFile) || !OperatingSystem.IsWindows()) return;
-        IReadOnlyList<AppRegistration> registrations;
+        if (!File.Exists(settingsFile)) return [];
         try
         {
-            registrations = ClientSettingsReader.ReadAppRegistrations(settingsFile);
+            var registrations = ClientSettingsReader.ReadAppRegistrations(settingsFile);
+            Console.WriteLine($"4.x client settings {settingsFile}: {registrations.Count} app registration(s): " +
+                              string.Join(", ", registrations.Select(r => $"{r.Name} ({r.ClientId})")));
+            return registrations;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
         {
             Console.WriteLine($"WARNING 4.x client settings {settingsFile} could not be read: {ex.Message}");
-            return;
+            return [];
         }
-        Console.WriteLine($"4.x client settings {settingsFile}: {registrations.Count} app registration(s): " +
-                          string.Join(", ", registrations.Select(r => $"{r.Name} ({r.ClientId})")));
+    }
 
-        foreach (var connection in result.Configuration.Connections.Where(c => c.AuthMode == D365AuthMode.ClientSecret))
+    /// <summary>
+    /// The 4.x client validates instances with its app registrations (portable.config): their secret is the one users keep up to
+    /// date, while every job carries its own, possibly outdated copy. Secrets of the client come first.
+    /// </summary>
+    private static void AddAppRegistrationSecrets(ConversionResult result, IReadOnlyList<AppRegistration> clientRegistrations)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        foreach (var registration in result.Configuration.AppRegistrations.Where(a => a.AuthMode == D365AuthMode.ClientSecret))
         {
-            foreach (var registration in registrations.Where(r => r.IsService && r.EncryptedSecret is not null
-                                                                  && string.Equals(r.ClientId, connection.ClientId, StringComparison.OrdinalIgnoreCase)).Reverse())
+            foreach (var client in clientRegistrations.Where(r => r.IsService && r.EncryptedSecret is not null
+                                                                  && string.Equals(r.ClientId, registration.ClientId, StringComparison.OrdinalIgnoreCase)).Reverse())
             {
                 string value;
-                try { value = ScheduleXmlConverter.DecryptDpapi(registration.EncryptedSecret!); }
+                try { value = ScheduleXmlConverter.DecryptDpapi(client.EncryptedSecret!); }
                 catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or FormatException) { continue; }
 
-                if (!result.ClientSecretCandidates.TryGetValue(connection.Name, out var candidates))
+                if (!result.ClientSecretCandidates.TryGetValue(registration.Name, out var candidates))
                 {
-                    result.ClientSecretCandidates[connection.Name] = candidates = [];
+                    result.ClientSecretCandidates[registration.Name] = candidates = [];
                 }
                 var candidate = candidates.FirstOrDefault(c => c.Value == value) ?? new SecretCandidate(value);
                 candidates.Remove(candidate);
-                candidate.Jobs.Insert(0, $"app registration '{registration.Name}' of the 4.x client");
+                candidate.Jobs.Insert(0, $"app registration '{client.Name}' of the 4.x client");
                 candidates.Insert(0, candidate);
-                connection.ClientSecret = candidate.Value;
+                registration.ClientSecret = candidate.Value;
             }
         }
     }
 
+    /// <summary>
+    /// The candidate secrets of an app registration (4.x client, jobs) are tried against Entra ID (client credentials token for a
+    /// D365 instance that uses it) - once per app registration - and the first one accepted is used. Secrets are never printed.
+    /// </summary>
     private static async Task ChooseClientSecretsAsync(ConversionResult result, CancellationToken cancellationToken)
     {
         var tokens = new MsalTokenProvider(NullLogger<MsalTokenProvider>.Instance);
+        var configuration = result.Configuration;
         foreach (var (name, candidates) in result.ClientSecretCandidates)
         {
-            if (result.Configuration.FindConnection(name) is not { } connection) continue;
+            if (configuration.FindAppRegistration(name) is not { } registration) continue;
+            var instance = configuration.Connections.FirstOrDefault(c => c.AppRegistration == name)
+                           ?? configuration.Jobs.Where(j => j.Options?.AppRegistration == name).Select(j => configuration.FindConnection(j.Options!.Connection)).FirstOrDefault(c => c is not null);
+            if (instance is null) continue;
+
             string? lastError = null;
             var tried = 0;
             SecretCandidate? accepted = null;
@@ -206,8 +230,8 @@ internal static partial class DbCommands
                 tried++;
                 var probe = new D365ConnectionOptions
                 {
-                    Name = connection.Name, AosUri = connection.AosUri, Tenant = connection.Tenant, Authority = connection.Authority,
-                    ClientId = connection.ClientId, AuthMode = D365AuthMode.ClientSecret, ClientSecret = candidate.Value
+                    Name = instance.Name, AosUri = instance.AosUri, Tenant = registration.Tenant, Authority = registration.Authority,
+                    ClientId = registration.ClientId, AuthMode = D365AuthMode.ClientSecret, ClientSecret = candidate.Value
                 };
                 try
                 {
@@ -225,14 +249,14 @@ internal static partial class DbCommands
 
             if (accepted is not null)
             {
-                connection.ClientSecret = accepted.Value;
-                Console.WriteLine($"Connection {name}: client secret accepted by Entra ID (source: {accepted.Jobs[0]}" +
+                registration.ClientSecret = accepted.Value;
+                Console.WriteLine($"App registration {name}: client secret accepted by Entra ID (source: {accepted.Jobs[0]}" +
                                   (accepted.Jobs.Count > 1 ? $" and {accepted.Jobs.Count - 1} more" : "") + $"; {tried} of {candidates.Count} tried).");
             }
             else
             {
-                Console.WriteLine($"WARNING Connection {name}: no client secret of the 4.x jobs or client was accepted ({tried} of {candidates.Count} tried, last: {lastError}). " +
-                                  "The most used one is stored; when it is expired, set a new secret on the D365 instances page.");
+                Console.WriteLine($"WARNING App registration {name}: no client secret of the 4.x jobs or client was accepted ({tried} of {candidates.Count} tried, last: {lastError}). " +
+                                  "The most used one is stored; when it is expired, set a new secret on the App registrations page.");
             }
         }
     }
@@ -240,22 +264,33 @@ internal static partial class DbCommands
     [System.Text.RegularExpressions.GeneratedRegex(@"AADSTS\d+: [^.\r\n]+")]
     private static partial System.Text.RegularExpressions.Regex AadError();
 
-    /// <summary>"--secrets-only": the converted secrets go to the D365 instances and SFTP servers of the same name, nothing else changes.</summary>
+    /// <summary>
+    /// "--secrets-only": the converted secrets go to the app registrations and SFTP servers that already exist in RIS 5, nothing
+    /// else changes. An app registration is found by name, otherwise by client id (e.g. named "APP-..." by the migration of an
+    /// earlier import; the secret belongs to the application, whatever form of the tenant it was stored with).
+    /// </summary>
     private static async Task<int> SetSecretsOnlyAsync(RisConfiguration converted, DirectoryInfo? data, CancellationToken cancellationToken)
     {
         await using var services = await OpenAsync(data, cancellationToken);
         var repository = services.GetRequiredService<ConfigurationRepository>();
         var stored = await repository.LoadAsync(cancellationToken);
         var set = 0;
-        foreach (var connection in converted.Connections.Where(c => !SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret)))
+        foreach (var registration in converted.AppRegistrations.Where(a => a.AuthMode == D365AuthMode.ClientSecret && !SecretPlaceholder.IsPlaceholderOrEmpty(a.ClientSecret)))
         {
-            if (stored.FindConnection(connection.Name) is null)
+            var targets = stored.FindAppRegistration(registration.Name) is { } byName
+                ? [byName]
+                : stored.AppRegistrations.Where(a => a.AuthMode == D365AuthMode.ClientSecret && string.Equals(a.ClientId, registration.ClientId, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (targets.Count == 0)
             {
-                Console.WriteLine($"Connection {connection.Name}: not in RIS 5, skipped.");
+                Console.WriteLine($"App registration {registration.Name} ({registration.ClientId}): not in RIS 5, skipped.");
                 continue;
             }
-            await repository.SetSecretAsync(SecretOwner.Connection, connection.Name, connection.ClientSecret!, CurrentUser(), cancellationToken);
-            set++;
+            foreach (var target in targets)
+            {
+                await repository.SetSecretAsync(SecretOwner.AppRegistration, target.Name, registration.ClientSecret!, CurrentUser(), cancellationToken);
+                Console.WriteLine($"App registration {target.Name}: secret set.");
+                set++;
+            }
         }
         foreach (var server in converted.SftpServers.Where(s => !s.UseKey && !SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)))
         {
@@ -282,7 +317,7 @@ internal static partial class DbCommands
             var configuration = await services.GetRequiredService<ConfigurationRepository>().ExportAsync(ct);
             var target = parse.GetValue(output)!;
             RisJson.SaveConfiguration(configuration, target.FullName);
-            Console.WriteLine($"Exported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s) to {target.FullName}.");
+            Console.WriteLine($"Exported {configuration.Jobs.Count} job(s), {configuration.AppRegistrations.Count} app registration(s), {configuration.Connections.Count} D365 instance(s), {configuration.SftpServers.Count} SFTP server(s) to {target.FullName}.");
             return 0;
         });
         return command;
@@ -292,7 +327,7 @@ internal static partial class DbCommands
     {
         var owner = new Argument<string>("owner") { Description = "app-registration | connection (= its app registration) | sftp" };
         owner.AcceptOnlyFromAmong("app-registration", "connection", "sftp");
-        var name = new Argument<string>("name") { Description = "Connection or SFTP server name" };
+        var name = new Argument<string>("name") { Description = "App registration, D365 instance or SFTP server name" };
         var data = DataOption();
         var command = new Command("set-secret",
             "Set the client secret / password of a connection or the password / key passphrase of an SFTP server. The value is read from the console without echo, or from standard input.")

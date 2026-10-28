@@ -55,7 +55,7 @@ public static class Program
 
             foreach (var error in errors) Console.Error.WriteLine("ERROR   " + error);
             foreach (var warning in warnings) Console.WriteLine("WARNING " + warning);
-            Console.WriteLine($"{configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s): " +
+            Console.WriteLine($"{configuration.Jobs.Count} job(s), {configuration.AppRegistrations.Count} app registration(s), {configuration.Connections.Count} D365 instance(s), {configuration.SftpServers.Count} SFTP server(s): " +
                               (errors.Count == 0 ? "configuration is valid" : $"{errors.Count} error(s)"));
             return errors.Count == 0 ? 0 : 1;
         });
@@ -78,7 +78,7 @@ public static class Program
             foreach (var warning in result.Warnings) Console.WriteLine("WARNING " + warning);
             var errors = ConfigurationValidator.Validate(result.Configuration);
             foreach (var error in errors) Console.WriteLine("CHECK   " + error);
-            Console.WriteLine($"Converted {result.Configuration.Jobs.Count} job(s), {result.Configuration.Connections.Count} connection(s), " +
+            Console.WriteLine($"Converted {result.Configuration.Jobs.Count} job(s), {result.Configuration.AppRegistrations.Count} app registration(s), {result.Configuration.Connections.Count} D365 instance(s), " +
                               $"{result.Configuration.SftpServers.Count} SFTP server(s) to {target.FullName}. {result.Warnings.Count} warning(s), {errors.Count} validation issue(s).");
             return 0;
         });

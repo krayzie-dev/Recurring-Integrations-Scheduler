@@ -17,8 +17,8 @@ public sealed class ConversionResult
     public List<string> Warnings { get; } = [];
 
     /// <summary>
-    /// Every distinct decrypted client secret per connection name, most used first. 4.x stores the secret in every job, so when
-    /// it was renewed only in some jobs, the jobs of one connection carry different secrets. Never written to a file.
+    /// Every distinct decrypted client secret per app registration name, most used first. 4.x stores the secret in every job, so
+    /// when it was renewed only in some jobs, the jobs of one app registration carry different secrets. Never written to a file.
     /// </summary>
     public Dictionary<string, List<SecretCandidate>> ClientSecretCandidates { get; } = new(StringComparer.OrdinalIgnoreCase);
 }
@@ -37,6 +37,9 @@ public sealed class ConversionOptions
 
     /// <summary>Value used for secrets that are not decrypted.</summary>
     public string SecretPlaceholder { get; set; } = RIS.Core.Configuration.SecretPlaceholder.Value;
+
+    /// <summary>Names of app registrations by client id (the 4.x client's "Azure App registrations"); others are named "APP-" and the start of the client id.</summary>
+    public IReadOnlyDictionary<string, string> AppRegistrationNames { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -98,23 +101,39 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
         }
 
         LinkMonitors(result.Configuration);
+        AssignAppRegistrations(result.Configuration);
 
         // The secret used by most jobs is the default; "ris db import-4x" tries all of them against Entra ID.
-        foreach (var (connectionName, candidates) in result.ClientSecretCandidates)
+        foreach (var (registrationName, candidates) in result.ClientSecretCandidates)
         {
             candidates.Sort((a, b) => b.Jobs.Count.CompareTo(a.Jobs.Count));
-            if (result.Configuration.FindConnection(connectionName) is { } connection) connection.ClientSecret = candidates[0].Value;
+            if (result.Configuration.FindAppRegistration(registrationName) is { } registration) registration.ClientSecret = candidates[0].Value;
             if (candidates.Count > 1)
             {
-                result.Warnings.Add($"Connection {connectionName}: the 4.x jobs carry {candidates.Count} different client secrets " +
+                result.Warnings.Add($"App registration {registrationName}: the 4.x jobs carry {candidates.Count} different client secrets " +
                                     $"({string.Join(", ", candidates.Select(c => $"{c.Jobs.Count} job(s), e.g. {c.Jobs[0]}"))}) - the secret was renewed only in some jobs.");
             }
         }
         return result;
     }
 
+    /// <summary>
+    /// 4.x jobs carry their own sign-in. Each D365 instance gets the app registration used by most of its jobs as default; a job
+    /// signing in with another one keeps it as its own app registration.
+    /// </summary>
+    private static void AssignAppRegistrations(RisConfiguration configuration)
+    {
+        foreach (var instance in configuration.Connections)
+        {
+            var jobs = configuration.Jobs.Where(j => j.Options?.Connection == instance.Name).Select(j => j.Options!).ToList();
+            instance.AppRegistration = jobs.GroupBy(j => j.AppRegistration).OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault()
+                                       ?? configuration.AppRegistrations.FirstOrDefault()?.Name;
+            foreach (var job in jobs.Where(j => j.AppRegistration == instance.AppRegistration)) job.AppRegistration = null;
+        }
+    }
+
     /// <summary>Records the decrypted client secret of a job (4.x copies the secret into every job).</summary>
-    private void AddSecretCandidate(string connectionName, JobData data, string key, bool serviceAuth, ConversionResult result)
+    private void AddSecretCandidate(string registrationName, JobData data, string key, bool serviceAuth, ConversionResult result)
     {
         if (!serviceAuth || !_options.DecryptSecrets || !OperatingSystem.IsWindows()) return;
         var encrypted = data.OptionalString("AadClientSecret");
@@ -129,9 +148,9 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
             return;
         }
 
-        if (!result.ClientSecretCandidates.TryGetValue(connectionName, out var candidates))
+        if (!result.ClientSecretCandidates.TryGetValue(registrationName, out var candidates))
         {
-            result.ClientSecretCandidates[connectionName] = candidates = [];
+            result.ClientSecretCandidates[registrationName] = candidates = [];
         }
         var candidate = candidates.FirstOrDefault(c => c.Value == value);
         if (candidate is null) candidates.Add(candidate = new SecretCandidate(value));
@@ -251,57 +270,83 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
         options.PauseOnError = data.Bool("PauseJobOnException");
         options.IndefinitePause = data.Bool("IndefinitePause");
         options.ActionPaths = ActionPaths(data);
-        options.Connection = Connection(data, key, result).Name;
+        options.Connection = Instance(data, result).Name;
+        // Resolved per instance once all jobs are converted (AssignAppRegistrations): cleared when it is the instance default.
+        options.AppRegistration = AppRegistration(data, key, result).Name;
         return options;
     }
 
-    private D365ConnectionOptions Connection(JobData data, string key, ConversionResult result)
+    /// <summary>One D365 instance per AOS address, named after the host.</summary>
+    private static D365ConnectionOptions Instance(JobData data, ConversionResult result)
     {
         var aosUri = new Uri(data.String("AosUri").TrimEnd('/'));
+        if (result.Configuration.Connections.FirstOrDefault(c => c.AosUri == aosUri) is { } existing) return existing;
+
+        var baseName = aosUri.Host.Split('.')[0].ToUpperInvariant();
+        var name = baseName;
+        for (var i = 2; result.Configuration.Connections.Any(c => c.Name == name); i++) name = $"{baseName}-{i}";
+        var instance = new D365ConnectionOptions { Name = name, AosUri = aosUri };
+        result.Configuration.Connections.Add(instance);
+        return instance;
+    }
+
+    /// <summary>One app registration per sign-in (tenant, client id, method, user); the secrets of its jobs are candidates.</summary>
+    private AppRegistrationOptions AppRegistration(JobData data, string key, ConversionResult result)
+    {
         var clientId = data.String("AadClientId");
         var tenant = data.String("AadTenant");
+        var authority = new Uri(data.OptionalString("AzureAuthEndpoint") ?? "https://login.microsoftonline.com");
         var serviceAuth = data.Bool("UseServiceAuthentication");
+        var userName = serviceAuth ? null : data.OptionalString("UserName");
 
-        var existing = result.Configuration.Connections.FirstOrDefault(c =>
-            c.AosUri == aosUri && string.Equals(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(c.Tenant, tenant, StringComparison.OrdinalIgnoreCase) &&
-            (c.AuthMode == D365AuthMode.ClientSecret) == serviceAuth &&
-            (serviceAuth || string.Equals(c.UserName, data.OptionalString("UserName"), StringComparison.OrdinalIgnoreCase)));
+#pragma warning disable CS0618 // username/password is converted as-is from 4.x
+        var existing = result.Configuration.AppRegistrations.FirstOrDefault(a =>
+            string.Equals(a.ClientId, clientId, StringComparison.OrdinalIgnoreCase) && SameTenant(a.Tenant, tenant) &&
+            a.Authority == authority && (a.AuthMode == D365AuthMode.ClientSecret) == serviceAuth &&
+            string.Equals(a.UserName, userName, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
+            if (!string.Equals(existing.Tenant, tenant, StringComparison.OrdinalIgnoreCase) && result.Warnings.All(w => !w.StartsWith($"App registration {existing.Name}: tenant", StringComparison.Ordinal)))
+            {
+                result.Warnings.Add($"App registration {existing.Name}: tenant given as {existing.Tenant} and as {tenant} in the 4.x jobs - taken as the same tenant ({existing.Tenant}).");
+            }
             AddSecretCandidate(existing.Name, data, key, serviceAuth, result);
             return existing;
         }
 
-        var baseName = aosUri.Host.Split('.')[0].ToUpperInvariant();
+        var baseName = _options.AppRegistrationNames.TryGetValue(clientId, out var known) && !string.IsNullOrWhiteSpace(known)
+            ? known.Trim()
+            : "APP-" + (clientId.Length > 8 ? clientId[..8] : clientId).ToUpperInvariant();
         var name = baseName;
-        for (var i = 2; result.Configuration.Connections.Any(c => c.Name == name); i++)
-        {
-            name = $"{baseName}-{i}";
-        }
+        for (var i = 2; result.Configuration.FindAppRegistration(name) is not null; i++) name = $"{baseName}-{i}";
 
-#pragma warning disable CS0618 // username/password is converted as-is from 4.x
-        var connection = new D365ConnectionOptions
+        var registration = new AppRegistrationOptions
         {
             Name = name,
-            AosUri = aosUri,
             Tenant = tenant,
-            Authority = new Uri(data.OptionalString("AzureAuthEndpoint") ?? "https://login.microsoftonline.com"),
+            Authority = authority,
             ClientId = clientId,
             AuthMode = serviceAuth ? D365AuthMode.ClientSecret : D365AuthMode.UsernamePassword,
             ClientSecret = serviceAuth ? Secret(data.OptionalString("AadClientSecret"), $"{name}.ClientSecret", key, result) : null,
-            UserName = serviceAuth ? null : data.OptionalString("UserName"),
+            UserName = userName,
             UserPassword = serviceAuth ? null : Secret(data.OptionalString("UserPassword"), $"{name}.UserPassword", key, result)
         };
 #pragma warning restore CS0618
         if (!serviceAuth)
         {
-            result.Warnings.Add($"Connection {name}: uses username/password authentication (no MFA). Consider an app registration with client secret or certificate.");
+            result.Warnings.Add($"App registration {name}: uses username/password authentication (no MFA). Consider client secret or certificate.");
         }
-        result.Configuration.Connections.Add(connection);
+        result.Configuration.AppRegistrations.Add(registration);
         AddSecretCandidate(name, data, key, serviceAuth, result);
-        return connection;
+        return registration;
     }
+
+    /// <summary>
+    /// 4.x jobs give the tenant as a domain or as its id. A client id belongs to one tenant, so a domain and an id are taken as
+    /// the same tenant (they cannot be compared offline); two different domains or two different ids are not.
+    /// </summary>
+    private static bool SameTenant(string a, string b) =>
+        string.Equals(a, b, StringComparison.OrdinalIgnoreCase) || Guid.TryParse(a, out _) != Guid.TryParse(b, out _);
 
     private SftpTransferOptions? Sftp(JobData data, string direction, string key, ConversionResult result)
     {
