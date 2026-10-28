@@ -77,7 +77,7 @@ else
                         }
                         else
                         {
-                            <ObjectEditor @key="_step" Target="_job.Options!" Include="Fields(_step)" Changed="Changed" Connections="_connections" SftpServers="_sftpServers"
+                            <ObjectEditor @key="_step" Target="_job.Options!" Include="Fields(_step)" Changed="Changed" Connections="_connections" SftpServers="_sftpServers" AppRegistrations="_appRegistrations" InstanceAppRegistrations="_instanceAppRegistrations"
                                           ShowRequired="_attempted.Contains(_step)" OnHelp="f => _helpField = f" FieldExtra="FieldExtra" />
                         }
                         @StepExtra
@@ -127,6 +127,8 @@ else
     private IReadOnlyList<string> _live = [];
     private IReadOnlyList<string> _connections = [];
     private IReadOnlyList<string> _sftpServers = [];
+    private IReadOnlyList<string> _appRegistrations = [];
+    private IReadOnlyDictionary<string, string?> _instanceAppRegistrations = new Dictionary<string, string?>();
     private List<BreadcrumbItem> _breadcrumbs = [];
     private string? _copyFrom;
 
@@ -152,6 +154,8 @@ else
         var configuration = Store.Current;
         _connections = configuration.Connections.Select(c => c.Name).Order().ToList();
         _sftpServers = configuration.SftpServers.Select(s => s.Name).Order().ToList();
+        _appRegistrations = configuration.AppRegistrations.Select(a => a.Name).Order().ToList();
+        _instanceAppRegistrations = configuration.Connections.ToDictionary(c => c.Name, c => c.AppRegistration, StringComparer.OrdinalIgnoreCase);
         var from = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query)["from"];
         if (IsNew && from is not null && configuration.FindJob(from) is { } source)
         {
@@ -287,16 +291,19 @@ else
             builder.AddAttribute(1, nameof(TestButton.Label), T["Test_ProjectEntities"].Value);
             builder.AddAttribute(2, nameof(TestButton.Icon), Icons.Material.Filled.ListAlt);
             builder.AddAttribute(3, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(connection) || string.IsNullOrWhiteSpace(project));
-            builder.AddAttribute(4, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.DataProjectAsync(connection, project)));
+            var registration = _job.Options.AppRegistration;
+            builder.AddAttribute(4, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.DataProjectAsync(connection, project, default, registration)));
             builder.CloseComponent();
         }
-        else if (property == "Connection")
+        else if (property == "AppRegistration")
         {
+            // After instance and app registration: the test signs in exactly as the job will.
             var connection = _job!.Options!.Connection;
+            var registration = _job.Options.AppRegistration;
             builder.OpenComponent<TestButton>(0);
             builder.AddAttribute(1, nameof(TestButton.Label), T["Test_Run"].Value);
             builder.AddAttribute(2, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(connection));
-            builder.AddAttribute(3, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.D365Async(connection)));
+            builder.AddAttribute(3, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.D365Async(connection, default, registration)));
             builder.CloseComponent();
         }
     };

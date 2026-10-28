@@ -482,8 +482,8 @@
   <data name="Enum_LegalEntitySource_FileName" xml:space="preserve"><value>Fragment nazwy pliku</value></data>
   <data name="Enum_D365AuthMode_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
   <data name="Enum_D365AuthMode_Certificate" xml:space="preserve"><value>Certyfikat</value></data>
-  <data name="FieldHint_Connection" xml:space="preserve"><value>Środowisko D365 i rejestracja aplikacji (strona Instancje D365)</value></data>
-  <data name="FieldHelp_Connection" xml:space="preserve"><value>Instancja D365: adres AOS, tenant Entra ID, client id oraz sekret lub certyfikat. Definiowana raz na stronie Instancje D365 i współdzielona przez zadania.</value></data>
+  <data name="FieldHint_Connection" xml:space="preserve"><value>Środowisko D365 (strona Instancje D365)</value></data>
+  <data name="FieldHelp_Connection" xml:space="preserve"><value>Instancja D365: adres AOS i jej domyślna rejestracja aplikacji (logowanie). Definiowana raz na stronie Instancje D365 i współdzielona przez zadania; zadanie może logować się inną rejestracją (pole Rejestracja aplikacji).</value></data>
   <data name="FieldHint_DataProject" xml:space="preserve"><value>Nazwa projektu danych w D365 Zarządzanie danymi</value></data>
   <data name="FieldHelp_DataProject" xml:space="preserve"><value>Projekt danych (definition group) w D365 → Zarządzanie danymi. Eksport: projekt do wyeksportowania. Import: projekt, do którego trafia pakiet. Musi istnieć w środowisku.</value></data>
   <data name="FieldHint_ActivityId" xml:space="preserve"><value>Id cyklicznego zadania danych (GUID)</value></data>
@@ -747,4 +747,24 @@
   <data name="Access_None" xml:space="preserve"><value>Brak członków ról.</value></data>
   <data name="Access_Kerberos" xml:space="preserve"><value>Grupy lokalne serwera: SERWER\Grupa albo sama nazwa (podpowiedzi w polu). Zmiana członkostwa działa po ponownym otwarciu przeglądarki dla grupy lokalnej, po ponownym zalogowaniu do Windows dla grupy AD.</value></data>
   <data name="Test_AppRegOk" xml:space="preserve"><value>Zalogowano do Entra ID (żadna instancja D365 nie używa jeszcze tej rejestracji, więc dostęp do D365 nie był sprawdzany).</value></data>
+  <data name="Nav_AppRegistrations" xml:space="preserve"><value>Rejestracje aplikacji</value></data>
+  <data name="AppReg_Add" xml:space="preserve"><value>Nowa rejestracja aplikacji</value></data>
+  <data name="AppReg_Intro" xml:space="preserve"><value>Aplikacje Microsoft Entra ID, którymi RIS loguje się do D365. Instancja D365 używa swojej domyślnej rejestracji; zadanie może wybrać inną. Odnowiony sekret wpisujesz tutaj raz – działa we wszystkich instancjach i zadaniach, które używają tej rejestracji.</value></data>
+  <data name="AppReg_SectionApp" xml:space="preserve"><value>Aplikacja Entra ID</value></data>
+  <data name="AppReg_NameHint" xml:space="preserve"><value>Nazwa, którą wskazują instancje D365 i zadania, np. RIS-PROD</value></data>
+  <data name="AppReg_NameLocked" xml:space="preserve"><value>Nazwy nie można zmienić: wskazują ją instancje D365 i zadania.</value></data>
+  <data name="AppReg_TestHint" xml:space="preserve"><value>Test działa na serwerze, kontem usługi, z wartościami tego formularza: loguje się do Entra ID, a z wybraną instancją D365 odczytuje też zarządzanie danymi tej instancji.</value></data>
+  <data name="AppReg_TestWith" xml:space="preserve"><value>Testuj z instancją D365</value></data>
+  <data name="AppReg_UsedBy" xml:space="preserve"><value>Używana przez</value></data>
+  <data name="AppReg_UsedByText" xml:space="preserve"><value>instancje: {0}, zadania: {1}</value></data>
+  <data name="AppReg_InUseTitle" xml:space="preserve"><value>Rejestracja aplikacji {0} jest używana</value></data>
+  <data name="AppReg_InUseText" xml:space="preserve"><value>Nie można jej usunąć, dopóki korzystają z niej instancje D365 lub zadania. Najpierw wybierz w nich inną rejestrację:</value></data>
+  <data name="AppReg_None" xml:space="preserve"><value>Nie ma jeszcze rejestracji aplikacji.</value></data>
+  <data name="Field_AppRegistration" xml:space="preserve"><value>Rejestracja aplikacji</value></data>
+  <data name="Conn_SectionAppRegistration" xml:space="preserve"><value>Logowanie</value></data>
+  <data name="Conn_AppRegistrationHint" xml:space="preserve"><value>Domyślne logowanie zadań tej instancji (zadanie może wybrać inne)</value></data>
+  <data name="Conn_AppRegistrationMissing" xml:space="preserve"><value>Brak rejestracji aplikacji</value></data>
+  <data name="AppReg_DefaultOfInstance" xml:space="preserve"><value>Domyślna instancji ({0})</value></data>
+  <data name="FieldHint_AppRegistration" xml:space="preserve"><value>Puste = domyślna rejestracja aplikacji instancji D365</value></data>
+  <data name="FieldHelp_AppRegistration" xml:space="preserve"><value>Aplikacja Microsoft Entra ID, którą zadanie loguje się do D365. Zostaw puste, aby użyć domyślnej rejestracji instancji D365; wybierz inną, gdy to zadanie ma działać jako inna aplikacja (jak w 4.x, gdzie każde zadanie miało swoją rejestrację). Rejestracje definiuje się na stronie Rejestracje aplikacji.</value></data>
 </root>

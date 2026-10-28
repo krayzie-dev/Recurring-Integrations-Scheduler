@@ -37,7 +37,7 @@
                     }
                     @if (value is not null)
                     {
-                        <ObjectEditor Target="value" Connections="Connections" SftpServers="SftpServers" Changed="Changed" Exclude="Exclude"
+                        <ObjectEditor Target="value" Connections="Connections" SftpServers="SftpServers" AppRegistrations="AppRegistrations" InstanceAppRegistrations="InstanceAppRegistrations" Changed="Changed" Exclude="Exclude"
                                       ShowRequired="ShowRequired" OnHelp="OnHelp" />
                     }
                 </MudPaper>
@@ -83,6 +83,20 @@
                                 }
                             </MudSelect>
                         }
+                        else if (p.Name == "AppRegistration" && type == typeof(string) && AppRegistrations is not null)
+                        {
+                            @* Empty = the default app registration of the chosen D365 instance. *@
+                            var instance = (Target as RIS.Core.Options.JobOptionsBase)?.Connection ?? "";
+                            var defaultText = T["AppReg_DefaultOfInstance", InstanceAppRegistrations?.GetValueOrDefault(instance) ?? "–"].Value;
+                            <MudSelect T="string" Value="@((string?)p.GetValue(Target) ?? "")" ValueChanged="v => Set(p, string.IsNullOrEmpty(v) ? null : v)" Label="@label"
+                                       ToStringFunc="v => string.IsNullOrEmpty(v) ? defaultText : v" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@hint">
+                                <MudSelectItem Value="@("")">@defaultText</MudSelectItem>
+                                @foreach (var registration in AppRegistrations)
+                                {
+                                    <MudSelectItem Value="registration">@registration</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
                         else if (p.Name == "Server" && type == typeof(string) && SftpServers is not null)
                         {
                             <MudSelect T="string" Value="@((string?)p.GetValue(Target))" ValueChanged="v => Set(p, v ?? string.Empty)" Label="@label" Required="required"
@@ -119,6 +133,10 @@
     [Parameter, EditorRequired] public object Target { get; set; } = null!;
     [Parameter] public IReadOnlyList<string>? Connections { get; set; }
     [Parameter] public IReadOnlyList<string>? SftpServers { get; set; }
+    /// <summary>App registrations for the "AppRegistration" field of a job.</summary>
+    [Parameter] public IReadOnlyList<string>? AppRegistrations { get; set; }
+    /// <summary>Default app registration per D365 instance (shown as the empty choice).</summary>
+    [Parameter] public IReadOnlyDictionary<string, string?>? InstanceAppRegistrations { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     /// <summary>Properties not shown (e.g. secrets edited separately).</summary>
     [Parameter] public IReadOnlyCollection<string> Exclude { get; set; } = [];

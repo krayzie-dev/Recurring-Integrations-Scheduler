@@ -1,0 +1,166 @@
+@page "/app-registrations"
+@attribute [Authorize(Policy = RisRoles.CanAdminister)]
+@inherits RisPageBase
+@using RIS.Core.Options
+@using RIS.Persistence
+@inject ConfigurationRepository Repository
+@inject IRisConfigurationStore Store
+@inject ConnectionTestService Tests
+@inject ConnectionTestResults TestResults
+
+<PageTitle>RIS 5 – @T["Nav_AppRegistrations"]</PageTitle>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1">
+    <MudText Typo="Typo.h5">@T["Nav_AppRegistrations"]</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NetworkCheck" OnClick="TestAllAsync" Disabled="_items.Count == 0 || _running.Count > 0">@T["Test_All"]</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="() => EditAsync(null)">@T["AppReg_Add"]</MudButton>
+</MudStack>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@T["AppReg_Intro"]</MudText>
+
+<MudDataGrid T="AppRegistrationOptions" Items="_items" Dense="true" Hover="true" Elevation="0" Outlined="true" Loading="Loading">
+    <Columns>
+        <PropertyColumn Property="a => a.Name" Title="@T["Field_Name"]" />
+        <PropertyColumn Property="a => a.Tenant" Title="@T["Field_Tenant"]" />
+        <PropertyColumn Property="a => a.ClientId" Title="@T["Field_ClientId"]" CellClass="ris-mono ris-wrap-any" />
+        <TemplateColumn T="AppRegistrationOptions" Title="@T["Conn_Method"]">
+            <CellTemplate>
+                @if (context.Item.AuthMode == D365AuthMode.Certificate)
+                {
+                    var certificate = Certificate(context.Item.CertificateThumbprint);
+                    var ok = certificate is { HasPrivateKey: true, Expired: false };
+                    <MudTooltip Text="@(certificate is null ? T["Cert_NotFound"] : certificate.Subject)">
+                        <MudChip T="string" Size="Size.Small" Color="@(ok ? Color.Success : Color.Warning)" Icon="@Icons.Material.Filled.VerifiedUser" Class="ris-mono ma-0">
+                            @Short(context.Item.CertificateThumbprint)@(certificate is null ? "" : $" · {certificate.NotAfter.ToString("d", CultureInfo.CurrentCulture)}")
+                        </MudChip>
+                    </MudTooltip>
+                }
+                else if (HasSecret(context.Item.Name))
+                {
+                    <MudTooltip Text="@T["Secret_Set"]">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock" Class="ma-0">@T["Enum_D365AuthMode_" + context.Item.AuthMode]</MudChip>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen" Class="ma-0">@T["Enum_D365AuthMode_" + context.Item.AuthMode]: @T["Secret_Missing"]</MudChip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="AppRegistrationOptions" Title="@T["Test_Last"]">
+            <CellTemplate>
+                <TestStatus Last="TestResults.Get(TestTarget.AppRegistration, context.Item.Name)" Running="_running.Contains(context.Item.Name)" OnTest="() => TestAsync(context.Item.Name)" />
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="AppRegistrationOptions" Title="@T["AppReg_UsedBy"]">
+            <CellTemplate>
+                @{ var (instances, jobs) = UsedBy(context.Item.Name); }
+                <MudTooltip Text="@string.Join(", ", instances.Concat(jobs))" Disabled="instances.Count + jobs.Count == 0">
+                    <span>@T["AppReg_UsedByText", instances.Count, jobs.Count]</span>
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="AppRegistrationOptions" Title="@T["Common_Actions"]" StickyRight="true">
+            <CellTemplate>
+                <div class="ris-actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => EditAsync(context.Item)" title="@T["Action_Edit"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteAsync(context.Item)" title="@T["Common_Delete"]" />
+                </div>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent><MudText Class="pa-4">@T["AppReg_None"]</MudText></NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    protected override bool RefreshOnRuns => false;
+
+    private IReadOnlyList<AppRegistrationOptions> _items = [];
+    private IReadOnlyList<CertificateInfo> _certificates = [];
+    private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task LoadAsync()
+    {
+        _items = (await Repository.LoadAsync()).AppRegistrations.Select(ConfigurationRepository.WithoutSecrets).OrderBy(a => a.Name).ToList();
+        try { _certificates = Certificates.List(); }
+        catch (System.Security.Cryptography.CryptographicException) { _certificates = []; }
+    }
+
+    private CertificateInfo? Certificate(string? thumbprint) =>
+        _certificates.FirstOrDefault(c => string.Equals(c.Thumbprint, thumbprint?.Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
+
+    private static string Short(string? thumbprint) => thumbprint is { Length: > 8 } ? thumbprint[..8] + "…" : thumbprint ?? "";
+
+    /// <summary>Whether the secret needed by the sign-in method is stored (checked on the server; secrets never reach the browser).</summary>
+    private bool HasSecret(string name)
+    {
+        var stored = Store.Current.FindAppRegistration(name);
+#pragma warning disable CS0618
+        return stored?.AuthMode switch
+        {
+            D365AuthMode.Certificate => true,
+            D365AuthMode.UsernamePassword => !SecretPlaceholder.IsPlaceholderOrEmpty(stored.UserPassword),
+            D365AuthMode.ClientSecret => !SecretPlaceholder.IsPlaceholderOrEmpty(stored.ClientSecret),
+            _ => false
+        };
+#pragma warning restore CS0618
+    }
+
+    /// <summary>D365 instances with this default app registration and jobs that choose it themselves.</summary>
+    private (IReadOnlyList<string> Instances, IReadOnlyList<string> Jobs) UsedBy(string name) => (
+        Store.Current.Connections.Where(c => string.Equals(c.AppRegistration, name, StringComparison.OrdinalIgnoreCase)).Select(c => c.Name).ToList(),
+        Store.Current.Jobs.Where(j => string.Equals(j.Options?.AppRegistration, name, StringComparison.OrdinalIgnoreCase)).Select(j => j.Key).ToList());
+
+    private async Task TestAsync(string name)
+    {
+        _running.Add(name);
+        StateHasChanged();
+        try { await Tests.AppRegistrationAsync(name, Disposed); }
+        finally
+        {
+            _running.Remove(name);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Tests every app registration, four at a time; each row updates when its test ends.</summary>
+    private async Task TestAllAsync()
+    {
+        using var slots = new SemaphoreSlim(4);
+        await Task.WhenAll(_items.Select(async a =>
+        {
+            await slots.WaitAsync();
+            try { await TestAsync(a.Name); }
+            finally { slots.Release(); }
+        }));
+    }
+
+    private async Task EditAsync(AppRegistrationOptions? existing)
+    {
+        if (await AppRegistrationEditor.OpenAsync(Dialogs, Repository, Store, T, existing, UserName) is not null)
+        {
+            Snackbar.Add(T["Saved"], Severity.Success);
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(AppRegistrationOptions registration)
+    {
+        // In use: explain instead of a validation error after the attempt.
+        var (instances, jobs) = UsedBy(registration.Name);
+        if (instances.Count + jobs.Count > 0)
+        {
+            await ConfirmAsync(T["AppReg_InUseTitle", registration.Name], T["AppReg_InUseText"], T["Common_Close"], Color.Primary, instances.Concat(jobs).ToList());
+            return;
+        }
+        if (!await ConfirmAsync(T["Reference_DeleteTitle", registration.Name], T["Reference_DeleteText"], T["Common_Delete"], Color.Error)) return;
+        try
+        {
+            await Repository.DeleteAppRegistrationAsync(registration.Name, UserName);
+            await ReloadAsync();
+        }
+        catch (ConfigurationValidationException ex)
+        {
+            Snackbar.Add(string.Join("; ", ex.Errors), Severity.Error, o => o.RequireInteraction = true);
+        }
+    }
+}

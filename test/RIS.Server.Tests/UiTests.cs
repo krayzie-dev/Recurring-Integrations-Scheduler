@@ -152,9 +152,15 @@ public sealed class UiTests
 
         var connections = await GetPageAsync("/connections", "Admin", "en-US");
         StringAssert.Contains(connections, "TEST");
-        StringAssert.Contains(connections, "Client secret", "Sign-in method with its secret state.");
-        Assert.IsFalse(connections.Contains("Client secret: "), "The secret is set (no \"missing\" marker).");
+        StringAssert.Contains(connections, "APP-", "The instance shows its app registration (inline sign-in of the request moved there).");
         Assert.IsFalse(connections.Contains("secret\"") || connections.Contains(">secret<"), "Secret value never rendered.");
+        var registrations = await GetPageAsync("/app-registrations", "Admin", "en-US");
+        StringAssert.Contains(registrations, "App registrations");
+        StringAssert.Contains(registrations, "Client secret", "Sign-in method with its secret state.");
+        Assert.IsFalse(registrations.Contains("Client secret: "), "The secret is set (no \"missing\" marker).");
+        Assert.IsFalse(registrations.Contains("secret\"") || registrations.Contains(">secret<"), "Secret value never rendered.");
+        StringAssert.Contains(registrations, "instances: 1, jobs: 0");
+        Assert.IsFalse((await GetPageAsync("/app-registrations", "Operator", "en-US")).Contains("New app registration"), "Admin only.");
         StringAssert.Contains(await GetPageAsync("/sftp-servers", "Admin", "en-US"), "New SFTP server");
         // The audit grid pages on the server (rows come after the interactive circuit starts): the page itself, and the
         // entries through the same query via the API (one page, total in X-Total-Count, no secrets).

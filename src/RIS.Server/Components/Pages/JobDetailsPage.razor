@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = RisRoles.CanView)]
 @inherits RisPageBase
 @inject ExportService Exports
+@inject IRisConfigurationStore Store
 @inject IJSRuntime JS
 
 <PageTitle>RIS 5 – @Name</PageTitle>
@@ -63,6 +64,8 @@ else
                         <tbody>
                             <tr><td style="width: 40%">@T["Job_Group"]</td><td>@job.Group</td></tr>
                             <tr><td>@T["Job_Connection"]</td><td>@job.Connection</td></tr>
+                            <tr><td>@T["Field_AppRegistration"]</td><td>@(_details.Definition.Options?.AppRegistration
+                                ?? T["AppReg_DefaultOfInstance", Store.Current.FindConnection(job.Connection ?? "")?.AppRegistration ?? "–"].Value)</td></tr>
                             <tr><td>@T["Job_Schedule"]</td><td title="@job.Schedule">@ScheduleBuilder.Describe(_details.Definition.Schedule, T)</td></tr>
                             <tr><td>@T["Job_MissedRuns"]</td><td>@T["MissedRuns_" + _details.Definition.Schedule.MissedRuns]</td></tr>
                             <tr><td>@T["Job_PairedJob"]</td><td>@(_details.Definition.PairedJob ?? "–")</td></tr>

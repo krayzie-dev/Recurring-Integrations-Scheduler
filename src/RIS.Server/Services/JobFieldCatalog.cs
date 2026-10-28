@@ -24,6 +24,7 @@ public static class JobFieldCatalog
     {
         // D365
         ["Connection"] = (JobStep.D365, 0),
+        ["AppRegistration"] = (JobStep.D365, 0),
         ["DataProject"] = (JobStep.D365, 1),
         ["ActivityId"] = (JobStep.D365, 2),
         ["EntityName"] = (JobStep.D365, 3),

@@ -8,6 +8,7 @@
     </AuthorizeView>
     <AuthorizeView Policy="@RisRoles.CanAdminister">
         <MudDivider Class="my-2" />
+        <MudNavLink Href="/app-registrations" Icon="@Icons.Material.Filled.Key">@T["Nav_AppRegistrations"]</MudNavLink>
         <MudNavLink Href="/connections" Icon="@Icons.Material.Filled.Cable">@T["Nav_Connections"]</MudNavLink>
         <MudNavLink Href="/sftp-servers" Icon="@Icons.Material.Filled.Dns">@T["Nav_SftpServers"]</MudNavLink>
         <MudNavLink Href="/access" Icon="@Icons.Material.Filled.AdminPanelSettings">@T["Nav_Access"]</MudNavLink>

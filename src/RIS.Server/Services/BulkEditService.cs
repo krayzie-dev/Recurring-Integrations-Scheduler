@@ -13,6 +13,9 @@ namespace RIS.Server.Services;
 public sealed record BulkEdit
 {
     public string? Connection { get; init; }
+    /// <summary>App registration of the jobs; <see cref="ClearAppRegistration"/> = back to the default of the instance.</summary>
+    public string? AppRegistration { get; init; }
+    public bool ClearAppRegistration { get; init; }
     public string? Group { get; init; }
     public string? TimeZone { get; init; }
     /// <summary>Removes the time zone (server time zone is used).</summary>
@@ -111,6 +114,8 @@ public sealed class BulkEditService(IRisConfigurationStore store, ConfigurationR
     {
         var options = job.Options!;
         if (!string.IsNullOrWhiteSpace(edit.Connection)) options.Connection = edit.Connection.Trim();
+        if (edit.ClearAppRegistration) options.AppRegistration = null;
+        else if (!string.IsNullOrWhiteSpace(edit.AppRegistration)) options.AppRegistration = edit.AppRegistration.Trim();
         if (!string.IsNullOrWhiteSpace(edit.Group)) job.Group = edit.Group.Trim();
         if (edit.ClearTimeZone) job.Schedule.TimeZone = null;
         else if (!string.IsNullOrWhiteSpace(edit.TimeZone)) job.Schedule.TimeZone = edit.TimeZone.Trim();

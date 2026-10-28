@@ -15,6 +15,13 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_appRegistration" Label="@T["Field_AppRegistration"]" Clearable="true" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   ToStringFunc="@(v => v == DefaultAppRegistration ? T["AppReg_DefaultOfInstance", "…"].Value : v)">
+                            <MudSelectItem Value="DefaultAppRegistration">@T["AppReg_DefaultOfInstance", "…"]</MudSelectItem>
+                            @foreach (var a in Store.Current.AppRegistrations.Select(a => a.Name).Order()) { <MudSelectItem Value="a">@a</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
                         <MudTextField T="string" @bind-Value="_group" Label="@T["Job_Group"]" Placeholder="@T["BulkEdit_Unchanged"]" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
@@ -122,6 +129,8 @@
     [Parameter] public IReadOnlyList<JobRef> Jobs { get; set; } = [];
     [Parameter] public string? UserName { get; set; }
 
+    private const string DefaultAppRegistration = "default";
+    private string? _appRegistration;
     private string? _connection, _group, _timeZone, _cron, _startAt, _find, _replace;
     private MissedRunPolicy? _missedRuns;
     private bool? _paused, _pauseOnError;
@@ -149,6 +158,8 @@
         return new BulkEdit
         {
             Connection = _connection,
+            AppRegistration = _appRegistration == DefaultAppRegistration ? null : _appRegistration,
+            ClearAppRegistration = _appRegistration == DefaultAppRegistration,
             Group = _group,
             TimeZone = string.IsNullOrEmpty(_timeZone) ? null : _timeZone,
             ClearTimeZone = _timeZone == ServerZone,

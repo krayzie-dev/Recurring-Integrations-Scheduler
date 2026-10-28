@@ -408,8 +408,8 @@
   <data name="Enum_LegalEntitySource_FileName" xml:space="preserve"><value>Part of the file name</value></data>
   <data name="Enum_D365AuthMode_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
   <data name="Enum_D365AuthMode_Certificate" xml:space="preserve"><value>Certificate</value></data>
-  <data name="FieldHint_Connection" xml:space="preserve"><value>D365 environment and app registration (D365 instances page)</value></data>
-  <data name="FieldHelp_Connection" xml:space="preserve"><value>D365 instance: AOS URL, Entra ID tenant, client id and secret or certificate. Defined once on the D365 instances page and shared by jobs.</value></data>
+  <data name="FieldHint_Connection" xml:space="preserve"><value>D365 environment (D365 instances page)</value></data>
+  <data name="FieldHelp_Connection" xml:space="preserve"><value>D365 instance: AOS URL and its default app registration (sign-in). Defined once on the D365 instances page and shared by jobs; a job may sign in with another app registration (field App registration).</value></data>
   <data name="FieldHint_DataProject" xml:space="preserve"><value>Name of the data project in D365 Data management</value></data>
   <data name="FieldHelp_DataProject" xml:space="preserve"><value>Data project (definition group) in D365 → Data management. Export: the project to export. Import: the project the package is imported into. Must exist in the environment.</value></data>
   <data name="FieldHint_ActivityId" xml:space="preserve"><value>Id of the recurring data job (GUID)</value></data>
@@ -673,4 +673,24 @@
   <data name="Access_None" xml:space="preserve"><value>No role members.</value></data>
   <data name="Access_Kerberos" xml:space="preserve"><value>Local groups of this server: SERVER\Group or just the name (suggested in the field). A change of membership takes effect after reopening the browser for a local group, after signing in to Windows again for an AD group.</value></data>
   <data name="Test_AppRegOk" xml:space="preserve"><value>Signed in to Entra ID (no D365 instance uses this app registration yet, so D365 access was not checked).</value></data>
+  <data name="Nav_AppRegistrations" xml:space="preserve"><value>App registrations</value></data>
+  <data name="AppReg_Add" xml:space="preserve"><value>New app registration</value></data>
+  <data name="AppReg_Intro" xml:space="preserve"><value>Microsoft Entra ID applications RIS signs in with. A D365 instance uses its default app registration; a job may choose another one. A renewed secret is set here once and applies to every instance and job that uses the registration.</value></data>
+  <data name="AppReg_SectionApp" xml:space="preserve"><value>Entra ID application</value></data>
+  <data name="AppReg_NameHint" xml:space="preserve"><value>Name used by D365 instances and jobs, e.g. RIS-PROD</value></data>
+  <data name="AppReg_NameLocked" xml:space="preserve"><value>The name cannot be changed: D365 instances and jobs refer to it.</value></data>
+  <data name="AppReg_TestHint" xml:space="preserve"><value>The test runs on the server with the service account and the values of this form: it signs in to Entra ID and, with a D365 instance, reads data management of that instance.</value></data>
+  <data name="AppReg_TestWith" xml:space="preserve"><value>Test with D365 instance</value></data>
+  <data name="AppReg_UsedBy" xml:space="preserve"><value>Used by</value></data>
+  <data name="AppReg_UsedByText" xml:space="preserve"><value>instances: {0}, jobs: {1}</value></data>
+  <data name="AppReg_InUseTitle" xml:space="preserve"><value>App registration {0} is in use</value></data>
+  <data name="AppReg_InUseText" xml:space="preserve"><value>It cannot be deleted while D365 instances or jobs use it. First choose another app registration in them:</value></data>
+  <data name="AppReg_None" xml:space="preserve"><value>No app registrations yet.</value></data>
+  <data name="Field_AppRegistration" xml:space="preserve"><value>App registration</value></data>
+  <data name="Conn_SectionAppRegistration" xml:space="preserve"><value>Sign-in</value></data>
+  <data name="Conn_AppRegistrationHint" xml:space="preserve"><value>Default sign-in of the jobs of this instance (a job may choose another one)</value></data>
+  <data name="Conn_AppRegistrationMissing" xml:space="preserve"><value>No app registration</value></data>
+  <data name="AppReg_DefaultOfInstance" xml:space="preserve"><value>Default of the instance ({0})</value></data>
+  <data name="FieldHint_AppRegistration" xml:space="preserve"><value>Empty = the default app registration of the D365 instance</value></data>
+  <data name="FieldHelp_AppRegistration" xml:space="preserve"><value>Microsoft Entra ID application the job signs in with. Leave it empty to use the default of the D365 instance; choose another one when this job must run as another application (as in 4.x, where every job had its own app registration). Defined on the App registrations page.</value></data>
 </root>
