@@ -232,6 +232,25 @@ public sealed class D365ClientTests : IDisposable
     }
 
     [TestMethod]
+    public async Task GetLegalEntities_FollowsNextLink()
+    {
+        _server.Given(Request.Create().WithPath("/data/LegalEntities").WithParam("$select", "LegalEntityId").WithParam("$skiptoken", "2").UsingGet())
+            .AtPriority(1)
+            .RespondWith(Response.Create().WithBodyAsJson(new { value = new object[] { new { LegalEntityId = "2101" } } }));
+        _server.Given(Request.Create().WithPath("/data/LegalEntities").WithParam("$select", "LegalEntityId").UsingGet())
+            .AtPriority(2)
+            .RespondWith(Response.Create().WithBodyAsJson(new Dictionary<string, object>
+            {
+                ["value"] = new object[] { new { LegalEntityId = "2001" }, new { LegalEntityId = "2020" } },
+                ["@odata.nextLink"] = _server.Url + "/data/LegalEntities?$select=LegalEntityId&$skiptoken=2"
+            }));
+
+        var ids = await _client.GetLegalEntitiesAsync(CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "2001", "2020", "2101" }, ids.ToList());
+    }
+
+    [TestMethod]
     public void ODataError_MessageIsTheReasonFromD365_NotTheStackTrace()
     {
         // Shape of a real ImportFromPackage error (org0516c10d, 28.10.2026), stack traces shortened.

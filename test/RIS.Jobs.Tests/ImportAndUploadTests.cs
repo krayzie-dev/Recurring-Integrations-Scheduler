@@ -1,6 +1,7 @@
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RIS.Core.Contracts;
 using RIS.Core.Errors;
 using RIS.Core.Options;
@@ -107,6 +108,86 @@ public sealed class ImportTests
 
         Assert.AreEqual(JobOutcomeStatus.Succeeded, outcome.Status, outcome.Summary);
         CollectionAssert.Contains(host.D365.Calls, "ImportFromPackage 2020");
+    }
+
+    [TestMethod]
+    public async Task MultiCompany_UnknownCompany_GoesToErrorsWithoutCallingD365_OthersAreImported()
+    {
+        using var host = new JobsTestHost();
+        AddTemplate(host);
+        host.FileSystem.AddFile(@"C:\ris\in\2020_a.csv", new MockFileData("x") { CreationTime = new DateTime(2026, 1, 1) });
+        host.FileSystem.AddFile(@"C:\ris\in\nocompany.csv", new MockFileData("x") { CreationTime = new DateTime(2026, 1, 2) });
+        host.FileSystem.AddFile(@"C:\ris\in\usmf_b.csv", new MockFileData("x") { CreationTime = new DateTime(2026, 1, 3) });
+        var options = Options();
+        options.Company = null;
+        options.MultiCompany = new MultiCompanyOptions { Source = LegalEntitySource.FileName, FileNameSeparator = "_", TokenPosition = 1 };
+
+        var outcome = await host.RunAsync(options);
+
+        Assert.AreEqual(ErrorCodes.LegalEntityNotResolved, outcome.ErrorCode, outcome.Summary);
+        CollectionAssert.AreEquivalent(new[] { "ImportFromPackage 2020", "ImportFromPackage usmf" },
+            host.D365.Calls.Where(c => c.StartsWith("ImportFromPackage", StringComparison.Ordinal)).ToList(), "The unknown company is not sent to D365; case does not matter.");
+        Assert.AreEqual(1, host.D365.Calls.Count(c => c == "GetLegalEntities"), "Companies are read once, not per file.");
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\errors\nocompany.csv"));
+        StringAssert.Contains(host.FileSystem.File.ReadAllText(@"C:\ris\errors\nocompany.Status"), "does not exist in D365");
+    }
+
+    [TestMethod]
+    public async Task MultiCompany_ListOfCompaniesNotAvailable_CompanyIsNotChecked()
+    {
+        using var host = new JobsTestHost();
+        host.D365.LegalEntitiesError = () => new HttpRequestException("403");
+        AddTemplate(host);
+        host.FileSystem.AddFile(@"C:\ris\in\2020_a.csv", new MockFileData("x"));
+        host.FileSystem.AddFile(@"C:\ris\in\2021_b.csv", new MockFileData("x"));
+        var options = Options();
+        options.Company = null;
+        options.MultiCompany = new MultiCompanyOptions { Source = LegalEntitySource.FileName, FileNameSeparator = "_", TokenPosition = 1 };
+
+        var outcome = await host.RunAsync(options);
+
+        Assert.AreEqual(JobOutcomeStatus.Succeeded, outcome.Status, outcome.Summary);
+        Assert.AreEqual(2, host.D365.Calls.Count(c => c.StartsWith("ImportFromPackage", StringComparison.Ordinal)), "D365 validates the companies itself.");
+        Assert.AreEqual(1, host.D365.Calls.Count(c => c == "GetLegalEntities"), "A failed read is not repeated for every file.");
+    }
+
+    [TestMethod]
+    public async Task SingleCompanyImport_DoesNotReadCompanies()
+    {
+        using var host = new JobsTestHost();
+        AddTemplate(host);
+        host.FileSystem.AddFile(@"C:\ris\in\a.csv", new MockFileData("x"));
+
+        await host.RunAsync(Options());
+
+        Assert.IsFalse(host.D365.Calls.Contains("GetLegalEntities"));
+    }
+
+    [TestMethod]
+    public async Task LegalEntityCache_ReadsOncePerDay_ReloadsForUnknownCompanyAtMostEvery5Minutes()
+    {
+        using var host = new JobsTestHost();
+        var cache = host.Services.GetRequiredService<LegalEntityCache>();
+        var connection = host.Configuration.Connections[0];
+        int Reads() => host.D365.Calls.Count(c => c == "GetLegalEntities");
+
+        Assert.IsTrue(await cache.ExistsAsync(host.D365, connection, "2020", default));
+        Assert.IsTrue(await cache.ExistsAsync(host.D365, connection, "usmf", default));
+        Assert.AreEqual(1, Reads());
+
+        host.D365.LegalEntities.Add("NEW1");
+        host.Clock.UtcNow += TimeSpan.FromMinutes(1);
+        Assert.IsFalse(await cache.ExistsAsync(host.D365, connection, "NEW1", default), "Within 5 minutes of the last read the list is not reloaded.");
+        host.Clock.UtcNow += TimeSpan.FromMinutes(5);
+        Assert.IsTrue(await cache.ExistsAsync(host.D365, connection, "NEW1", default), "A company created during the day is found after a reload.");
+        Assert.AreEqual(2, Reads());
+
+        host.Clock.UtcNow += TimeSpan.FromHours(23);
+        Assert.IsTrue(await cache.ExistsAsync(host.D365, connection, "2020", default));
+        Assert.AreEqual(2, Reads(), "Known companies do not reload the list within a day.");
+        host.Clock.UtcNow += TimeSpan.FromHours(2);
+        Assert.IsTrue(await cache.ExistsAsync(host.D365, connection, "2020", default));
+        Assert.AreEqual(3, Reads(), "After a day the list is read again.");
     }
 
     [TestMethod]

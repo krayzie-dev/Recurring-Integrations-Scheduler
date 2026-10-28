@@ -50,6 +50,8 @@ public sealed class FakeD365Client : ID365Client, ID365ClientFactory
     public List<(string FileName, byte[] Package)> UploadedPackages { get; } = [];
     public List<(string Name, string? Entity, string? Company)> Enqueued { get; } = [];
     public List<DataProjectEntity> ProjectEntities { get; } = [];
+    public List<string> LegalEntities { get; } = ["2020", "USMF"];
+    public Func<Exception?> LegalEntitiesError { get; set; } = () => null;
 
     public ID365Client Create(D365ConnectionOptions connection, D365ActionPaths? actionPaths = null) => this;
 
@@ -108,6 +110,13 @@ public sealed class FakeD365Client : ID365Client, ID365ClientFactory
     {
         Calls.Add($"GetDataProjectEntities {definitionGroupId}");
         return Task.FromResult<IReadOnlyList<DataProjectEntity>>(ProjectEntities);
+    }
+
+    public Task<IReadOnlyList<string>> GetLegalEntitiesAsync(CancellationToken cancellationToken)
+    {
+        Calls.Add("GetLegalEntities");
+        if (LegalEntitiesError() is { } error) throw error;
+        return Task.FromResult<IReadOnlyList<string>>([.. LegalEntities]);
     }
 
     public Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken)

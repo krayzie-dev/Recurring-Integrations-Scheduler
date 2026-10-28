@@ -18,7 +18,7 @@ Logs contain `JobKey`, `RunId` (Quartz fire instance id) and, where relevant, `E
 | RIS-EXP-003 | Package URL not available within the timeout | Execution succeeded but package was not produced; check the execution in D365. |
 | RIS-EXP-004 | Download of exported package failed | Check network access to Azure blob storage from the server. |
 | RIS-IMP-001 | ImportFromPackage request failed | File moved to errors; error report next to it contains D365 response. |
-| RIS-IMP-002 | Legal entity cannot be determined from file name/folder | Check file naming against `multiCompany` settings; file moved to errors. |
+| RIS-IMP-002 | Legal entity cannot be determined from file name/folder, or the company does not exist in D365 (multi-company import; the list of companies is read once a day per environment, reloaded for an unknown company at most every 5 minutes) | Check file naming against `multiCompany` settings; file moved to errors, nothing sent to D365. |
 | RIS-IMP-003 | Data project not found in D365 or has no entities (generated envelope) | Check `dataProject` (exact name) and the connection's company access; use "Show project entities" in the job editor. |
 | RIS-IMP-004 | Files of a package do not match the entities of the data project (generated envelope) | Name each file after its entity (e.g. `Customer groups.csv`); include a file for every entity or turn on `allowPartialPackages`. The message lists unmatched files and missing entities. |
 | RIS-UPL-001 | Enqueue failed | File moved to errors; error report contains D365 response. |

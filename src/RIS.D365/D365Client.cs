@@ -65,6 +65,9 @@ public interface IPackageApiClient
     /// <summary>Entities of a data project in execution order (empty when the project does not exist).</summary>
     Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string definitionGroupId, CancellationToken cancellationToken);
 
+    /// <summary>Ids of all legal entities (companies) of the environment.</summary>
+    Task<IReadOnlyList<string>> GetLegalEntitiesAsync(CancellationToken cancellationToken);
+
     /// <summary>Downloads content from a URL returned by D365: SAS URL of blob storage, or a location on the AOS (with the token).</summary>
     Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken);
 }
@@ -197,6 +200,30 @@ internal sealed class D365Client(HttpClient http, D365ConnectionOptions connecti
         {
             throw Unexpected("GetDataProjectEntities", $"Unexpected response of DataManagementDefinitionGroupDetails: {LogMasking.Truncate(payload)}", ex);
         }
+    }
+
+    public async Task<IReadOnlyList<string>> GetLegalEntitiesAsync(CancellationToken cancellationToken)
+    {
+        var ids = new List<string>();
+        string? next = "data/LegalEntities?$select=LegalEntityId";
+        while (next is not null)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, next);
+            using var response = await SendAsync("GetLegalEntities", request, authorize: true, noRetry: false, cancellationToken);
+            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+            try
+            {
+                using var document = JsonDocument.Parse(payload);
+                ids.AddRange(document.RootElement.GetProperty("value").EnumerateArray()
+                    .Select(e => e.GetProperty("LegalEntityId").GetString()).OfType<string>());
+                next = document.RootElement.TryGetProperty("@odata.nextLink", out var link) ? link.GetString() : null;
+            }
+            catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+            {
+                throw Unexpected("GetLegalEntities", $"Unexpected response of LegalEntities: {LogMasking.Truncate(payload)}", ex);
+            }
+        }
+        return ids;
     }
 
     public async Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken)

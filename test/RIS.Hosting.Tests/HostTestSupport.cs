@@ -29,6 +29,7 @@ public sealed class FakeD365 : ID365ClientFactory, ID365Client
     public Task<string?> GetImportTargetErrorKeysFileUrlAsync(string e, string n, CancellationToken ct) => Task.FromResult<string?>(null);
     public Task<string> GetExecutionErrorsAsync(string e, CancellationToken ct) => Task.FromResult("");
     public Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string g, CancellationToken ct) => Task.FromResult<IReadOnlyList<DataProjectEntity>>([]);
+    public Task<IReadOnlyList<string>> GetLegalEntitiesAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
     public Task<string> EnqueueAsync(Guid a, Stream c, string? co, string? en, string x, CancellationToken ct) => throw new NotSupportedException();
     public Task<DequeuedMessage?> DequeueAsync(Guid a, CancellationToken ct) => Task.FromResult<DequeuedMessage?>(null);
     public Task AckAsync(Guid a, DequeuedMessage m, CancellationToken ct) => Task.CompletedTask;

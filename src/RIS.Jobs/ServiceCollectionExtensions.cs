@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ISftpTransfer, SshNetSftpTransfer>();
         services.TryAddSingleton<ExecutionPoller>();
         services.TryAddSingleton<JobFiles>();
+        services.TryAddSingleton<LegalEntityCache>();
 
         services.TryAddTransient<IJobHandler<ExportJobOptions>, ExportHandler>();
         services.TryAddTransient<IJobHandler<ImportJobOptions>, ImportHandler>();

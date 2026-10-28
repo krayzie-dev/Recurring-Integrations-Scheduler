@@ -12,7 +12,7 @@ namespace RIS.Jobs.Handlers;
 /// Imports files or packages using Package API (blob upload + ImportFromPackage). 4.x: Job.Import.
 /// 5.0: failure of one file does not stop the remaining files; temporary packages are always deleted.
 /// </summary>
-public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles, IPollingClock clock) : IJobHandler<ImportJobOptions>
+public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles, IPollingClock clock, LegalEntityCache legalEntities) : IJobHandler<ImportJobOptions>
 {
     private const int MaxLegalEntityLength = 4;
 
@@ -82,6 +82,16 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
             await MoveToErrorsAsync(options, file, new ErrorReport(ErrorCodes.LegalEntityNotResolved,
                 $"Unable to determine legal entity from file '{fileName}'."), cancellationToken);
             throw new RisException(ErrorCodes.LegalEntityNotResolved, $"Unable to determine legal entity from file '{fileName}'. File moved to errors.");
+        }
+
+        // Multi-company: the company comes from the file name or folder, so it is checked before the package is built and sent
+        // (D365 would reject it only after overwriting the data project, and reports it truncated to 4 characters).
+        if (options.MultiCompany is not null && await legalEntities.ExistsAsync(client, run.Connection, legalEntity, cancellationToken) == false)
+        {
+            var message = $"Legal entity '{legalEntity}' (from file '{fileName}') does not exist in D365.";
+            await MoveToErrorsAsync(options, file, new ErrorReport(ErrorCodes.LegalEntityNotResolved, message), cancellationToken);
+            throw new RisException(ErrorCodes.LegalEntityNotResolved, message + " File moved to errors.",
+                new Dictionary<string, object?> { ["LegalEntity"] = legalEntity, ["File"] = fileName });
         }
 
         if (legalEntity.Length > MaxLegalEntityLength)
