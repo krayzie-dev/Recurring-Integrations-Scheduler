@@ -123,7 +123,8 @@ public sealed class ExportTests
         var configuration = System.Text.Json.JsonSerializer.Deserialize<RIS.Core.Configuration.RisConfiguration>(file.Content, RIS.Core.Configuration.RisJson.Options)!;
         Assert.AreEqual(1, configuration.Jobs.Count);
         Assert.AreEqual("TEST", configuration.Connections.Single().Name);
-        Assert.AreEqual(RIS.Core.Configuration.SecretPlaceholder.Value, configuration.Connections[0].ClientSecret);
+        Assert.AreEqual(configuration.Connections[0].AppRegistration, configuration.AppRegistrations.Single().Name, "The app registration of the instance is exported with it.");
+        Assert.AreEqual(RIS.Core.Configuration.SecretPlaceholder.Value, configuration.AppRegistrations[0].ClientSecret);
         Assert.AreEqual(System.Net.HttpStatusCode.NoContent,
             (await admin.PostAsync("/api/v1/config/import", new ByteArrayContent(file.Content) { Headers = { ContentType = new("application/json") } })).StatusCode);
     }

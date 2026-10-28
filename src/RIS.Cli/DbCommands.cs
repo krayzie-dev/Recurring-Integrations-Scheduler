@@ -115,6 +115,7 @@ internal static partial class DbCommands
 
             var withoutSecrets = new RisConfiguration
             {
+                AppRegistrations = configuration.AppRegistrations.Select(ConfigurationRepository.WithoutSecrets).ToList(),
                 Connections = configuration.Connections.Select(ConfigurationRepository.WithoutSecrets).ToList(),
                 SftpServers = configuration.SftpServers.Select(ConfigurationRepository.WithoutSecrets).ToList(),
                 Jobs = configuration.Jobs
@@ -289,8 +290,8 @@ internal static partial class DbCommands
 
     private static Command SetSecretCommand()
     {
-        var owner = new Argument<string>("owner") { Description = "connection | sftp" };
-        owner.AcceptOnlyFromAmong("connection", "sftp");
+        var owner = new Argument<string>("owner") { Description = "app-registration | connection (= its app registration) | sftp" };
+        owner.AcceptOnlyFromAmong("app-registration", "connection", "sftp");
         var name = new Argument<string>("name") { Description = "Connection or SFTP server name" };
         var data = DataOption();
         var command = new Command("set-secret",
@@ -306,7 +307,7 @@ internal static partial class DbCommands
             }
 
             await using var services = await OpenAsync(parse.GetValue(data), ct);
-            var secretOwner = parse.GetValue(owner) == "sftp" ? SecretOwner.SftpServer : SecretOwner.Connection;
+            var secretOwner = parse.GetValue(owner) switch { "sftp" => SecretOwner.SftpServer, "app-registration" => SecretOwner.AppRegistration, _ => SecretOwner.Connection };
             return await ChangeAsync(async () =>
             {
                 await services.GetRequiredService<ConfigurationRepository>().SetSecretAsync(secretOwner, parse.GetValue(name)!, value!, CurrentUser(), ct);

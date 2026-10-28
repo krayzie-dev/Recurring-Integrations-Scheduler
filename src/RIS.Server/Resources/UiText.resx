@@ -672,4 +672,5 @@
   <data name="Access_NoRole" xml:space="preserve"><value>No role.</value></data>
   <data name="Access_None" xml:space="preserve"><value>No role members.</value></data>
   <data name="Access_Kerberos" xml:space="preserve"><value>Local groups of this server: SERVER\Group or just the name (suggested in the field). A change of membership takes effect after reopening the browser for a local group, after signing in to Windows again for an AD group.</value></data>
+  <data name="Test_AppRegOk" xml:space="preserve"><value>Signed in to Entra ID (no D365 instance uses this app registration yet, so D365 access was not checked).</value></data>
 </root>

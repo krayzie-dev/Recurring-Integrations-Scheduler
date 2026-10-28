@@ -105,9 +105,14 @@ public sealed class ExportService(IStringLocalizer<UiText> text, TimeProvider ti
                     .Where(p => p.PropertyType == typeof(Core.Options.SftpTransferOptions))
                     .Select(p => (p.GetValue(j.Options) as Core.Options.SftpTransferOptions)?.Server))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var instances = exported.Connections.Where(c => connections.Contains(c.Name)).ToList();
+            // App registrations of these instances and the ones jobs choose themselves.
+            var registrations = instances.Select(c => c.AppRegistration).Concat(jobs.Select(j => j.Options?.AppRegistration))
+                .Where(n => !string.IsNullOrEmpty(n)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             configuration = new Core.Configuration.RisConfiguration
             {
-                Connections = exported.Connections.Where(c => connections.Contains(c.Name)).ToList(),
+                AppRegistrations = exported.AppRegistrations.Where(a => registrations.Contains(a.Name)).ToList(),
+                Connections = instances,
                 SftpServers = exported.SftpServers.Where(s => servers.Contains(s.Name)).ToList(),
                 Jobs = jobs
             };

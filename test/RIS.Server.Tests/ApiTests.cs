@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using RIS.Core.Configuration;
+using RIS.Core.Options;
 using RIS.Hosting.Tests;
 
 namespace RIS.Server.Tests;
@@ -49,19 +50,26 @@ public sealed class ApiTests
     public async Task Connection_SecretIsNeverReturned_NorAudited()
     {
         var admin = _factory.Client("Admin", @"TEST\admin");
-        var response = await admin.PutRisAsync("/api/v1/connections/TEST", RisTestHost.Connection);
+        var registration = new AppRegistrationOptions { Name = "TEST-APP", Tenant = "contoso.onmicrosoft.com", ClientId = Guid.NewGuid().ToString(), ClientSecret = "initial-secret-value" };
+        var response = await admin.PutRisAsync("/api/v1/app-registrations/TEST-APP", registration);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadAsStringAsync();
         StringAssert.Contains(body, SecretPlaceholder.Value);
-        Assert.IsFalse(body.Contains("\"secret\""), body);
+        Assert.IsFalse(body.Contains("initial-secret-value"), body);
+        var instance = await admin.PutRisAsync("/api/v1/connections/TEST",
+            new D365ConnectionOptions { Name = "TEST", AosUri = RisTestHost.Connection.AosUri, AppRegistration = "TEST-APP" });
+        StringAssert.Contains(await instance.Content.ReadAsStringAsync(), "TEST-APP");
 
-        Assert.AreEqual(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/v1/connections/TEST/secret", new { value = "new-secret-value" })).StatusCode);
+        // Secret of the app registration, also through the instance (older clients, ris db set-secret connection).
+        Assert.AreEqual(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/v1/app-registrations/TEST-APP/secret", new { value = "new-secret-value" })).StatusCode);
+        Assert.AreEqual(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/v1/connections/TEST/secret", new { value = "newer-secret-value" })).StatusCode);
         Assert.AreEqual(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/connections/TEST/secret", new { value = "" })).StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, (await admin.DeleteAsync("/api/v1/app-registrations/TEST-APP")).StatusCode, "Used by an instance.");
 
-        foreach (var url in new[] { "/api/v1/connections", "/api/v1/connections/TEST", "/api/v1/config/export", "/api/v1/audit" })
+        foreach (var url in new[] { "/api/v1/app-registrations", "/api/v1/app-registrations/TEST-APP", "/api/v1/connections", "/api/v1/connections/TEST", "/api/v1/config/export", "/api/v1/audit" })
         {
             var text = await admin.GetStringAsync(url);
-            Assert.IsFalse(text.Contains("new-secret-value") || text.Contains("\"secret\""), $"{url} leaks a secret: {text}");
+            Assert.IsFalse(text.Contains("secret-value") || text.Contains("\"secret\""), $"{url} leaks a secret: {text}");
         }
 
         var audit = await admin.GetFromJsonAsync<JsonElement>("/api/v1/audit");
@@ -146,7 +154,9 @@ public sealed class ApiTests
 
         var export = await admin.GetFromJsonAsync<JsonElement>("/api/v1/config/export");
         Assert.AreEqual(1, export.GetProperty("jobs").GetArrayLength());
-        Assert.AreEqual(SecretPlaceholder.Value, export.GetProperty("connections")[0].GetProperty("clientSecret").GetString());
+        Assert.AreEqual(SecretPlaceholder.Value, export.GetProperty("appRegistrations")[0].GetProperty("clientSecret").GetString());
+        Assert.IsFalse(export.GetProperty("connections")[0].TryGetProperty("clientSecret", out var inline) && inline.ValueKind == JsonValueKind.String,
+            "The instance has no secret of its own (the inline sign-in of the request was moved to an app registration).");
 
         var invalid = new RisConfiguration { Jobs = [RisTestHost.Export("X", ExportDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" })] };
         var result = await (await admin.PostAsync("/api/v1/config/validate", JsonContent.Create(invalid, options: RisJson.Options))).Content.ReadFromJsonAsync<JsonElement>();

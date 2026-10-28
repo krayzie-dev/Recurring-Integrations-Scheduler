@@ -93,7 +93,7 @@ public sealed class BulkEditTests
 
         Assert.AreEqual(HttpStatusCode.Forbidden, (await factory.Client("Operator").PostAsJsonAsync("/api/v1/jobs/bulk/edit", request)).StatusCode);
         var applied = await admin.PostAsJsonAsync("/api/v1/jobs/bulk/edit", request);
-        Assert.AreEqual(HttpStatusCode.OK, applied.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, applied.StatusCode, await applied.Content.ReadAsStringAsync());
         Assert.AreEqual("0 30 2 * * ?", await CronAsync(admin, "A"));
         Assert.AreEqual("0 30 3 * * ?", await CronAsync(admin, "B"));
         var audit = await admin.GetFromJsonAsync<JsonElement>("/api/v1/audit");

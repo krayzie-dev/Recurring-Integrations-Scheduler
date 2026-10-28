@@ -87,6 +87,7 @@ public sealed class BulkEditService(IRisConfigurationStore store, ConfigurationR
             var originals = result.Select(r => $"{r.OriginalGroup}.{r.OriginalName}").ToHashSet(StringComparer.OrdinalIgnoreCase);
             var proposed = new RisConfiguration
             {
+                AppRegistrations = configuration.AppRegistrations,
                 Connections = configuration.Connections,
                 SftpServers = configuration.SftpServers,
                 Jobs = configuration.Jobs.Where(j => !originals.Contains(j.Key)).Concat(result.Select(r => r.Job)).ToList()

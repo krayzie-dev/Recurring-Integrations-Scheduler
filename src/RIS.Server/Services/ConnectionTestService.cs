@@ -17,7 +17,7 @@ public sealed record TestResult(bool Succeeded, string Message, TimeSpan Duratio
 /// <summary>Last test of a saved connection or SFTP server (process memory; shown in the lists).</summary>
 public sealed record LastTest(TestResult Result, DateTimeOffset At);
 
-public enum TestTarget { D365, Sftp }
+public enum TestTarget { D365, Sftp, AppRegistration }
 
 /// <summary>Results of the last tests per saved connection / SFTP server, kept until the service restarts.</summary>
 public sealed class ConnectionTestResults
@@ -43,18 +43,61 @@ public sealed class ConnectionTestService(
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
-    /// <summary>Tests a saved connection and remembers the result.</summary>
-    public async Task<TestResult> D365Async(string connectionName, CancellationToken ct = default)
+    /// <summary>
+    /// Tests a saved D365 instance with its default app registration, or with <paramref name="appRegistration"/> (the one a job
+    /// uses); the result of the default is remembered for the list.
+    /// </summary>
+    public async Task<TestResult> D365Async(string connectionName, CancellationToken ct = default, string? appRegistration = null)
     {
-        var connection = store.Current.FindConnection(connectionName);
-        if (connection is null)
+        D365ConnectionOptions connection;
+        try
         {
-            return new TestResult(false, $"[{ErrorCodes.ConnectionNotFound}] Connection '{connectionName}' does not exist.", TimeSpan.Zero);
+            connection = store.Current.ResolveConnection(connectionName, appRegistration);
+        }
+        catch (RisException ex)
+        {
+            return new TestResult(false, $"[{ex.ErrorCode}] {ex.Message}", TimeSpan.Zero);
         }
         var result = await D365Async(connection, null, ct);
-        results?.Set(TestTarget.D365, connection.Name, result);
+        if (string.IsNullOrEmpty(appRegistration)) results?.Set(TestTarget.D365, connection.Name, result);
         return result;
     }
+
+    /// <summary>
+    /// Tests an app registration (possibly unsaved; an empty secret means the stored one): sign-in to Entra ID and, with
+    /// <paramref name="connectionName"/> (or the first instance using the registration), read access to that D365 instance.
+    /// </summary>
+    public async Task<TestResult> AppRegistrationAsync(AppRegistrationOptions form, string? storedName, string? connectionName = null, CancellationToken ct = default)
+    {
+        var stored = store.Current.FindAppRegistration(storedName);
+        var registration = WithStoredSecrets(form, stored);
+        var instance = (string.IsNullOrEmpty(connectionName) ? null : store.Current.FindConnection(connectionName))
+                       ?? store.Current.Connections.FirstOrDefault(c => string.Equals(c.AppRegistration, storedName ?? form.Name, StringComparison.OrdinalIgnoreCase));
+        TestResult result;
+        if (instance is not null)
+        {
+            result = await D365Async(instance.With(registration), null, ct);
+        }
+        else
+        {
+            // No instance yet: only the sign-in (token for Microsoft Graph, issued for any valid client credentials).
+            var probe = new D365ConnectionOptions { Name = form.Name, AosUri = new Uri("https://graph.microsoft.com") }.With(registration);
+            result = await RunAsync(async token =>
+            {
+                if (Invalid(registration) is { } invalid) return invalid;
+                await tokens.GetAuthorizationHeaderAsync(probe, token);
+                return null;
+            }, text["Test_AppRegOk"], ct);
+        }
+        if (stored is not null && string.IsNullOrEmpty(connectionName)) results?.Set(TestTarget.AppRegistration, stored.Name, result);
+        return result;
+    }
+
+    /// <summary>Tests a saved app registration and remembers the result.</summary>
+    public Task<TestResult> AppRegistrationAsync(string name, CancellationToken ct = default) =>
+        store.Current.FindAppRegistration(name) is { } registration
+            ? AppRegistrationAsync(registration, registration.Name, null, ct)
+            : Task.FromResult(new TestResult(false, $"[{ErrorCodes.ConnectionNotFound}] App registration '{name}' does not exist.", TimeSpan.Zero));
 
     /// <summary>
     /// Signs in to Entra ID and reads one data project definition through OData, with the given (possibly unsaved) settings.
@@ -62,6 +105,11 @@ public sealed class ConnectionTestService(
     /// </summary>
     public Task<TestResult> D365Async(D365ConnectionOptions form, string? storedName, CancellationToken ct = default) => RunAsync(async token =>
     {
+        // An instance form references its app registration; the sign-in comes from there.
+        if (!form.HasInlineSignIn && store.Current.FindAppRegistration(form.AppRegistration) is { } formRegistration && string.IsNullOrEmpty(form.ClientId))
+        {
+            form = form.With(formRegistration);
+        }
         var connection = WithStoredSecrets(form, storedName is null ? null : store.Current.FindConnection(storedName));
         if (Invalid(connection) is { } invalid) return invalid;
         var authorization = await tokens.GetAuthorizationHeaderAsync(connection, token);
@@ -82,14 +130,15 @@ public sealed class ConnectionTestService(
     /// Entities of a data project as the import with a generated envelope sees them: execution order and the file name each
     /// entity expects in a package.
     /// </summary>
-    public async Task<TestResult> DataProjectAsync(string connectionName, string? project, CancellationToken ct = default)
+    public async Task<TestResult> DataProjectAsync(string connectionName, string? project, CancellationToken ct = default, string? appRegistration = null)
     {
         string success = "";
         var result = await RunAsync(async token =>
         {
             if (string.IsNullOrWhiteSpace(project)) return text["Test_ProjectEmpty"].Value;
-            var connection = store.Current.FindConnection(connectionName);
-            if (connection is null) return $"[{ErrorCodes.ConnectionNotFound}] Connection '{connectionName}' does not exist.";
+            D365ConnectionOptions connection;
+            try { connection = store.Current.ResolveConnection(connectionName, appRegistration); }
+            catch (RisException ex) { return $"[{ex.ErrorCode}] {ex.Message}"; }
             var entities = (await clients!.Create(connection).GetDataProjectEntitiesAsync(project, token)).Where(e => !e.Disabled).ToList();
             if (entities.Count == 0) return text["Test_ProjectMissing", project].Value;
             success = text["Test_ProjectOk", project, string.Join(" · ", entities.Select((e, i) =>
@@ -150,6 +199,15 @@ public sealed class ConnectionTestService(
     public static D365ConnectionOptions WithStoredSecrets(D365ConnectionOptions form, D365ConnectionOptions? stored) => new()
     {
         Name = form.Name, AosUri = form.AosUri, Tenant = form.Tenant, Authority = form.Authority, ClientId = form.ClientId, AuthMode = form.AuthMode,
+        CertificateThumbprint = form.CertificateThumbprint, UserName = form.UserName,
+        ClientSecret = SecretPlaceholder.IsPlaceholderOrEmpty(form.ClientSecret) ? stored?.ClientSecret : form.ClientSecret,
+        UserPassword = SecretPlaceholder.IsPlaceholderOrEmpty(form.UserPassword) ? stored?.UserPassword : form.UserPassword
+    };
+
+    /// <inheritdoc cref="WithStoredSecrets(D365ConnectionOptions, D365ConnectionOptions?)"/>
+    public static AppRegistrationOptions WithStoredSecrets(AppRegistrationOptions form, AppRegistrationOptions? stored) => new()
+    {
+        Name = form.Name, Tenant = form.Tenant, Authority = form.Authority, ClientId = form.ClientId, AuthMode = form.AuthMode,
         CertificateThumbprint = form.CertificateThumbprint, UserName = form.UserName,
         ClientSecret = SecretPlaceholder.IsPlaceholderOrEmpty(form.ClientSecret) ? stored?.ClientSecret : form.ClientSecret,
         UserPassword = SecretPlaceholder.IsPlaceholderOrEmpty(form.UserPassword) ? stored?.UserPassword : form.UserPassword

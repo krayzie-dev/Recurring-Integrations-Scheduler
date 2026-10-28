@@ -8,7 +8,9 @@ namespace RIS.Server.Api;
 
 public sealed record SecretRequest(string Value);
 
-public sealed record D365TestRequest(string Connection);
+public sealed record D365TestRequest(string Connection, string? AppRegistration = null);
+
+public sealed record AppRegistrationTestRequest(string AppRegistration, string? Connection = null);
 
 public sealed record FolderTestRequest(string? Path);
 
@@ -44,6 +46,24 @@ public static class ConfigApi
         });
         api.MapPut("/connections/{name}/secret", async (string name, SecretRequest request, ConfigurationRepository repository, ClaimsPrincipal user, CancellationToken ct) =>
             await SetSecretAsync(SecretOwner.Connection, name, request, repository, user, ct));
+
+        api.MapGet("/app-registrations", async (ConfigurationRepository repository, CancellationToken ct) =>
+            Results.Ok((await repository.LoadAsync(ct)).AppRegistrations.Select(ConfigurationRepository.WithoutSecrets)));
+        api.MapGet("/app-registrations/{name}", async (string name, ConfigurationRepository repository, CancellationToken ct) =>
+            (await repository.LoadAsync(ct)).FindAppRegistration(name) is { } a ? Results.Ok(ConfigurationRepository.WithoutSecrets(a)) : NotFound("App registration", name));
+        api.MapPut("/app-registrations/{name}", async (string name, AppRegistrationOptions registration, ConfigurationRepository repository, ClaimsPrincipal user, CancellationToken ct) =>
+        {
+            if (Mismatch(name, registration.Name) is { } problem) return problem;
+            await repository.SaveAppRegistrationAsync(registration, User(user), ct);
+            return Results.Ok(ConfigurationRepository.WithoutSecrets((await repository.LoadAsync(ct)).FindAppRegistration(name)!));
+        });
+        api.MapDelete("/app-registrations/{name}", async (string name, ConfigurationRepository repository, ClaimsPrincipal user, CancellationToken ct) =>
+        {
+            await repository.DeleteAppRegistrationAsync(name, User(user), ct);
+            return Results.NoContent();
+        });
+        api.MapPut("/app-registrations/{name}/secret", async (string name, SecretRequest request, ConfigurationRepository repository, ClaimsPrincipal user, CancellationToken ct) =>
+            await SetSecretAsync(SecretOwner.AppRegistration, name, request, repository, user, ct));
 
         api.MapGet("/sftp-servers", async (ConfigurationRepository repository, CancellationToken ct) =>
             Results.Ok((await repository.LoadAsync(ct)).SftpServers.Select(ConfigurationRepository.WithoutSecrets)));
@@ -99,7 +119,11 @@ public static class ConfigApi
 
         // Checks run by the service account (what jobs will use).
         api.MapPost("/test/d365", async (D365TestRequest request, ConnectionTestService tests, CancellationToken ct) =>
-            Results.Ok(await tests.D365Async(request.Connection, ct)));
+            Results.Ok(await tests.D365Async(request.Connection, ct, request.AppRegistration)));
+        api.MapPost("/test/app-registration", async (AppRegistrationTestRequest request, ConnectionTestService tests, IRisConfigurationStore store, CancellationToken ct) =>
+            store.Current.FindAppRegistration(request.AppRegistration) is { } registration
+                ? Results.Ok(await tests.AppRegistrationAsync(registration, registration.Name, request.Connection, ct))
+                : NotFound("App registration", request.AppRegistration));
         api.MapPost("/test/folder", async (FolderTestRequest request, ConnectionTestService tests, CancellationToken ct) =>
             Results.Ok(await tests.FolderAsync(request.Path, ct)));
         api.MapPost("/test/sftp", async (SftpTestRequest request, ConnectionTestService tests, CancellationToken ct) =>
