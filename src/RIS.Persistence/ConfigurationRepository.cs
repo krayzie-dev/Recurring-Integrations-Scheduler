@@ -26,7 +26,8 @@ public sealed record JobChange(string OriginalGroup, string OriginalName, JobDef
 public enum SecretOwner
 {
     Connection,
-    SftpServer
+    SftpServer,
+    AppRegistration
 }
 
 /// <summary>
@@ -46,6 +47,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         return new RisConfiguration
         {
+            AppRegistrations = (await db.AppRegistrations.AsNoTracking().OrderBy(a => a.Name).ToListAsync(cancellationToken)).Select(ToOptions).ToList(),
             Connections = (await db.Connections.AsNoTracking().OrderBy(c => c.Name).ToListAsync(cancellationToken)).Select(ToOptions).ToList(),
             SftpServers = (await db.SftpServers.AsNoTracking().OrderBy(s => s.Name).ToListAsync(cancellationToken)).Select(ToOptions).ToList(),
             Jobs = (await db.Jobs.AsNoTracking().OrderBy(j => j.Group).ThenBy(j => j.Name).ToListAsync(cancellationToken)).Select(ToDefinition).ToList()
@@ -56,6 +58,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
     public async Task<RisConfiguration> ExportAsync(CancellationToken cancellationToken = default)
     {
         var configuration = await LoadAsync(cancellationToken);
+        configuration.AppRegistrations = configuration.AppRegistrations.Select(WithoutSecrets).ToList();
         configuration.Connections = configuration.Connections.Select(WithoutSecrets).ToList();
         configuration.SftpServers = configuration.SftpServers.Select(WithoutSecrets).ToList();
         return configuration;
@@ -80,10 +83,79 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
                 db.Connections.Add(entity);
             }
 
+            if (connection.HasInlineSignIn) MoveSignInToAppRegistrations(db, configuration, [connection], audit);
             Apply(entity, connection);
             Replace(configuration.Connections, c => c.Name, ToOptions(entity));
             audit("Connection", connection.Name, before is null ? "Created" : "Updated", before, AuditJson(entity, previousSecrets));
         });
+
+    public Task SaveAppRegistrationAsync(AppRegistrationOptions registration, string? user, CancellationToken cancellationToken = default) =>
+        ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            var entity = await db.AppRegistrations.FirstOrDefaultAsync(a => a.Name == registration.Name, cancellationToken);
+            var before = entity is null ? null : AuditJson(entity);
+            string?[] previousSecrets = [entity?.ProtectedClientSecret, entity?.ProtectedUserPassword];
+            if (entity is null)
+            {
+                entity = new AppRegistrationEntity { Name = registration.Name, Tenant = "", Authority = "", ClientId = "" };
+                db.AppRegistrations.Add(entity);
+            }
+
+            Apply(entity, registration);
+            Replace(configuration.AppRegistrations, a => a.Name, ToOptions(entity));
+            audit("AppRegistration", registration.Name, before is null ? "Created" : "Updated", before, AuditJson(entity, previousSecrets));
+        });
+
+    /// <summary>Deletes an app registration; refused (validation) while a D365 instance or a job uses it.</summary>
+    public Task DeleteAppRegistrationAsync(string name, string? user, CancellationToken cancellationToken = default) =>
+        ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            var entity = await db.AppRegistrations.FirstOrDefaultAsync(a => a.Name == name, cancellationToken) ?? throw NotFound("App registration", name);
+            db.AppRegistrations.Remove(entity);
+            configuration.AppRegistrations.RemoveAll(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+            audit("AppRegistration", name, "Deleted", AuditJson(entity), null);
+        });
+
+    /// <summary>
+    /// Moves the inline sign-in of D365 instances (database from before app registrations) to app registrations; instances
+    /// with the same sign-in share one. Runs at startup; does nothing when there is nothing to move.
+    /// </summary>
+    public async Task<int> MoveInlineSignInAsync(string? user, CancellationToken cancellationToken = default)
+    {
+        var current = await LoadAsync(cancellationToken);
+        var inline = current.Connections.Where(c => c.HasInlineSignIn).Select(c => c.Name).ToList();
+        if (inline.Count == 0) return 0;
+
+        await ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            var instances = configuration.Connections.Where(c => c.HasInlineSignIn).ToList();
+            MoveSignInToAppRegistrations(db, configuration, instances, audit);
+            foreach (var instance in instances)
+            {
+                var entity = await db.Connections.FirstAsync(c => c.Name == instance.Name, cancellationToken);
+                Apply(entity, instance);
+                audit("Connection", instance.Name, "Migrated", null, $"sign-in moved to app registration {instance.AppRegistration}");
+            }
+        });
+        return inline.Count;
+    }
+
+    /// <summary>
+    /// Inline sign-in of <paramref name="instances"/> to app registrations (existing ones with the same sign-in are reused,
+    /// new ones are added to the database); the instances then reference them and have no sign-in of their own.
+    /// </summary>
+    private void MoveSignInToAppRegistrations(RisDbContext db, RisConfiguration configuration, IReadOnlyList<D365ConnectionOptions> instances, AuditWriter audit)
+    {
+        var existing = configuration.AppRegistrations.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        new RisConfiguration { AppRegistrations = configuration.AppRegistrations, Connections = [.. instances] }.Normalize();
+        foreach (var registration in configuration.AppRegistrations.Where(a => !existing.Contains(a.Name)))
+        {
+            var entity = new AppRegistrationEntity { Name = registration.Name, Tenant = "", Authority = "", ClientId = "" };
+            Apply(entity, registration);
+            db.AppRegistrations.Add(entity);
+            audit("AppRegistration", registration.Name, "Created", null, AuditJson(entity));
+        }
+    }
 
     public Task SaveSftpServerAsync(SftpServerOptions server, string? user, CancellationToken cancellationToken = default) =>
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
@@ -193,7 +265,25 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
     public Task SetSecretAsync(SecretOwner owner, string name, string value, string? user, CancellationToken cancellationToken = default) =>
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
-            if (owner == SecretOwner.Connection)
+            // The secret of an instance is the secret of its app registration (set-secret connection X, PUT /connections/X/secret).
+            if (owner == SecretOwner.Connection
+                && await db.Connections.AsNoTracking().FirstOrDefaultAsync(c => c.Name == name, cancellationToken) is { AppRegistration: { } registrationName })
+            {
+                owner = SecretOwner.AppRegistration;
+                name = registrationName;
+            }
+
+            if (owner == SecretOwner.AppRegistration)
+            {
+                var entity = await db.AppRegistrations.FirstOrDefaultAsync(a => a.Name == name, cancellationToken) ?? throw NotFound("App registration", name);
+#pragma warning disable CS0618
+                if (entity.AuthMode == D365AuthMode.UsernamePassword) entity.ProtectedUserPassword = secrets.Protect(value);
+#pragma warning restore CS0618
+                else entity.ProtectedClientSecret = secrets.Protect(value);
+                Touch(entity, user);
+                Replace(configuration.AppRegistrations, a => a.Name, ToOptions(entity));
+            }
+            else if (owner == SecretOwner.Connection)
             {
                 var entity = await db.Connections.FirstOrDefaultAsync(c => c.Name == name, cancellationToken) ?? throw NotFound("Connection", name);
 #pragma warning disable CS0618
@@ -218,6 +308,20 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
     public Task ImportAsync(RisConfiguration imported, string? user, CancellationToken cancellationToken = default) =>
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
+            foreach (var registration in imported.AppRegistrations)
+            {
+                var entity = await db.AppRegistrations.FirstOrDefaultAsync(a => a.Name == registration.Name, cancellationToken);
+                if (entity is null)
+                {
+                    entity = new AppRegistrationEntity { Name = registration.Name, Tenant = "", Authority = "", ClientId = "" };
+                    db.AppRegistrations.Add(entity);
+                }
+                Apply(entity, registration);
+                Replace(configuration.AppRegistrations, a => a.Name, ToOptions(entity));
+            }
+
+            // Files from before app registrations (and converted 4.x schedules): inline sign-in -> app registrations.
+            MoveSignInToAppRegistrations(db, configuration, imported.Connections.Where(c => c.HasInlineSignIn).ToList(), audit);
             foreach (var connection in imported.Connections)
             {
                 var entity = await db.Connections.FirstOrDefaultAsync(c => c.Name == connection.Name, cancellationToken);
@@ -256,7 +360,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             }
 
             audit("Configuration", "*", "Imported", null,
-                $"{imported.Connections.Count} connection(s), {imported.SftpServers.Count} SFTP server(s), {imported.Jobs.Count} job(s)");
+                $"{imported.AppRegistrations.Count} app registration(s), {imported.Connections.Count} connection(s), {imported.SftpServers.Count} SFTP server(s), {imported.Jobs.Count} job(s)");
         });
 
     public async Task<IReadOnlyList<AuditEntry>> GetAuditAsync(int take = 200, CancellationToken cancellationToken = default)
@@ -397,6 +501,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         {
             switch (entry.Entity)
             {
+                case AppRegistrationEntity a: Touch(a, user); break;
                 case ConnectionEntity c: Touch(c, user); break;
                 case SftpServerEntity s: Touch(s, user); break;
                 case JobDefinitionEntity j: j.UpdatedUtc = time.GetUtcNow().UtcDateTime; j.UpdatedBy = user; break;
@@ -412,12 +517,76 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
 
     private void Touch(ConnectionEntity entity, string? user) { entity.UpdatedUtc = time.GetUtcNow().UtcDateTime; entity.UpdatedBy = user; }
 
+    private void Touch(AppRegistrationEntity entity, string? user) { entity.UpdatedUtc = time.GetUtcNow().UtcDateTime; entity.UpdatedBy = user; }
+
     private void Touch(SftpServerEntity entity, string? user) { entity.UpdatedUtc = time.GetUtcNow().UtcDateTime; entity.UpdatedBy = user; }
+
+    private void Apply(AppRegistrationEntity entity, AppRegistrationOptions options)
+    {
+        entity.Name = options.Name;
+        entity.Tenant = options.Tenant;
+        entity.Authority = options.Authority.ToString();
+        entity.ClientId = options.ClientId;
+        entity.AuthMode = options.AuthMode;
+        // Only the credentials of the chosen mode are kept: switching mode removes the others (also stored secrets).
+#pragma warning disable CS0618 // UsernamePassword is obsolete but still supported
+        entity.CertificateThumbprint = options.AuthMode == D365AuthMode.Certificate ? options.CertificateThumbprint : null;
+        entity.UserName = options.AuthMode == D365AuthMode.UsernamePassword ? options.UserName : null;
+        if (options.AuthMode != D365AuthMode.ClientSecret) entity.ProtectedClientSecret = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.ClientSecret)) entity.ProtectedClientSecret = secrets.Protect(options.ClientSecret);
+        if (options.AuthMode != D365AuthMode.UsernamePassword) entity.ProtectedUserPassword = null;
+        else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.UserPassword)) entity.ProtectedUserPassword = secrets.Protect(options.UserPassword);
+#pragma warning restore CS0618
+    }
+
+    private AppRegistrationOptions ToOptions(AppRegistrationEntity entity) => new()
+    {
+        Name = entity.Name,
+        Tenant = entity.Tenant,
+        Authority = new Uri(entity.Authority),
+        ClientId = entity.ClientId,
+        AuthMode = entity.AuthMode,
+        CertificateThumbprint = entity.CertificateThumbprint,
+        UserName = entity.UserName,
+#pragma warning disable CS0618
+        ClientSecret = secrets.Unprotect(entity.ProtectedClientSecret, $"app registration {entity.Name} client secret")
+                       ?? (entity.AuthMode == D365AuthMode.ClientSecret ? SecretPlaceholder.Value : null),
+        UserPassword = secrets.Unprotect(entity.ProtectedUserPassword, $"app registration {entity.Name} user password")
+                       ?? (entity.AuthMode == D365AuthMode.UsernamePassword ? SecretPlaceholder.Value : null)
+#pragma warning restore CS0618
+    };
+
+    public static AppRegistrationOptions WithoutSecrets(AppRegistrationOptions a) => new()
+    {
+        Name = a.Name, Tenant = a.Tenant, Authority = a.Authority, ClientId = a.ClientId, AuthMode = a.AuthMode,
+        CertificateThumbprint = a.CertificateThumbprint, UserName = a.UserName,
+        ClientSecret = string.IsNullOrEmpty(a.ClientSecret) ? null : SecretPlaceholder.Value,
+        UserPassword = string.IsNullOrEmpty(a.UserPassword) ? null : SecretPlaceholder.Value
+    };
+
+    /// <inheritdoc cref="AuditJson(ConnectionEntity, string?[])"/>
+    private string AuditJson(AppRegistrationEntity entity, string?[]? previous = null)
+    {
+        var options = ToOptions(entity);
+        options.ClientSecret = AuditSecret(entity.ProtectedClientSecret, previous, 0);
+        options.UserPassword = AuditSecret(entity.ProtectedUserPassword, previous, 1);
+        return JsonSerializer.Serialize(options, AuditJsonOptions);
+    }
 
     private void Apply(ConnectionEntity entity, D365ConnectionOptions options)
     {
         entity.Name = options.Name;
         entity.AosUri = options.AosUri?.ToString() ?? string.Empty;
+        entity.AppRegistration = string.IsNullOrEmpty(options.AppRegistration) ? null : options.AppRegistration;
+        if (entity.AppRegistration is not null)
+        {
+            // The sign-in is in the app registration: no copy in the instance.
+            entity.Tenant = entity.ClientId = string.Empty;
+            entity.Authority = "https://login.microsoftonline.com/";
+            entity.AuthMode = D365AuthMode.ClientSecret;
+            entity.CertificateThumbprint = entity.UserName = entity.ProtectedClientSecret = entity.ProtectedUserPassword = null;
+            return;
+        }
         entity.Tenant = options.Tenant;
         entity.Authority = options.Authority.ToString();
         entity.ClientId = options.ClientId;
@@ -461,7 +630,14 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         entity.Hash = ComputeHash(job);
     }
 
-    private D365ConnectionOptions ToOptions(ConnectionEntity entity) => new()
+    private D365ConnectionOptions ToOptions(ConnectionEntity entity) => entity.AppRegistration is { } registration
+        ? new D365ConnectionOptions
+        {
+            Name = entity.Name,
+            AosUri = Uri.TryCreate(entity.AosUri, UriKind.Absolute, out var instanceAos) ? instanceAos : null,
+            AppRegistration = registration
+        }
+        : new D365ConnectionOptions
     {
         Name = entity.Name,
         AosUri = Uri.TryCreate(entity.AosUri, UriKind.Absolute, out var aos) ? aos : null,
@@ -507,7 +683,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
 
     public static D365ConnectionOptions WithoutSecrets(D365ConnectionOptions c) => new()
     {
-        Name = c.Name, AosUri = c.AosUri, Tenant = c.Tenant, Authority = c.Authority, ClientId = c.ClientId, AuthMode = c.AuthMode,
+        Name = c.Name, AosUri = c.AosUri, AppRegistration = c.AppRegistration, Tenant = c.Tenant, Authority = c.Authority, ClientId = c.ClientId, AuthMode = c.AuthMode,
         CertificateThumbprint = c.CertificateThumbprint, UserName = c.UserName,
         ClientSecret = string.IsNullOrEmpty(c.ClientSecret) ? null : SecretPlaceholder.Value,
         UserPassword = string.IsNullOrEmpty(c.UserPassword) ? null : SecretPlaceholder.Value

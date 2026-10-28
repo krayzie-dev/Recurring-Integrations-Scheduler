@@ -102,6 +102,7 @@ public sealed class D365ConnectionOptions : IValidatableObject
     public string? UserPassword { get; set; }
 
     /// <summary>True when the sign-in is in the instance itself (no app registration referenced).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool HasInlineSignIn => string.IsNullOrEmpty(AppRegistration) && !string.IsNullOrEmpty(ClientId);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -97,15 +97,20 @@ public static class DatabaseMaintenance
 
         await using var db = await services.GetRequiredService<IDbContextFactory<RisDbContext>>().CreateDbContextAsync(cancellationToken);
         var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
-        if (pending.Count == 0)
+        if (pending.Count > 0)
         {
-            return;
+            var backup = await BackupAsync(options.RisDatabase, options.BackupDirectory, options.BackupsToKeep, "before-migration", cancellationToken);
+            logger.LogInformation("Applying {Count} database migration(s) to {Database}: {Migrations}. Backup: {Backup}",
+                pending.Count, options.RisDatabase, pending, backup ?? "none (new database)");
+            await db.Database.MigrateAsync(cancellationToken);
         }
 
-        var backup = await BackupAsync(options.RisDatabase, options.BackupDirectory, options.BackupsToKeep, "before-migration", cancellationToken);
-        logger.LogInformation("Applying {Count} database migration(s) to {Database}: {Migrations}. Backup: {Backup}",
-            pending.Count, options.RisDatabase, pending, backup ?? "none (new database)");
-        await db.Database.MigrateAsync(cancellationToken);
+        // Data step of AddAppRegistrations: sign-in of D365 instances (and of databases imported later by older tools) to app registrations.
+        var moved = await services.GetRequiredService<ConfigurationRepository>().MoveInlineSignInAsync("RIS (migration)", cancellationToken);
+        if (moved > 0)
+        {
+            logger.LogInformation("Sign-in of {Count} D365 instance(s) moved to app registrations", moved);
+        }
     }
 }
 

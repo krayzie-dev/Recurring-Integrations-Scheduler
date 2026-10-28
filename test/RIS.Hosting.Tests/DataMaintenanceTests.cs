@@ -49,7 +49,7 @@ public sealed class DataMaintenanceTests
             var result = await service.RunAsync();
 
             Assert.IsTrue(result.Succeeded, string.Join("; ", result.Errors));
-            Assert.AreEqual(2, result.AuditEntriesDeleted, "All but the newest entry.");
+            Assert.AreEqual(5, result.AuditEntriesDeleted, "All but the newest entry (3 instances, each with its app registration).");
             Assert.AreEqual(version, await repository.GetVersionAsync(), "The configuration version must not change.");
             Assert.AreEqual(1, result.LogFilesDeleted);
             Assert.AreEqual(1, result.LogFoldersDeleted);

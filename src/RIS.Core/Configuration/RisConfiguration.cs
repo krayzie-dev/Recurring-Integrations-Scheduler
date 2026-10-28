@@ -255,8 +255,11 @@ public sealed class RisConfiguration
     private static bool SameSignIn(AppRegistrationOptions a, D365ConnectionOptions c) =>
         string.Equals(a.Tenant, c.Tenant, StringComparison.OrdinalIgnoreCase) && a.Authority == c.Authority
         && string.Equals(a.ClientId, c.ClientId, StringComparison.OrdinalIgnoreCase) && a.AuthMode == c.AuthMode
-        && a.ClientSecret == c.ClientSecret && string.Equals(a.CertificateThumbprint, c.CertificateThumbprint, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(a.UserName, c.UserName, StringComparison.OrdinalIgnoreCase) && a.UserPassword == c.UserPassword;
+        && SameSecret(a.ClientSecret, c.ClientSecret) && string.Equals(a.CertificateThumbprint, c.CertificateThumbprint, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(a.UserName, c.UserName, StringComparison.OrdinalIgnoreCase) && SameSecret(a.UserPassword, c.UserPassword);
+
+    /// <summary>A placeholder (export without secrets, secret not set yet) matches any secret, so re-imports do not split registrations.</summary>
+    private static bool SameSecret(string? a, string? b) => a == b || a == SecretPlaceholder.Value || b == SecretPlaceholder.Value;
 
     public SftpServerOptions? FindSftpServer(string name) =>
         SftpServers.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));

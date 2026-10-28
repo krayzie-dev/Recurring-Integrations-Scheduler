@@ -325,7 +325,7 @@ public sealed partial class ConverterTests
         {
             var repository = services.GetRequiredService<ConfigurationRepository>();
             var configuration = await repository.LoadAsync(CancellationToken.None);
-            Assert.AreEqual(secret, configuration.Connections.Single().ClientSecret, "Decrypted on the 4.x server and stored by RIS 5.");
+            Assert.AreEqual(secret, configuration.ResolveConnection(configuration.Connections.Single().Name).ClientSecret, "Decrypted on the 4.x server and stored by RIS 5.");
             Assert.IsTrue(configuration.SftpServers.All(s => SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)), "Not decryptable: left to be set.");
             Assert.IsTrue(configuration.Jobs.All(j => j.Schedule.Paused));
         }
@@ -387,7 +387,7 @@ public sealed partial class ConverterTests
         await using (var services = new ServiceCollection().AddLogging().AddRisPersistence(persistence).BuildServiceProvider())
         {
             var configuration = await services.GetRequiredService<ConfigurationRepository>().LoadAsync(CancellationToken.None);
-            Assert.AreEqual("new-secret", configuration.Connections.Single().ClientSecret);
+            Assert.AreEqual("new-secret", configuration.ResolveConnection(configuration.Connections.Single().Name).ClientSecret);
             Assert.AreEqual(3, configuration.Jobs.Count);
             Assert.IsTrue(configuration.Jobs.All(j => j.Schedule.Paused), "Jobs not touched (still paused).");
         }
@@ -459,7 +459,8 @@ public sealed partial class ConverterTests
     private static async Task<string?> StoredSecretAsync(string data)
     {
         await using var services = new ServiceCollection().AddLogging().AddRisPersistence(new PersistenceOptions { DataDirectory = data }).BuildServiceProvider();
-        return (await services.GetRequiredService<ConfigurationRepository>().LoadAsync(CancellationToken.None)).Connections.Single().ClientSecret;
+        var configuration = await services.GetRequiredService<ConfigurationRepository>().LoadAsync(CancellationToken.None);
+        return configuration.ResolveConnection(configuration.Connections.Single().Name).ClientSecret;
     }
 
     [TestMethod]

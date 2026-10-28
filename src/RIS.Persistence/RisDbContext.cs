@@ -4,12 +4,33 @@ using RIS.Core.Options;
 
 namespace RIS.Persistence;
 
-/// <summary>D365 connection. Secrets are stored encrypted (Data Protection).</summary>
+/// <summary>
+/// D365 instance. Its sign-in is the app registration <see cref="AppRegistration"/>; databases from before app registrations
+/// have the sign-in in the instance itself (moved to app registrations at startup, then these columns are empty).
+/// </summary>
 public sealed class ConnectionEntity
 {
     public int Id { get; set; }
     public required string Name { get; set; }
     public required string AosUri { get; set; }
+    public string? AppRegistration { get; set; }
+    public required string Tenant { get; set; }
+    public required string Authority { get; set; }
+    public required string ClientId { get; set; }
+    public D365AuthMode AuthMode { get; set; }
+    public string? CertificateThumbprint { get; set; }
+    public string? UserName { get; set; }
+    public string? ProtectedClientSecret { get; set; }
+    public string? ProtectedUserPassword { get; set; }
+    public DateTime UpdatedUtc { get; set; }
+    public string? UpdatedBy { get; set; }
+}
+
+/// <summary>Entra ID app registration with encrypted secrets (Data Protection).</summary>
+public sealed class AppRegistrationEntity
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
     public required string Tenant { get; set; }
     public required string Authority { get; set; }
     public required string ClientId { get; set; }
@@ -85,6 +106,7 @@ public sealed class RoleMemberEntity
 
 public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbContext(options)
 {
+    public DbSet<AppRegistrationEntity> AppRegistrations => Set<AppRegistrationEntity>();
     public DbSet<ConnectionEntity> Connections => Set<ConnectionEntity>();
     public DbSet<SftpServerEntity> SftpServers => Set<SftpServerEntity>();
     public DbSet<JobDefinitionEntity> Jobs => Set<JobDefinitionEntity>();
@@ -99,6 +121,13 @@ public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbCon
             e.HasIndex(c => c.Name).IsUnique();
             e.Property(c => c.Name).UseCollation("NOCASE");
             e.Property(c => c.AuthMode).HasConversion<string>();
+        });
+        modelBuilder.Entity<AppRegistrationEntity>(e =>
+        {
+            e.ToTable("AppRegistrations");
+            e.HasIndex(a => a.Name).IsUnique();
+            e.Property(a => a.Name).UseCollation("NOCASE");
+            e.Property(a => a.AuthMode).HasConversion<string>();
         });
         modelBuilder.Entity<SftpServerEntity>(e =>
         {

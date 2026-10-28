@@ -58,38 +58,52 @@ public sealed class PersistenceTests
         return Convert.ToString(command.ExecuteScalar()) ?? string.Empty;
     }
 
+    private static AppRegistrationOptions Registration(string secret = "s3cr3t-value") => new()
+    {
+        Name = "RIS-APP", Tenant = "contoso.onmicrosoft.com", ClientId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", ClientSecret = secret
+    };
+
+    private static D365ConnectionOptions Instance(string name = "PROD") => new()
+    {
+        Name = name, AosUri = new Uri($"https://{name.ToLowerInvariant()}.operations.dynamics.com"), AppRegistration = "RIS-APP"
+    };
+
     [TestMethod]
     public async Task Secret_IsStoredEncrypted_AndReadBack()
     {
-        await _repository.SaveConnectionAsync(Connection(), "tester");
+        await _repository.SaveAppRegistrationAsync(Registration(), "tester");
+        await _repository.SaveConnectionAsync(Instance(), "tester");
 
-        Assert.AreEqual("s3cr3t-value", (await _repository.LoadAsync()).FindConnection("PROD")!.ClientSecret);
-        var raw = RawColumn("SELECT ProtectedClientSecret FROM Connections");
+        var configuration = await _repository.LoadAsync();
+        Assert.AreEqual("s3cr3t-value", configuration.FindAppRegistration("RIS-APP")!.ClientSecret);
+        Assert.AreEqual("s3cr3t-value", configuration.ResolveConnection("PROD").ClientSecret, "The instance signs in with its app registration.");
+        var raw = RawColumn("SELECT ProtectedClientSecret FROM AppRegistrations");
         Assert.IsFalse(raw.Contains("s3cr3t", StringComparison.Ordinal), "Secret must not be stored in plain text.");
         Assert.IsTrue(raw.Length > 50);
+        Assert.AreEqual("", RawColumn("SELECT ProtectedClientSecret FROM Connections"), "No copy in the instance.");
     }
 
     [TestMethod]
     public async Task SwitchingAuthMode_RemovesCredentialsOfTheOtherMode()
     {
-        await _repository.SaveConnectionAsync(Connection(), "tester");
+        await _repository.SaveAppRegistrationAsync(Registration(), "tester");
 
-        var certificate = Connection(secret: "");
+        var certificate = Registration();
         certificate.ClientSecret = null;
         certificate.AuthMode = D365AuthMode.Certificate;
         certificate.CertificateThumbprint = "0123456789ABCDEF0123456789ABCDEF01234567";
-        await _repository.SaveConnectionAsync(certificate, "tester");
+        await _repository.SaveAppRegistrationAsync(certificate, "tester");
 
-        var saved = (await _repository.LoadAsync()).FindConnection("PROD")!;
+        var saved = (await _repository.LoadAsync()).FindAppRegistration("RIS-APP")!;
         Assert.AreEqual(D365AuthMode.Certificate, saved.AuthMode);
-        Assert.IsNull(saved.ClientSecret, "The client secret is removed when the connection switches to a certificate.");
-        Assert.AreEqual("", RawColumn("SELECT ProtectedClientSecret FROM Connections"));
+        Assert.IsNull(saved.ClientSecret, "The client secret is removed when the registration switches to a certificate.");
+        Assert.AreEqual("", RawColumn("SELECT ProtectedClientSecret FROM AppRegistrations"));
 
         // Back to a secret: the thumbprint goes; the old secret does not come back (the form requires a new one).
-        await _repository.SaveConnectionAsync(Connection(secret: ""), "tester");
-        Assert.IsTrue(SecretPlaceholder.IsPlaceholderOrEmpty((await _repository.LoadAsync()).FindConnection("PROD")!.ClientSecret), "Not set (placeholder).");
-        await _repository.SaveConnectionAsync(Connection("new-secret"), "tester");
-        saved = (await _repository.LoadAsync()).FindConnection("PROD")!;
+        await _repository.SaveAppRegistrationAsync(Registration(secret: ""), "tester");
+        Assert.IsTrue(SecretPlaceholder.IsPlaceholderOrEmpty((await _repository.LoadAsync()).FindAppRegistration("RIS-APP")!.ClientSecret), "Not set (placeholder).");
+        await _repository.SaveAppRegistrationAsync(Registration("new-secret"), "tester");
+        saved = (await _repository.LoadAsync()).FindAppRegistration("RIS-APP")!;
         Assert.AreEqual("new-secret", saved.ClientSecret);
         Assert.IsNull(saved.CertificateThumbprint);
     }
@@ -134,13 +148,13 @@ public sealed class PersistenceTests
     [TestMethod]
     public async Task Audit_MarksSecretChanges_WithoutValues_AndIsReadable()
     {
-        await _repository.SaveConnectionAsync(Connection(), "tester");                 // created with a secret
-        await _repository.SaveConnectionAsync(Connection("replaced-secret"), "tester"); // secret replaced
-        var unchanged = Connection(secret: "");
-        await _repository.SaveConnectionAsync(unchanged, "tester");                     // saved without a new secret
+        await _repository.SaveAppRegistrationAsync(Registration(), "tester");                  // created with a secret
+        await _repository.SaveAppRegistrationAsync(Registration("replaced-secret"), "tester"); // secret replaced
+        await _repository.SaveAppRegistrationAsync(Registration(secret: ""), "tester");         // saved without a new secret
 
         var audit = (await _repository.GetAuditAsync()).OrderBy(a => a.TimestampUtc).ThenBy(a => a.Id).ToList();
         Assert.AreEqual(3, audit.Count);
+        Assert.IsTrue(audit.All(a => a.EntityType == "AppRegistration"));
         StringAssert.Contains(audit[0].After, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretChanged}\"");
         StringAssert.Contains(audit[1].Before, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretStored}\"");
         StringAssert.Contains(audit[1].After, $"\"clientSecret\": \"{ConfigurationRepository.AuditSecretChanged}\"");
@@ -152,30 +166,84 @@ public sealed class PersistenceTests
     [TestMethod]
     public async Task Audit_DoesNotContainSecrets_AndExportUsesPlaceholders()
     {
-        await _repository.SaveConnectionAsync(Connection(), "tester");
+        await _repository.SaveAppRegistrationAsync(Registration(), "tester");
+        await _repository.SaveConnectionAsync(Instance(), "tester");
+        // "Secret of the instance" (ris db set-secret connection PROD) is the secret of its app registration.
         await _repository.SetSecretAsync(SecretOwner.Connection, "PROD", "another-secret", "tester");
 
         var audit = await _repository.GetAuditAsync();
-        Assert.AreEqual(2, audit.Count);
+        Assert.AreEqual(3, audit.Count);
+        Assert.AreEqual("AppRegistration", audit[0].EntityType, "Newest first: the secret change of the app registration.");
         Assert.IsTrue(audit.All(a => !(a.After ?? "").Contains("s3cr3t") && !(a.After ?? "").Contains("another-secret")));
         Assert.AreEqual("tester", audit[0].User);
-        Assert.AreEqual(SecretPlaceholder.Value, (await _repository.ExportAsync()).FindConnection("PROD")!.ClientSecret);
-        Assert.AreEqual("another-secret", (await _repository.LoadAsync()).FindConnection("PROD")!.ClientSecret);
+        Assert.AreEqual(SecretPlaceholder.Value, (await _repository.ExportAsync()).FindAppRegistration("RIS-APP")!.ClientSecret);
+        Assert.AreEqual("another-secret", (await _repository.LoadAsync()).ResolveConnection("PROD").ClientSecret);
     }
 
     [TestMethod]
     public async Task Import_WithPlaceholderSecret_KeepsStoredSecret()
     {
-        await _repository.SaveConnectionAsync(Connection(), "tester");
+        await _repository.SaveAppRegistrationAsync(Registration(), "tester");
+        await _repository.SaveConnectionAsync(Instance(), "tester");
         var exported = await _repository.ExportAsync();
         exported.Jobs.Add(Job());
 
         await _repository.ImportAsync(exported, "tester");
 
         var loaded = await _repository.LoadAsync();
-        Assert.AreEqual("s3cr3t-value", loaded.FindConnection("PROD")!.ClientSecret);
+        Assert.AreEqual("s3cr3t-value", loaded.ResolveConnection("PROD").ClientSecret);
         Assert.AreEqual(1, loaded.Jobs.Count);
         Assert.AreEqual(JobType.Export, loaded.Jobs[0].Type);
+    }
+
+    [TestMethod]
+    public async Task InstancesWithInlineSignIn_AreMovedToSharedAppRegistrations()
+    {
+        // API/CLI of older versions and files from before app registrations: the sign-in comes with the instance.
+        var clientId = Guid.NewGuid().ToString();
+        D365ConnectionOptions Inline(string name, string secret) => new()
+        {
+            Name = name, AosUri = new Uri($"https://{name.ToLowerInvariant()}.operations.dynamics.com"), Tenant = "contoso.onmicrosoft.com", ClientId = clientId, ClientSecret = secret
+        };
+        await _repository.SaveConnectionAsync(Inline("UAT", "shared-secret"), "tester");
+        await _repository.ImportAsync(new RisConfiguration { Connections = [Inline("TEST", "shared-secret"), Inline("DEV", "other-secret")] }, "tester");
+
+        var configuration = await _repository.LoadAsync();
+        Assert.AreEqual(2, configuration.AppRegistrations.Count, "Same sign-in shared, a different secret of the same app separate.");
+        Assert.AreEqual(configuration.FindConnection("UAT")!.AppRegistration, configuration.FindConnection("TEST")!.AppRegistration);
+        Assert.AreNotEqual(configuration.FindConnection("UAT")!.AppRegistration, configuration.FindConnection("DEV")!.AppRegistration);
+        Assert.AreEqual("other-secret", configuration.ResolveConnection("DEV").ClientSecret);
+        Assert.AreEqual("", RawColumn("SELECT GROUP_CONCAT(ProtectedClientSecret, '') FROM Connections"), "No secrets left in the instances.");
+        Assert.IsTrue((await _repository.GetAuditAsync()).Any(a => a.EntityType == "AppRegistration" && a.Action == "Created"));
+    }
+
+    [TestMethod]
+    public async Task Startup_MovesInlineSignInOfAnOlderDatabase()
+    {
+        // A database written by a version without app registrations: secret in the instance row.
+        var protector = _services.GetRequiredService<ISecretProtector>();
+        var contexts = _services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<RisDbContext>>();
+        await using (var db = await contexts.CreateDbContextAsync())
+        {
+            foreach (var name in new[] { "PROD", "TEST" })
+            {
+                db.Connections.Add(new ConnectionEntity
+                {
+                    Name = name, AosUri = $"https://{name.ToLowerInvariant()}.operations.dynamics.com/", Tenant = "contoso.onmicrosoft.com",
+                    Authority = "https://login.microsoftonline.com/", ClientId = "c72d6454-e523-4f05-ac23-8d4d89e27fe5", ProtectedClientSecret = protector.Protect("old-db-secret")
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        await DatabaseMaintenance.MigrateAsync(_services);
+
+        var configuration = await _repository.LoadAsync();
+        Assert.AreEqual("APP-C72D6454", configuration.AppRegistrations.Single().Name);
+        Assert.AreEqual("old-db-secret", configuration.ResolveConnection("PROD").ClientSecret);
+        Assert.AreEqual("old-db-secret", configuration.ResolveConnection("TEST").ClientSecret);
+        Assert.AreEqual(2, (await _repository.GetAuditAsync()).Count(a => a.Action == "Migrated"));
+        Assert.AreEqual(0, await _repository.MoveInlineSignInAsync("again"), "Once.");
     }
 
     [TestMethod]
@@ -241,12 +309,12 @@ public sealed class PersistenceTests
         }
 
         var (first, total) = await _repository.QueryAuditAsync(0, 2, null);
-        Assert.AreEqual(5, total);
+        Assert.AreEqual(6, total, "App registration created from the inline sign-in, instance, 4 jobs.");
         CollectionAssert.AreEqual(new[] { "Export jobs.Job 3", "Export jobs.Job 2" }, first.Select(e => e.EntityKey).ToArray());
         var (second, _) = await _repository.QueryAuditAsync(2, 2, null);
         CollectionAssert.AreEqual(new[] { "Export jobs.Job 1", "Export jobs.Job 0" }, second.Select(e => e.EntityKey).ToArray());
 
-        Assert.AreEqual(1, (await _repository.QueryAuditAsync(0, 50, "alice")).Total);
+        Assert.AreEqual(2, (await _repository.QueryAuditAsync(0, 50, "alice")).Total);
         Assert.AreEqual("Export jobs.Job 2", (await _repository.QueryAuditAsync(0, 50, "needle_100%")).Items.Single().EntityKey, "Searches before/after JSON; _ and % are literal.");
         Assert.AreEqual(0, (await _repository.QueryAuditAsync(0, 50, "needle_1000")).Total);
     }

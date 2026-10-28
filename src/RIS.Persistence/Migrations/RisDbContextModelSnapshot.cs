@@ -17,6 +17,59 @@ namespace RIS.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("RIS.Persistence.AppRegistrationEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AuthMode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Authority")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CertificateThumbprint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProtectedUserPassword")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tenant")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("AppRegistrations", (string)null);
+                });
+
             modelBuilder.Entity("RIS.Persistence.AuditEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -62,6 +115,9 @@ namespace RIS.Persistence.Migrations
 
                     b.Property<string>("AosUri")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AppRegistration")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("AuthMode")
