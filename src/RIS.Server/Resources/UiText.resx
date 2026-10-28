@@ -86,7 +86,7 @@
   <data name="Job_MissedRuns" xml:space="preserve"><value>Missed runs</value></data>
   <data name="Job_PairedJob" xml:space="preserve"><value>Paired job</value></data>
   <data name="Job_NotFound" xml:space="preserve"><value>Job {0} is not configured.</value></data>
-  <data name="Job_PausedBecause" xml:space="preserve"><value>Paused: {0} (by {1})</value></data>
+  <data name="Job_PausedBecause" xml:space="preserve"><value>Paused: {0}</value></data>
   <data name="Job_TabOverview" xml:space="preserve"><value>Overview</value></data>
   <data name="Job_TabHistory" xml:space="preserve"><value>History</value></data>
   <data name="Job_TabDefinition" xml:space="preserve"><value>Definition</value></data>
@@ -693,4 +693,9 @@
   <data name="AppReg_DefaultOfInstance" xml:space="preserve"><value>Default of the instance ({0})</value></data>
   <data name="FieldHint_AppRegistration" xml:space="preserve"><value>Empty = the default app registration of the D365 instance</value></data>
   <data name="FieldHelp_AppRegistration" xml:space="preserve"><value>Microsoft Entra ID application the job signs in with. Leave it empty to use the default of the D365 instance; choose another one when this job must run as another application (as in 4.x, where every job had its own app registration). Defined on the App registrations page.</value></data>
+  <data name="PauseReason_IndefinitePause" xml:space="preserve"><value>indefinitely, in the job settings (job disabled)</value></data>
+  <data name="PauseReason_Configuration" xml:space="preserve"><value>in the job settings (e.g. imported from 4.x as paused)</value></data>
+  <data name="PauseReason_KeptAfterChange" xml:space="preserve"><value>by an operator (kept after the job was changed)</value></data>
+  <data name="PauseReason_Error" xml:space="preserve"><value>after a failed run (Pause on error)</value></data>
+  <data name="State_RunningPaused" xml:space="preserve"><value>Running now (started manually); the job stays paused: {0}</value></data>
 </root>

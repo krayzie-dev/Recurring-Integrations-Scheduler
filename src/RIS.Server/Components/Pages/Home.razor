@@ -109,7 +109,7 @@ else
     {
         AttentionKind.Failing => T["Attention_Failing", item.Job.ConsecutiveFailures] + (item.Detail is null ? "" : ": " + item.Detail),
         AttentionKind.NoRecentSuccess => T["Attention_NoRecentSuccess", item.Detail ?? ""],
-        AttentionKind.Paused => T["Attention_Paused"] + (item.Detail is null ? "" : ": " + item.Detail),
+        AttentionKind.Paused => T["Attention_Paused"] + (Pausing.Text(item.Job, T) is { } reason ? ": " + reason : ""),
         _ => T["Attention_NotScheduled"]
     };
 

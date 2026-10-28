@@ -5,6 +5,15 @@ using RIS.Core.Options;
 
 namespace RIS.Jobs.Quartz;
 
+/// <summary>Pause reasons set by RIS (stored by Quartz; the UI shows them translated). Operators type their own reasons.</summary>
+public static class PauseReasons
+{
+    public const string IndefinitePause = "IndefinitePause";
+    public const string Configuration = "Paused in configuration";
+    public const string KeptAfterChange = "Paused by operator (kept after configuration change)";
+    public const string Error = "Paused after a failed run (PauseOnError)";
+}
+
 /// <summary>
 /// Job input stored by Quartz. The envelope keeps the polymorphic "type" of options in the serialized JSON.
 /// Contains no secrets: connections and SFTP servers are referenced by name.
@@ -56,7 +65,7 @@ public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, 
 
         if (outcome.Status == JobOutcomeStatus.Failed && options.PauseOnError)
         {
-            await context.Scheduler.PauseJob(key, cancellationToken);
+            await context.Scheduler.PauseJobWith(key, new PauseDetails { Reason = PauseReasons.Error, RequestedBy = "RIS" }, cancellationToken);
             logger.LogWarning("Job {JobKey} was paused because it failed and PauseOnError is set", jobKey);
         }
     }
@@ -274,9 +283,9 @@ public static class RisJobScheduling
             Replace = true,
             Paused = paused,
             PauseReason = !paused ? null
-                : definition.Options?.IndefinitePause == true ? "IndefinitePause"
-                : configPaused ? "Paused in configuration"
-                : "Paused by operator (kept after configuration change)"
+                : definition.Options?.IndefinitePause == true ? PauseReasons.IndefinitePause
+                : configPaused ? PauseReasons.Configuration
+                : PauseReasons.KeptAfterChange
         };
         await scheduler.ScheduleJob(BuildJob(definition, definitionHash), [BuildTrigger(definition, DateTimeOffset.UtcNow)], options, cancellationToken);
     }

@@ -160,7 +160,7 @@
   <data name="Job_MissedRuns" xml:space="preserve"><value>Przegapione terminy</value></data>
   <data name="Job_PairedJob" xml:space="preserve"><value>Zadanie powiązane</value></data>
   <data name="Job_NotFound" xml:space="preserve"><value>Zadanie {0} nie jest skonfigurowane.</value></data>
-  <data name="Job_PausedBecause" xml:space="preserve"><value>Wstrzymane: {0} (przez {1})</value></data>
+  <data name="Job_PausedBecause" xml:space="preserve"><value>Wstrzymane: {0}</value></data>
   <data name="Job_TabOverview" xml:space="preserve"><value>Przegląd</value></data>
   <data name="Job_TabHistory" xml:space="preserve"><value>Historia</value></data>
   <data name="Job_TabDefinition" xml:space="preserve"><value>Definicja</value></data>
@@ -767,4 +767,9 @@
   <data name="AppReg_DefaultOfInstance" xml:space="preserve"><value>Domyślna instancji ({0})</value></data>
   <data name="FieldHint_AppRegistration" xml:space="preserve"><value>Puste = domyślna rejestracja aplikacji instancji D365</value></data>
   <data name="FieldHelp_AppRegistration" xml:space="preserve"><value>Aplikacja Microsoft Entra ID, którą zadanie loguje się do D365. Zostaw puste, aby użyć domyślnej rejestracji instancji D365; wybierz inną, gdy to zadanie ma działać jako inna aplikacja (jak w 4.x, gdzie każde zadanie miało swoją rejestrację). Rejestracje definiuje się na stronie Rejestracje aplikacji.</value></data>
+  <data name="PauseReason_IndefinitePause" xml:space="preserve"><value>bezterminowo, w ustawieniach zadania (zadanie wyłączone)</value></data>
+  <data name="PauseReason_Configuration" xml:space="preserve"><value>w ustawieniach zadania (np. zaimportowane z 4.x jako wstrzymane)</value></data>
+  <data name="PauseReason_KeptAfterChange" xml:space="preserve"><value>przez operatora (zachowane po zmianie zadania)</value></data>
+  <data name="PauseReason_Error" xml:space="preserve"><value>po nieudanym uruchomieniu (Wstrzymaj po błędzie)</value></data>
+  <data name="State_RunningPaused" xml:space="preserve"><value>Teraz działa (uruchomione ręcznie); zadanie pozostaje wstrzymane: {0}</value></data>
 </root>

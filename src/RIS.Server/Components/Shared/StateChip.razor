@@ -8,9 +8,17 @@
 
     private string Key => Job.Running ? "Running" : Job.State;
 
-    private string? Tooltip => Job.IsPaused && Job.PauseReason is not null
-        ? (string.IsNullOrEmpty(Job.PausedBy) ? Job.PauseReason : $"{Job.PauseReason} ({Job.PausedBy})")
-        : null;
+    // A paused job may still run (started manually): the chip shows "running", the tooltip that the job stays paused.
+    private string? Tooltip
+    {
+        get
+        {
+            if (!Job.IsPaused) return null;
+            var reason = Pausing.Text(Job, T);
+            if (Job.Running) return T["State_RunningPaused", reason ?? T["State_Paused"].Value].Value;
+            return reason is null ? null : T["Job_PausedBecause", reason].Value;
+        }
+    }
 
     private Color Colour => Key switch
     {

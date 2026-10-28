@@ -30,7 +30,7 @@ public sealed class ExportService(IStringLocalizer<UiText> text, TimeProvider ti
         new(text["Job_Connection"], o => ((JobSummary)o!).Connection),
         new(text["Job_Schedule"], o => ((JobSummary)o!).Schedule),
         new(text["Job_State"], o => text["State_" + ((JobSummary)o!).State].Value),
-        new(text["Pause_Reason"], o => ((JobSummary)o!).PauseReason),
+        new(text["Pause_Reason"], o => RIS.Server.Ui.Pausing.Reason(((JobSummary)o!).PauseReason, text)),
         new(text["Job_NextRun"], o => Local(((JobSummary)o!).NextRunUtc, zone), DateFormat),
         new(text["Job_LastRun"], o => Local(((JobSummary)o!).LastRunUtc, zone), DateFormat),
         new(text["Run_Result"], o => ((JobSummary)o!).LastResult is { } r ? text["Result_" + r].Value : null),

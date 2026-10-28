@@ -49,7 +49,7 @@ else
 
     @if (job.IsPaused && job.PauseReason is not null)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">@T["Job_PausedBecause", job.PauseReason, job.PausedBy ?? "?"]</MudAlert>
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">@T["Job_PausedBecause", Pausing.Text(job, T)!]</MudAlert>
     }
     @if (!string.IsNullOrEmpty(job.Description))
     {
