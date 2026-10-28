@@ -712,4 +712,9 @@
   <data name="HistoryFilter_Clear" xml:space="preserve"><value>Wyczyść filtry</value></data>
   <data name="HistoryFilter_NoMatch" xml:space="preserve"><value>Żadne uruchomienie nie pasuje do filtrów.</value></data>
   <data name="HistoryFilter_Selected" xml:space="preserve"><value>Wybrano: {0}</value></data>
+  <data name="Common_Actions" xml:space="preserve"><value>Akcje</value></data>
+  <data name="Gantt_ZoomIn" xml:space="preserve"><value>Powiększ skalę</value></data>
+  <data name="Gantt_ZoomOut" xml:space="preserve"><value>Pomniejsz skalę</value></data>
+  <data name="Gantt_ZoomReset" xml:space="preserve"><value>Domyślna skala (100%)</value></data>
+  <data name="Gantt_ZoomFit" xml:space="preserve"><value>Dopasuj do szerokości strony</value></data>
 </root>

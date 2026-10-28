@@ -4,14 +4,14 @@
 
 @if (Filterable && Runs.Count > 0)
 {
-    <div class="d-flex flex-wrap gap-3 align-center mb-2 ris-no-print ris-history-filters">
+    <div class="ris-filter-bar mb-2 ris-no-print ris-history-filters">
         <MudTextField T="string" Value="_text" ValueChanged="SetTextAsync" Immediate="true" DebounceInterval="250" Clearable="true"
                       Placeholder="@T["HistoryFilter_Search"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FilterList"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 300px; max-width: 360px" />
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="ris-filter-field ris-filter-search" />
         @if (ShowJob && _allGroups.Count > 1)
         {
             <MudSelect T="string" Label="@T["Job_Group"]" MultiSelection="true" SelectedValues="_groups" SelectedValuesChanged="SetGroups"
-                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 180px">
+                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="ris-filter-field">
                 @foreach (var group in _allGroups)
                 {
                     <MudSelectItem T="string" Value="group">@group</MudSelectItem>
@@ -19,7 +19,7 @@
             </MudSelect>
         }
         <MudSelect T="string" Label="@T["Run_Result"]" MultiSelection="true" SelectedValues="_results" SelectedValuesChanged="SetResults"
-                   MultiSelectionTextFunc="SelectedResults" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 170px">
+                   MultiSelectionTextFunc="SelectedResults" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="ris-filter-field">
             @foreach (var result in _allResults)
             {
                 <MudSelectItem T="string" Value="result">@T["Result_" + result]</MudSelectItem>
@@ -28,7 +28,7 @@
         @if (_allCodes.Count > 0)
         {
             <MudSelect T="string" Label="@T["Run_ErrorCode"]" MultiSelection="true" SelectedValues="_codes" SelectedValuesChanged="SetCodes"
-                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 170px">
+                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Class="ris-filter-field">
                 @foreach (var errorCode in _allCodes)
                 {
                     <MudSelectItem T="string" Value="errorCode">@errorCode</MudSelectItem>

@@ -17,6 +17,7 @@ Pages refresh by themselves when a job starts or finishes.
 ![Job list](img/jobs.png)
 
 - **Search** looks in name, description, D365 instance, summary and schedule. Filters: group, type, D365 instance, quick filters *Failing*, *Paused*, *Running*.
+- The *Last run* column shows the result and time and, after several failures in a row, a red marker (e.g. ×3). The run and pause buttons are in the *Actions* column, always visible at the right edge.
 - The coloured bar at the type marks the job type (the same colours as the bar borders in the charts).
 - **Bulk actions** after selecting: *Run now*, *Pause* (with a reason visible to everyone), *Resume*, *Bulk edit*, *Delete*.
 - The download icon exports the visible or selected jobs to Excel, CSV or JSON (definitions without secrets).
@@ -44,6 +45,7 @@ A Gantt chart of scheduled runs for a day or a week:
 - **Bar fill** – state (scheduled, paused – dashed), **border** – job type (legend below the toolbar).
 - Jobs running more often than every 30 minutes are shown as a **band** ("every 5 min").
 - Bar length is the median duration of recent runs.
+- **Scale**: 🔍− / 🔍+ shrinks or widens the time axis (25% to 1200%), clicking the percentage returns to 100%, ⛶ fits the whole day or week to the page width (the chart opens that way). Hour labels get denser at a larger scale.
 - Grouping: group, D365 instance, type. Red line = now. Clicking a bar opens the job.
 - Export: PNG, PDF (print), Excel, CSV.
 

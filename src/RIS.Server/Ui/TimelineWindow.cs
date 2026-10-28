@@ -35,6 +35,28 @@ public sealed record TimelineWindow(TimelineRange Range, DateTime StartLocal, Ti
     public TimeSpan BandThreshold => Range == TimelineRange.Week ? TimeSpan.FromMinutes(30) : TimeSpan.FromMinutes(5);
     public double TimeWidth => Range == TimelineRange.Week ? 7 * 210 : 24 * 60;
     public int HourStep => Range == TimelineRange.Week ? 6 : 1;
+
+    /// <summary>Zoom levels of the time axis (1 = <see cref="TimeWidth"/>); "fit" may give any value in between.</summary>
+    public static readonly double[] ZoomLevels = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12];
+    public const double MinZoom = 0.25, MaxZoom = 12;
+
+    public double TimeWidthAt(double zoom) => TimeWidth * Math.Clamp(zoom, MinZoom, MaxZoom);
+
+    /// <summary>Hours between the labels of the axis: as dense as possible with at least 40 px between labels.</summary>
+    public int HourStepAt(double zoom)
+    {
+        var pixelsPerHour = TimeWidthAt(zoom) / (EndLocal - StartLocal).TotalHours;
+        foreach (var step in new[] { 1, 2, 3, 6, 12 })
+        {
+            if (step * pixelsPerHour >= 40) return step;
+        }
+        return 24;
+    }
+
+    /// <summary>Next zoom level in the direction (+1 larger, -1 smaller) from any current value.</summary>
+    public static double NextZoom(double zoom, int direction) => direction > 0
+        ? ZoomLevels.FirstOrDefault(z => z > zoom + 0.001, MaxZoom)
+        : ZoomLevels.LastOrDefault(z => z < zoom - 0.001, MinZoom);
     public string DayFormat => Range == TimelineRange.Week ? "ddd d.MM" : "dddd, d MMMM yyyy";
 
     public string Title => Range == TimelineRange.Week

@@ -31,48 +31,36 @@
 </MudStack>
 
 @* Filters *@
-<MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
-    <MudGrid Spacing="2">
-        <MudItem xs="12" md="3">
-            <MudTextField @bind-Value="_search" Placeholder="@T["Common_Search"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+<MudPaper Class="pa-3 mb-3 ris-filter-bar" Elevation="0" Outlined="true">
+            <MudTextField @bind-Value="_search" Placeholder="@T["Common_Search"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Class="ris-filter-field ris-filter-search"
                           Immediate="true" DebounceInterval="250" OnDebounceIntervalElapsed="ApplyFilter" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </MudItem>
-        <MudItem xs="6" md="2">
             <MudSelect T="string" @bind-SelectedValues="_groups" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Group"]" Variant="Variant.Outlined" Margin="Margin.Dense"
- Clearable="true">
+ Clearable="true" Class="ris-filter-field">
                 @foreach (var group in _all.Select(j => j.Group).Distinct().Order())
                 {
                     <MudSelectItem Value="group">@group</MudSelectItem>
                 }
             </MudSelect>
-        </MudItem>
-        <MudItem xs="6" md="2">
             <MudSelect T="string" @bind-SelectedValues="_types" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Type"]" Variant="Variant.Outlined" Margin="Margin.Dense"
- Clearable="true">
+ Clearable="true" Class="ris-filter-field">
                 @foreach (var type in Enum.GetNames<JobType>())
                 {
                     <MudSelectItem Value="type">@T["JobType_" + type]</MudSelectItem>
                 }
             </MudSelect>
-        </MudItem>
-        <MudItem xs="6" md="2">
             <MudSelect T="string" @bind-SelectedValues="_connections" @bind-SelectedValues:after="ApplyFilter" MultiSelection="true" Label="@T["Job_Connection"]" Variant="Variant.Outlined" Margin="Margin.Dense"
- Clearable="true">
+ Clearable="true" Class="ris-filter-field">
                 @foreach (var connection in _all.Select(j => j.Connection ?? "").Distinct().Order())
                 {
                     <MudSelectItem Value="connection">@connection</MudSelectItem>
                 }
             </MudSelect>
-        </MudItem>
-        <MudItem xs="6" md="3">
             <MudChipSet T="string" @bind-SelectedValues="_quick" @bind-SelectedValues:after="ApplyFilter" SelectionMode="SelectionMode.MultiSelection" Size="Size.Small"
  CheckMark="true">
                 <MudChip Value="@("failing")" Color="Color.Error">@T["Filter_Failing"]</MudChip>
                 <MudChip Value="@("paused")" Color="Color.Warning">@T["Filter_Paused"]</MudChip>
                 <MudChip Value="@("running")" Color="Color.Info">@T["Filter_Running"]</MudChip>
             </MudChipSet>
-        </MudItem>
-    </MudGrid>
 </MudPaper>
 
 @* Bulk actions for the selection *@
@@ -100,17 +88,17 @@
              SortMode="SortMode.Multiple" Loading="Loading" RowsPerPage="50" Elevation="0" Outlined="true" Comparer="_comparer">
     <Columns>
         <SelectColumn T="JobSummary" />
-        <PropertyColumn Property="j => j.Key" Title="@T["Job_Name"]">
+        <PropertyColumn Property="j => j.Key" Title="@T["Job_Name"]" CellClass="ris-wrap">
             <CellTemplate>
                 <MudLink Href="@JobLink(context.Item)">@context.Item.Name</MudLink>
                 <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@context.Item.Group</MudText>
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Type" Title="@T["Job_Type"]">
-            <CellTemplate><span class="@($"ris-type {Shared.Gantt.TypeCss(Enum.Parse<JobType>(context.Item.Type))}")">@T["JobType_" + context.Item.Type]</span></CellTemplate>
+            <CellTemplate><span class="@($"ris-type {Shared.Gantt.TypeCss(Enum.Parse<JobType>(context.Item.Type))}")" title="@T["JobType_" + context.Item.Type]">@ShortType(context.Item.Type)</span></CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.Connection" Title="@T["Job_Connection"]" />
-        <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]">
+        <PropertyColumn Property="j => j.Schedule" Title="@T["Job_Schedule"]" CellClass="ris-wrap">
             <CellTemplate><span title="@context.Item.Schedule">@ScheduleText(context.Item)</span></CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="j => j.State" Title="@T["Job_State"]">
@@ -121,27 +109,28 @@
         </PropertyColumn>
         <PropertyColumn Property="j => j.LastRunUtc" Title="@T["Job_LastRun"]">
             <CellTemplate>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <ResultChip Result="@context.Item.LastResult" Tooltip="@context.Item.LastSummary" />
+                <div class="ris-two-lines">
+                    <div class="d-flex align-center gap-1">
+                        <ResultChip Result="@context.Item.LastResult" Tooltip="@context.Item.LastSummary" />
+                        @if (context.Item.ConsecutiveFailures > 1)
+                        {
+                            <MudTooltip Text="@T["Job_Failures"]">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" Class="ma-0">×@context.Item.ConsecutiveFailures</MudChip>
+                            </MudTooltip>
+                        }
+                    </div>
                     @if (context.Item.LastRunUtc is not null)
                     {
                         <MudText Typo="Typo.caption">@Prefs.Format(context.Item.LastRunUtc)</MudText>
                     }
-                </MudStack>
+                </div>
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="j => j.ConsecutiveFailures" Title="@T["Job_Failures"]">
-            <CellTemplate>
-                @if (context.Item.ConsecutiveFailures > 0)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Error">@context.Item.ConsecutiveFailures</MudChip>
-                }
-            </CellTemplate>
-        </PropertyColumn>
-        <TemplateColumn T="JobSummary" Sortable="false" CellClass="d-flex justify-end">
+        <TemplateColumn T="JobSummary" Sortable="false" Title="@(CanOperate ? T["Common_Actions"] : "")" StickyRight="true">
             <CellTemplate>
                 @if (CanOperate)
                 {
+                    <div class="ris-actions">
                     <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" title="@T["Action_Run"]" OnClick="() => RunJobsAsync([Ref(context.Item)])" />
                     @if (context.Item.IsPaused)
                     {
@@ -151,6 +140,7 @@
                     {
                         <MudIconButton Icon="@Icons.Material.Filled.Pause" Size="Size.Small" Color="Color.Warning" title="@T["Action_Pause"]" OnClick="() => PauseJobsAsync([Ref(context.Item)])" />
                     }
+                    </div>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -171,6 +161,9 @@
 
     // Rows are compared by key, so the selection survives a refresh (new record instances).
     private readonly IEqualityComparer<JobSummary> _comparer = new KeyComparer();
+
+    /// <summary>Type without the English name in parentheses ("Pobieranie (Download)" -> "Pobieranie"); the full name is the tooltip.</summary>
+    private string ShortType(string type) => T["JobType_" + type].Value.Split(" (")[0];
 
     private IReadOnlyList<JobRef> SelectedRefs => _selected.Select(Ref).ToList();
 

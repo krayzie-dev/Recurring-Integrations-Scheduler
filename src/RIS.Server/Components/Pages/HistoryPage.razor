@@ -8,7 +8,7 @@
 <PageTitle>RIS 5 – @T["Nav_History"]</PageTitle>
 <MudText Typo="Typo.h5" Class="mb-2">@T["History_Title"]</MudText>
 
-<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
+<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Zoom="_zoom" ZoomChanged="z => _zoom = z" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
                  Search="@_search" SearchChanged="SetSearchAsync" ChartId="history-gantt" FileName="ris-history" OnExport="ExportAsync">
     <MudSwitch T="bool" Value="_failedOnly" ValueChanged="SetFailedOnlyAsync" Color="Color.Error" Label="@T["History_FailedOnly"]" />
 </TimelineToolbar>
@@ -24,7 +24,7 @@ else
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@T["History_Truncated", HistoryTimelineService.MaxRuns]</MudAlert>
     }
-    <Gantt Id="history-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidth" HourStep="_window.HourStep"
+    <Gantt Id="history-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidthAt(_zoom)" HourStep="_window.HourStepAt(_zoom)"
            DayFormat="@_window.DayFormat" OnItemClick="OpenRunAsync" />
 
     <MudText Typo="Typo.h6" Class="mt-4 mb-2 ris-no-print">@T["History_Runs", _runs.Count]</MudText>
@@ -37,6 +37,7 @@ else
 
 @code {
     private TimelineWindow _window = null!;
+    private double _zoom = 1;
     private TimelineGrouping _grouping = TimelineGrouping.Group;
     private string? _search;
     private bool _failedOnly;

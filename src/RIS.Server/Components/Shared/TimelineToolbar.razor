@@ -2,7 +2,8 @@
 @inject IJSRuntime JS
 @* Range, navigation, grouping, search and export of a Gantt view. *@
 
-<MudPaper Class="pa-2 mb-2 d-flex align-center flex-wrap gap-2 ris-no-print" Elevation="0" Outlined="true">
+<div @ref="_box">
+<MudPaper Class="pa-2 mb-2 d-flex align-center flex-wrap gap-2 ris-no-print ris-toolbar" Elevation="0" Outlined="true">
     <MudToggleGroup T="TimelineRange" Value="Window.Range" ValueChanged="r => WindowChanged.InvokeAsync(Window.WithRange(r))" Size="Size.Small" Outlined="true">
         <MudToggleItem Value="TimelineRange.Day">@T["Gantt_Day"]</MudToggleItem>
         <MudToggleItem Value="TimelineRange.Week">@T["Gantt_Week"]</MudToggleItem>
@@ -11,18 +12,30 @@
     <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="() => WindowChanged.InvokeAsync(TimelineWindow.Current(Window.Range, Window.Zone))">@T["Gantt_Today"]</MudButton>
     <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" OnClick="() => WindowChanged.InvokeAsync(Window.Next())" title="@T["Gantt_Next"]" />
     <MudText Typo="Typo.subtitle1" Class="mx-2">@Window.Title</MudText>
+    @if (ZoomChanged.HasDelegate)
+    {
+        @* Scale of the time axis: smaller / 100 % / larger / fit to the width of the page. *@
+        <div class="d-flex align-center ris-zoom">
+            <MudIconButton Icon="@Icons.Material.Filled.ZoomOut" Size="Size.Small" OnClick="() => SetZoomAsync(TimelineWindow.NextZoom(Zoom, -1))"
+                           Disabled="Zoom <= TimelineWindow.MinZoom" title="@T["Gantt_ZoomOut"]" />
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => SetZoomAsync(1)" title="@T["Gantt_ZoomReset"]" Style="min-width: 56px">@($"{Zoom * 100:0}%")</MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.ZoomIn" Size="Size.Small" OnClick="() => SetZoomAsync(TimelineWindow.NextZoom(Zoom, 1))"
+                           Disabled="Zoom >= TimelineWindow.MaxZoom" title="@T["Gantt_ZoomIn"]" />
+            <MudIconButton Icon="@Icons.Material.Filled.FitScreen" Size="Size.Small" OnClick="FitAsync" title="@T["Gantt_ZoomFit"]" />
+        </div>
+    }
 
     <MudSpacer />
     @ChildContent
     <MudSelect T="TimelineGrouping" Value="Grouping" ValueChanged="g => GroupingChanged.InvokeAsync(g)" Label="@T["Gantt_GroupBy"]" Dense="true"
-               Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 170px">
+               Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 150px">
         @foreach (var grouping in Enum.GetValues<TimelineGrouping>())
         {
             <MudSelectItem Value="grouping">@T["Gantt_GroupBy_" + grouping]</MudSelectItem>
         }
     </MudSelect>
     <MudTextField T="string" Value="Search" ValueChanged="s => SearchChanged.InvokeAsync(s)" Placeholder="@T["Common_Search"]" Immediate="true" DebounceInterval="300"
-                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Style="max-width: 220px" />
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" Style="max-width: 180px" />
     <MudMenu Icon="@Icons.Material.Filled.Download" Dense="true" title="@T["Common_Export"]">
         <MudMenuItem Icon="@Icons.Material.Filled.Image" OnClick="ExportPngAsync">@T["Export_Png"]</MudMenuItem>
         <MudMenuItem Icon="@Icons.Material.Filled.PictureAsPdf" OnClick="PrintAsync">@T["Export_Pdf"]</MudMenuItem>
@@ -33,6 +46,7 @@
         }
     </MudMenu>
 </MudPaper>
+</div>
 
 @code {
     [Parameter, EditorRequired] public TimelineWindow Window { get; set; } = null!;
@@ -45,6 +59,26 @@
     [Parameter] public string FileName { get; set; } = "ris";
     [Parameter] public EventCallback<string> OnExport { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Zoom of the time axis (1 = default width); with ZoomChanged the toolbar shows the zoom buttons and fits the chart at first.</summary>
+    [Parameter] public double Zoom { get; set; } = 1;
+    [Parameter] public EventCallback<double> ZoomChanged { get; set; }
+
+    private ElementReference _box;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ZoomChanged.HasDelegate) await FitAsync();
+    }
+
+    private async Task SetZoomAsync(double zoom) => await ZoomChanged.InvokeAsync(Math.Clamp(zoom, TimelineWindow.MinZoom, TimelineWindow.MaxZoom));
+
+    /// <summary>The whole day/week in the width of the page (the toolbar is as wide as the chart area).</summary>
+    private async Task FitAsync()
+    {
+        var width = await JS.InvokeAsync<double>("ris.elementWidth", _box);
+        if (width <= GanttLayout.LabelWidth + 100) return;
+        await SetZoomAsync((width - GanttLayout.LabelWidth - 8) / Window.TimeWidth);
+    }
 
     private async Task ExportPngAsync() =>
         await JS.InvokeVoidAsync("ris.exportSvgToPng", ChartId, $"{FileName}-{Window.StartLocal:yyyy-MM-dd}.png");

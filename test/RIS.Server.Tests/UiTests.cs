@@ -152,7 +152,8 @@ public sealed class UiTests
 
         var connections = await GetPageAsync("/connections", "Admin", "en-US");
         StringAssert.Contains(connections, "TEST");
-        StringAssert.Contains(connections, "Set");
+        StringAssert.Contains(connections, "Client secret", "Sign-in method with its secret state.");
+        Assert.IsFalse(connections.Contains("Client secret: "), "The secret is set (no \"missing\" marker).");
         Assert.IsFalse(connections.Contains("secret\"") || connections.Contains(">secret<"), "Secret value never rendered.");
         StringAssert.Contains(await GetPageAsync("/sftp-servers", "Admin", "en-US"), "New SFTP server");
         // The audit grid pages on the server (rows come after the interactive circuit starts): the page itself, and the

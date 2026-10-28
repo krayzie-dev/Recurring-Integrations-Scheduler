@@ -18,9 +18,9 @@
     <thead>
         <tr>
             <th>@T["Maint_Data"]</th>
-            <th style="text-align: right">@T["Maint_Items"]</th>
+            <th>@T["Maint_Items"]</th>
             <th>@T["Maint_Oldest"]</th>
-            <th style="text-align: right">@T["Maint_Size"]</th>
+            <th>@T["Maint_Size"]</th>
             <th>@T["Maint_Retention"]</th>
             <th>@T["Maint_Location"]</th>
         </tr>
@@ -30,11 +30,11 @@
         {
             <tr>
                 <td><b>@T["Maint_Store_" + store.Key]</b><div class="mud-text-secondary" style="font-size: .75rem">@T["Maint_StoreHelp_" + store.Key]</div></td>
-                <td style="text-align: right">@(store.Items is { } n ? UiFormat.Number((int)Math.Min(n, int.MaxValue)) : "–")</td>
-                <td>@Prefs.Format(store.OldestUtc, "g")</td>
-                <td style="text-align: right">@Bytes(store.Bytes)</td>
-                <td>@store.Retention</td>
-                <td class="ris-mono" style="font-size: .75rem">@store.Location</td>
+                <td class="ris-nowrap" style="text-align: right">@(store.Items is { } n ? UiFormat.Number((int)Math.Min(n, int.MaxValue)) : "–")</td>
+                <td class="ris-nowrap">@Prefs.Format(store.OldestUtc, "g")</td>
+                <td class="ris-nowrap" style="text-align: right">@Bytes(store.Bytes)</td>
+                <td class="ris-nowrap">@store.Retention</td>
+                <td class="ris-mono ris-nowrap" style="font-size: .75rem">@store.Location</td>
             </tr>
         }
     </tbody>

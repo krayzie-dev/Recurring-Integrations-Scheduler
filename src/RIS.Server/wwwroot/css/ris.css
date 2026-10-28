@@ -111,3 +111,24 @@
 .ris-manual th, .ris-manual td { border: 1px solid var(--mud-palette-lines-default); padding: 5px 8px; text-align: left; vertical-align: top; }
 .ris-manual th { background: var(--mud-palette-background-gray); font-weight: 500; }
 @media print { .ris-manual { border: none !important; padding: 0 !important; } .ris-manual img { box-shadow: none; page-break-inside: avoid; } }
+
+/* Tables. Headers centred (sort icon included). Data grid values do not wrap, so every column is as wide as its content;
+   columns with long text opt in to wrapping with CellClass="ris-wrap". Key/value tables (no thead) are not affected. */
+.mud-table-root > .mud-table-head .mud-table-cell, .mud-simple-table thead th { text-align: center !important; vertical-align: middle; }
+.mud-data-grid .mud-table-head .column-header { justify-content: center; }
+.mud-data-grid .mud-table-head .column-header .sortable-column-header { width: auto; }
+.mud-data-grid .mud-table-body .mud-table-cell { white-space: nowrap; vertical-align: middle; }
+.mud-data-grid .mud-table-cell { padding-left: 10px !important; padding-right: 10px !important; }
+.mud-data-grid .mud-table-body .mud-table-cell.ris-wrap { white-space: normal; min-width: 10rem; }
+/* Long values without spaces (URLs): break only when the table would not fit. */
+.mud-data-grid .mud-table-body .mud-table-cell.ris-wrap-any { white-space: normal; overflow-wrap: anywhere; min-width: 12rem; }
+.mud-data-grid .mud-table-body .ris-mono { white-space: nowrap; word-break: normal; }
+/* Cell content: buttons of the "Actions" column, two lines (e.g. result chip and time) without breaking a value. */
+.ris-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
+.ris-two-lines { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap; line-height: 1.25; }
+/* Filter bars: all fields on one line, chips centred on the fields. */
+.ris-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ris-filter-bar > .ris-filter-field { flex: 0 1 190px; min-width: 150px; margin: 0; }
+.ris-filter-bar > .ris-filter-search { flex: 1 1 220px; max-width: 360px; }
+.ris-filter-bar .mud-input-control, .ris-toolbar .mud-input-control { margin-top: 0 !important; }
+.ris-nowrap, .mud-simple-table td.ris-nowrap { white-space: nowrap !important; word-break: normal; }

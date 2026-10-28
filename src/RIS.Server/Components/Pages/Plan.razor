@@ -8,7 +8,7 @@
 <PageTitle>RIS 5 – @T["Nav_Plan"]</PageTitle>
 <MudText Typo="Typo.h5" Class="mb-2">@T["Plan_Title"]</MudText>
 
-<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
+<TimelineToolbar Window="_window" WindowChanged="SetWindowAsync" Zoom="_zoom" ZoomChanged="z => _zoom = z" Grouping="_grouping" GroupingChanged="SetGroupingAsync"
                  Search="@_search" SearchChanged="SetSearchAsync" ChartId="plan-gantt" FileName="ris-plan" OnExport="ExportAsync" />
 <GanttLegend />
 
@@ -23,12 +23,13 @@ else
     {
         <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@T["Plan_Truncated", SchedulePlanService.MaxFiresPerJob]</MudAlert>
     }
-    <Gantt Id="plan-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidth" HourStep="_window.HourStep"
+    <Gantt Id="plan-gantt" Timeline="_timeline" Zone="Prefs.Zone" ZoneLabel="@Prefs.ZoneLabel" TimeWidth="_window.TimeWidthAt(_zoom)" HourStep="_window.HourStepAt(_zoom)"
            DayFormat="@_window.DayFormat" OnItemClick="OpenJob" />
 }
 
 @code {
     private TimelineWindow _window = null!;
+    private double _zoom = 1;
     private TimelineGrouping _grouping = TimelineGrouping.Group;
     private string? _search;
     private Timeline? _timeline;

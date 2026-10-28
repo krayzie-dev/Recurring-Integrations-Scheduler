@@ -19,13 +19,10 @@
 <MudDataGrid T="D365ConnectionOptions" Items="_items" Dense="true" Hover="true" Elevation="0" Outlined="true" Loading="Loading">
     <Columns>
         <PropertyColumn Property="c => c.Name" Title="@T["Field_Name"]" />
-        <PropertyColumn Property="c => c.AosUri" Title="AOS" />
+        <PropertyColumn Property="c => c.AosUri" Title="AOS" CellClass="ris-wrap-any" />
         <PropertyColumn Property="c => c.Tenant" Title="@T["Field_Tenant"]" />
-        <PropertyColumn Property="c => c.ClientId" Title="@T["Field_ClientId"]" CellClass="ris-mono" />
+        <PropertyColumn Property="c => c.ClientId" Title="@T["Field_ClientId"]" CellClass="ris-mono ris-wrap-any" />
         <TemplateColumn T="D365ConnectionOptions" Title="@T["Conn_Method"]">
-            <CellTemplate>@T["Enum_D365AuthMode_" + context.Item.AuthMode]</CellTemplate>
-        </TemplateColumn>
-        <TemplateColumn T="D365ConnectionOptions" Title="@T["Secret"]">
             <CellTemplate>
                 @if (context.Item.AuthMode == D365AuthMode.Certificate)
                 {
@@ -39,11 +36,15 @@
                 }
                 else if (HasSecret(context.Item))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@T["Secret_Set"]</MudChip>
+                    <MudTooltip Text="@T["Secret_Set"]">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@T["Enum_D365AuthMode_" + context.Item.AuthMode]</MudChip>
+                    </MudTooltip>
                 }
                 else
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen">@T["Secret_Missing"]</MudChip>
+                    <MudTooltip Text="@T["Secret_Missing"]">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen">@T["Enum_D365AuthMode_" + context.Item.AuthMode]: @T["Secret_Missing"]</MudChip>
+                    </MudTooltip>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -60,10 +61,12 @@
                 </MudTooltip>
             </CellTemplate>
         </TemplateColumn>
-        <TemplateColumn T="D365ConnectionOptions" CellClass="d-flex justify-end">
+        <TemplateColumn T="D365ConnectionOptions" Title="@T["Common_Actions"]" StickyRight="true">
             <CellTemplate>
+                <div class="ris-actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => EditAsync(context.Item)" title="@T["Action_Edit"]" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteAsync(context.Item)" title="@T["Common_Delete"]" />
+                </div>
             </CellTemplate>
         </TemplateColumn>
     </Columns>

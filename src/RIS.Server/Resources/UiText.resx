@@ -638,4 +638,9 @@
   <data name="HistoryFilter_Clear" xml:space="preserve"><value>Clear filters</value></data>
   <data name="HistoryFilter_NoMatch" xml:space="preserve"><value>No runs match the filters.</value></data>
   <data name="HistoryFilter_Selected" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="Common_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Gantt_ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
+  <data name="Gantt_ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="Gantt_ZoomReset" xml:space="preserve"><value>Default scale (100%)</value></data>
+  <data name="Gantt_ZoomFit" xml:space="preserve"><value>Fit to the page width</value></data>
 </root>

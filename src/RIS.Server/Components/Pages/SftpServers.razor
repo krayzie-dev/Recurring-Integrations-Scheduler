@@ -24,25 +24,16 @@
         <PropertyColumn Property="c => c.UserName" Title="@T["Field_UserName"]" />
         <TemplateColumn T="SftpServerOptions" Title="@T["Conn_Method"]">
             <CellTemplate>
-                @if (context.Item.UseKey)
-                {
-                    <MudTooltip Text="@context.Item.KeyPath"><span>@T["Sftp_AuthKey"]</span></MudTooltip>
-                }
-                else
-                {
-                    @T["Sftp_AuthPassword"]
-                }
-            </CellTemplate>
-        </TemplateColumn>
-        <TemplateColumn T="SftpServerOptions" Title="@T["Secret"]">
-            <CellTemplate>
+                @{ var method = context.Item.UseKey ? T["Sftp_AuthKey"] : T["Sftp_AuthPassword"]; }
                 @if (HasSecret(context.Item))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@T["Secret_Set"]</MudChip>
+                    <MudTooltip Text="@(context.Item.UseKey ? context.Item.KeyPath : T["Secret_Set"])">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@method</MudChip>
+                    </MudTooltip>
                 }
                 else
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen">@T["Secret_Missing"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockOpen">@method: @T["Secret_Missing"]</MudChip>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -59,10 +50,12 @@
                 </MudTooltip>
             </CellTemplate>
         </TemplateColumn>
-        <TemplateColumn T="SftpServerOptions" CellClass="d-flex justify-end">
+        <TemplateColumn T="SftpServerOptions" Title="@T["Common_Actions"]" StickyRight="true">
             <CellTemplate>
+                <div class="ris-actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => EditAsync(context.Item)" title="@T["Action_Edit"]" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteAsync(context.Item)" title="@T["Common_Delete"]" />
+                </div>
             </CellTemplate>
         </TemplateColumn>
     </Columns>

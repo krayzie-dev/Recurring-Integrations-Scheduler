@@ -17,6 +17,7 @@ Strony odświeżają się same, gdy zadanie startuje lub się kończy.
 ![Lista zadań](img/jobs.png)
 
 - **Szukaj** przeszukuje nazwę, opis, instancję D365, podsumowanie i harmonogram. Filtry: grupa, typ, instancja D365, szybkie filtry *Z błędami*, *Wstrzymane*, *W trakcie*.
+- Kolumna *Ostatnie uruchomienie* pokazuje wynik i czas, a przy kilku błędach z rzędu – czerwony znacznik (np. ×3). Przyciski uruchomienia i wstrzymania są w kolumnie *Akcje*, zawsze widocznej przy prawej krawędzi.
 - Kolorowy pasek przy typie oznacza typ zadania (te same kolory co ramki pasków na wykresach).
 - **Akcje zbiorcze** po zaznaczeniu: *Uruchom teraz*, *Wstrzymaj* (z powodem widocznym dla wszystkich), *Wznów*, *Edycja zbiorcza*, *Usuń*.
 - Ikona pobierania eksportuje widoczne lub zaznaczone zadania do Excela, CSV albo JSON (definicje bez sekretów).
@@ -44,6 +45,7 @@ Wykres Gantta zaplanowanych uruchomień na dzień lub tydzień:
 - **Wypełnienie paska** – stan (zaplanowane, wstrzymane – przerywane), **ramka** – typ zadania (legenda pod paskiem narzędzi).
 - Zadania uruchamiane częściej niż co 30 minut są pokazane jako **pas** („co 5 min”).
 - Długość paska to mediana czasu trwania ostatnich uruchomień.
+- **Skala**: 🔍− / 🔍+ zmniejsza lub zwiększa szerokość osi czasu (od 25% do 1200%), kliknięcie wartości procentowej wraca do 100%, ⛶ dopasowuje cały dzień lub tydzień do szerokości strony (tak otwiera się wykres). Opisy godzin zagęszczają się przy większej skali.
 - Grupowanie: grupa, instancja D365, typ. Linia czerwona = teraz. Kliknięcie paska otwiera zadanie.
 - Eksport: PNG, PDF (wydruk), Excel, CSV.
 
