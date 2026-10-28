@@ -302,3 +302,5 @@ __pycache__/
 
 # RIS 5 documentation is versioned
 !docs/ris5/*.md
+# RIS 5 user manual shipped with the application
+!src/RIS.Server/wwwroot/manual/*/*.md
