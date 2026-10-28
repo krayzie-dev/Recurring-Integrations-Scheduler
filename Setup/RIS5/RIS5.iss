@@ -114,8 +114,10 @@ english.ImportDescription=A RIS 4.x schedule was found on this server.
 polish.ImportDescription=Na tym serwerze znaleziono harmonogram RIS 4.x.
 english.ImportOption=Import the 4.x jobs as PAUSED jobs (resume them in the UI after checking)
 polish.ImportOption=Zaimportuj zadania 4.x jako WSTRZYMANE (wznów je w UI po sprawdzeniu)
-english.ImportHint=Secrets are not imported: set them in the UI (Connections) or with "ris db set-secret". Report: %1
-polish.ImportHint=Sekrety nie są importowane: ustaw je w UI (Połączenia) lub poleceniem "ris db set-secret". Raport: %1
+english.ImportHint=4.x jobs imported as paused, with the 4.x secrets (decrypted on this server). Secrets that could not be taken over are listed in the report: %1
+polish.ImportHint=Zadania 4.x zaimportowane jako wstrzymane, razem z sekretami 4.x (odszyfrowanymi na tym serwerze). Sekrety, których nie dało się przenieść, są wymienione w raporcie: %1
+english.Account4x=RIS 4.x service on this server runs as: %1 (preselected - it has access to the 4.x folders).
+polish.Account4x=Usługa RIS 4.x na tym serwerze działa na koncie: %1 (wybrane domyślnie - ma dostęp do folderów 4.x).
 english.KeepSettings=Existing settings in %1 are kept (run the setup with /RECONFIGURE=1 to change them).
 polish.KeepSettings=Zachowano istniejące ustawienia w %1 (uruchom instalator z /RECONFIGURE=1, aby je zmienić).
 english.ServiceRunning=The service is running: %1%nOpen %2
@@ -136,7 +138,7 @@ var
   NetworkPage: TInputQueryWizardPage;
   ImportPage: TInputOptionWizardPage;
   Upgrade, Reconfigure: Boolean;
-  Schedule4x, ResultText: String;
+  Schedule4x, Account4x, ResultText: String;
 
 function LogonUser(lpszUsername, lpszDomain, lpszPassword: String; dwLogonType, dwLogonProvider: Integer; var phToken: THandle): Boolean;
   external 'LogonUserW@advapi32.dll stdcall';
@@ -263,15 +265,41 @@ begin
   Result := '[' + Result + ']';
 end;
 
+{ Value of a "KEY=value" line of helper output. }
+function ValueOf(Text, Key: String): String;
+var
+  Index: Integer;
+begin
+  Result := '';
+  Index := Pos(Key + '=', Text);
+  if Index = 0 then Exit;
+  Result := Copy(Text, Index + Length(Key) + 1, MaxInt);
+  Index := Pos(#13, Result);
+  if Index = 0 then Index := Pos(#10, Result);
+  if Index > 0 then Result := Copy(Result, 1, Index - 1);
+  Result := Trim(Result);
+end;
+
 procedure InitializeWizard();
 var
-  AccountParam: String;
+  AccountParam, Output, AccountHint: String;
 begin
   Upgrade := ServiceExists() and FileExists(MachineSettings());
   Reconfigure := Param('RECONFIGURE', '0') = '1';
 
+  { RIS 4.x on this server: its schedule (found through the service and its configuration) and its service account. }
+  Schedule4x := '';
+  Account4x := '';
+  if not Upgrade then
+  begin
+    if Helper('Find4x', '', Output) = 0 then Schedule4x := ValueOf(Output, 'SCHEDULE');
+    Account4x := ValueOf(Output, 'ACCOUNT');
+  end;
+
+  AccountHint := CustomMessage('AccountHint');
+  if Account4x <> '' then AccountHint := FmtMessage(CustomMessage('Account4x'), [Account4x]) + #13#10#13#10 + AccountHint;
   AccountPage := CreateInputOptionPage(wpSelectTasks, CustomMessage('AccountCaption'), CustomMessage('AccountDescription'),
-    CustomMessage('AccountHint'), True, False);
+    AccountHint, True, False);
   AccountPage.Add('LocalSystem');
   AccountPage.Add('LocalService');
   AccountPage.Add('NetworkService');
@@ -281,7 +309,15 @@ begin
   CredentialsPage.Add(CustomMessage('UserName'), False);
   CredentialsPage.Add(CustomMessage('Password'), True);
 
-  AccountParam := Param('ACCOUNT', 'LocalService');
+  AccountParam := Param('ACCOUNT', '');
+  if AccountParam = '' then
+  begin
+    { Same account as the 4.x service: it already has access to the integration folders. }
+    if CompareText(Account4x, 'NT AUTHORITY\LocalService') = 0 then AccountParam := 'LocalService'
+    else if CompareText(Account4x, 'NT AUTHORITY\NetworkService') = 0 then AccountParam := 'NetworkService'
+    else if Account4x <> '' then AccountParam := Account4x
+    else AccountParam := 'LocalService';
+  end;
   if CompareText(AccountParam, 'LocalSystem') = 0 then AccountPage.SelectedValueIndex := 0
   else if CompareText(AccountParam, 'LocalService') = 0 then AccountPage.SelectedValueIndex := 1
   else if CompareText(AccountParam, 'NetworkService') = 0 then AccountPage.SelectedValueIndex := 2
@@ -306,8 +342,6 @@ begin
   NetworkPage.Values[3] := Param('ADMINS', 'S-1-5-32-544;' + InstallingUser());
   NetworkPage.Values[4] := Param('OPERATORS', '');
 
-  Schedule4x := ExpandConstant('{commonpf32}\Recurring Integrations Scheduler\Schedule.xml');
-  if not FileExists(Schedule4x) then Schedule4x := ExpandConstant('{commonpf64}\Recurring Integrations Scheduler\Schedule.xml');
   ImportPage := CreateInputOptionPage(NetworkPage.ID, CustomMessage('ImportCaption'), CustomMessage('ImportDescription'), Schedule4x, False, False);
   ImportPage.Add(CustomMessage('ImportOption'));
   ImportPage.Values[0] := Param('IMPORT4X', '1') = '1';
@@ -323,7 +357,7 @@ begin
   Result := False;
   if (PageID = AccountPage.ID) or (PageID = NetworkPage.ID) then Result := not Configure()
   else if PageID = CredentialsPage.ID then Result := (not Configure()) or IsBuiltInAccount()
-  else if PageID = ImportPage.ID then Result := Upgrade or not FileExists(Schedule4x);
+  else if PageID = ImportPage.ID then Result := Upgrade or (Schedule4x = '');
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -475,10 +509,10 @@ begin
   Ris := ExpandConstant('{app}\cli\ris.exe');
   Folder := DataDir() + '\import-4x';
   ForceDirectories(Folder);
-  RunCaptured(Ris, 'convert-schedule "' + Schedule4x + '" -o "' + Folder + '\jobs.json"', Output);
+  { Converted in memory; the 4.x secrets are decrypted here (DPAPI of this server) and stored encrypted by RIS 5, never in a file.
+    The report folder gets jobs.json without secrets. }
+  RunCaptured(Ris, 'db import-4x "' + Schedule4x + '" --paused --data "' + DataDir() + '" --report "' + Folder + '"', Output);
   SaveStringToFile(Folder + '\import.log', Output + #13#10, False);
-  RunCaptured(Ris, 'db import "' + Folder + '\jobs.json" --paused', Output);
-  SaveStringToFile(Folder + '\import.log', Output + #13#10, True);
   ResultText := ResultText + #13#10 + FmtMessage(CustomMessage('ImportHint'), [Folder + '\import.log']);
 end;
 

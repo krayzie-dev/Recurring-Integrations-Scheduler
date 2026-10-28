@@ -1,8 +1,10 @@
 using System.CommandLine;
 using System.Text;
+using System.Xml.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RIS.Core.Configuration;
+using RIS.Migration;
 using RIS.Persistence;
 
 namespace RIS.Cli;
@@ -19,6 +21,7 @@ internal static class DbCommands
         var command = new Command("db", "Manage the RIS 5 server configuration database");
         command.Subcommands.Add(MigrateCommand());
         command.Subcommands.Add(ImportCommand());
+        command.Subcommands.Add(Import4xCommand());
         command.Subcommands.Add(ExportCommand());
         command.Subcommands.Add(SetSecretCommand());
         return command;
@@ -63,6 +66,65 @@ internal static class DbCommands
                 {
                     Console.WriteLine("Connections without a secret in the file (stored value kept, if any): " + string.Join(", ", missing) +
                                       ". Set with: ris db set-secret connection <name>");
+                }
+            });
+        });
+        return command;
+    }
+
+    /// <summary>
+    /// Upgrade from 4.x on the 4.x server (used by the installer): Schedule.xml is converted in memory, the 4.x secrets are decrypted
+    /// (DPAPI of this machine) and stored encrypted by RIS 5 - they are never written to a file. The report folder gets jobs.json
+    /// with &lt;SET-SECRET&gt; placeholders and the list of warnings.
+    /// </summary>
+    private static Command Import4xCommand()
+    {
+        var schedule = new Argument<FileInfo>("schedule") { Description = "RIS 4.x Schedule.xml" };
+        var data = DataOption();
+        var paused = new Option<bool>("--paused") { Description = "Import all jobs paused (switch them one by one from 4.x)" };
+        var noSecrets = new Option<bool>("--no-secrets") { Description = "Do not decrypt the 4.x secrets (set them later)" };
+        var report = new Option<DirectoryInfo?>("--report") { Description = "Folder for jobs.json (without secrets) of the converted configuration" };
+        var command = new Command("import-4x", "Convert RIS 4.x Schedule.xml and import it, with the 4.x secrets when run on the 4.x server") { schedule, data, paused, noSecrets, report };
+        command.SetAction(async (parse, ct) =>
+        {
+            var source = parse.GetValue(schedule)!;
+            var result = new ScheduleXmlConverter(new ConversionOptions { DecryptSecrets = !parse.GetValue(noSecrets) }).Convert(XDocument.Load(source.FullName));
+            var configuration = result.Configuration;
+            if (parse.GetValue(paused))
+            {
+                foreach (var job in configuration.Jobs) job.Schedule.Paused = true;
+            }
+
+            Console.WriteLine($"Source: {source.FullName}");
+            foreach (var warning in result.Warnings) Console.WriteLine("WARNING " + warning);
+            foreach (var error in ConfigurationValidator.Validate(configuration)) Console.WriteLine("CHECK   " + error);
+
+            var withoutSecrets = new RisConfiguration
+            {
+                Connections = configuration.Connections.Select(ConfigurationRepository.WithoutSecrets).ToList(),
+                SftpServers = configuration.SftpServers.Select(ConfigurationRepository.WithoutSecrets).ToList(),
+                Jobs = configuration.Jobs
+            };
+            if (parse.GetValue(report) is { } folder)
+            {
+                folder.Create();
+                RisJson.SaveConfiguration(withoutSecrets, Path.Combine(folder.FullName, "jobs.json"));
+            }
+
+            await using var services = await OpenAsync(parse.GetValue(data), ct);
+            return await ChangeAsync(async () =>
+            {
+                await services.GetRequiredService<ConfigurationRepository>().ImportAsync(configuration, CurrentUser(), ct);
+                var missing = configuration.Connections.Where(c => SecretPlaceholder.IsPlaceholderOrEmpty(c.ClientSecret) && SecretPlaceholder.IsPlaceholderOrEmpty(c.UserPassword)
+                                                                   && string.IsNullOrEmpty(c.CertificateThumbprint)).Select(c => "connection " + c.Name)
+                    .Concat(configuration.SftpServers.Where(s => !s.UseKey && SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)).Select(s => "SFTP server " + s.Name))
+                    .ToList();
+                var migrated = configuration.Connections.Count + configuration.SftpServers.Count - missing.Count;
+                Console.WriteLine($"Imported {configuration.Jobs.Count} job(s), {configuration.Connections.Count} connection(s), {configuration.SftpServers.Count} SFTP server(s)" +
+                                  (parse.GetValue(paused) ? ", all jobs paused" : "") + $". Secrets taken over from 4.x: {migrated}.");
+                if (missing.Count > 0)
+                {
+                    Console.WriteLine("Secrets to set in RIS 5 (Connections / SFTP servers, or ris db set-secret): " + string.Join(", ", missing));
                 }
             });
         });

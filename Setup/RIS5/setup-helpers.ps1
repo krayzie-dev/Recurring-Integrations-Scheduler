@@ -6,6 +6,8 @@
       -Action EventSource                                       Application log source "Recurring Integrations Scheduler 5"
       -Action StopService                                       stop RIS5 and wait (60 s)
       -Action WaitHealth          -Port P                       wait until http://localhost:P/health answers (90 s); prints the status
+      -Action Find4x                                            RIS 4.x on this server: prints SCHEDULE=<Schedule.xml>, ACCOUNT=<service account>
+                                                                (exit 2 when no schedule is found)
 #>
 param(
     [Parameter(Mandatory)] [string] $Action,
@@ -120,6 +122,36 @@ public static class RisLsa {
             }
             Write-Output "No answer"
             exit 1
+        }
+        "Find4x" {
+            # Where the 4.x service really reads its schedule: service -> folder -> quartz.plugin.xml.fileNames of its .exe.config
+            # ("~/" = folder of the service). Default install folders when there is no service.
+            $candidates = @()
+            $service = Get-CimInstance Win32_Service -Filter "Name='RecurringIntegrationsScheduler'" -ErrorAction SilentlyContinue
+            if ($service) {
+                $exe = if ($service.PathName -match '^\s*"([^"]+)"') { $Matches[1] } else { ($service.PathName -split '\s+')[0] }
+                $folder = Split-Path $exe -Parent
+                Write-Output "ACCOUNT=$($service.StartName)"
+                Write-Output "STATE=$($service.State)"
+                $config = "$exe.config"
+                if (Test-Path $config) {
+                    $entry = ([xml](Get-Content $config -Raw)).SelectNodes("//add[@key='quartz.plugin.xml.fileNames']") | Select-Object -First 1
+                    if ($entry) {
+                        foreach ($name in ($entry.value -split ',')) {
+                            $name = $name.Trim()
+                            if ($name.StartsWith("~")) { $name = Join-Path $folder $name.TrimStart('~', '/', '\') }
+                            elseif (-not [IO.Path]::IsPathRooted($name)) { $name = Join-Path $folder $name }
+                            $candidates += $name
+                        }
+                    }
+                }
+                $candidates += Join-Path $folder "Schedule.xml"
+            }
+            $candidates += "${env:ProgramFiles(x86)}\Recurring Integrations Scheduler\Schedule.xml", "$env:ProgramFiles\Recurring Integrations Scheduler\Schedule.xml"
+            $schedule = $candidates | Where-Object { $_ -and (Test-Path $_ -PathType Leaf) } | Select-Object -First 1
+            if (-not $schedule) { Write-Output "No RIS 4.x schedule found."; exit 2 }
+            Write-Output "SCHEDULE=$schedule"
+            exit 0
         }
         default { Write-Output "Unknown action $Action"; exit 9 }
     }

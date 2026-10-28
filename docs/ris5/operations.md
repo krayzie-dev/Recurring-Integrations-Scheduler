@@ -12,9 +12,13 @@ Run `RIS5-Setup-<version>.exe` as Administrator (from the GitHub release or the 
    `;`, SIDs allowed; default `S-1-5-32-544` = local Administrators on any Windows language, plus the installing user).
    On the server itself the Administrators group does not count: UAC gives the browser a filtered token, so local admins
    need their account listed by name (the installer adds the installing user).
-3. **Import from 4.x** (only when `Program Files (x86)\Recurring Integrations Scheduler\Schedule.xml` exists): converts the
-   4.x schedule and imports all jobs **paused**. Secrets are not imported – set them in the UI (Connections) or with
-   `ris db set-secret`. Report: `%ProgramData%\RIS5\import-4x\import.log`.
+3. **Import from 4.x** (only on a new installation where RIS 4.x is found): the schedule is located through the 4.x service
+   (`RecurringIntegrationsScheduler` -> its folder -> `quartz.plugin.xml.fileNames` in the `.exe.config`, `~/` = service
+   folder), with the default install folders as fallback. `ris db import-4x --paused` converts it in memory and imports all
+   jobs **paused**, together with the 4.x secrets: they are decrypted on this server (DPAPI LocalMachine) and stored
+   encrypted by RIS 5, never written to a file. Report: `%ProgramData%\RIS5\import-4x\import.log` (warnings, secrets that
+   could not be taken over) and `jobs.json` (without secrets). The account page preselects the account of the 4.x service
+   (it has access to the integration folders); silent installs with a domain account still need `/ACCOUNT` + `/PASSWORD`.
 
 The installer then writes the machine settings to `%ProgramData%\RIS5\appsettings.json`, grants the service account Modify
 on `%ProgramData%\RIS5`, creates the Event Log source, installs the service `RIS5` (delayed automatic start, restarts after
@@ -98,7 +102,8 @@ Apps & features → Recurring Integrations Scheduler 5. The service and the fire
 
 ### Parallel run with 4.x
 
-Import the 4.x jobs paused (installer option or `ris db import jobs.json --paused`), set the secrets, run single jobs with
+Import the 4.x jobs paused (installer option or `ris db import-4x Schedule.xml --paused` on the 4.x server), set the secrets that
+could not be taken over, run single jobs with
 "Run now" against a test environment and compare the results, then pause the 4.x jobs and resume the RIS 5 jobs (bulk
 resume in the Jobs page).
 

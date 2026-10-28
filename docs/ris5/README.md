@@ -86,6 +86,8 @@ ris run jobs.json --job "CustInvoicejour interface D365_AX2012" [--dry-run] [--l
 
 ris db migrate                         [--data <dir>]
 ris db import jobs.json                [--data <dir>]   add/update; <SET-SECRET> keeps stored secrets
+ris db import-4x Schedule.xml [--paused] [--report <dir>] [--no-secrets] [--data <dir>]
+                                       4.x upgrade in one step; secrets decrypted on the 4.x server, never written to a file
 ris db export -o jobs.json             [--data <dir>]   secrets replaced by <SET-SECRET>
 ris db set-secret connection CONTOSO-PROD              value read without echo (or from stdin)
 ris db set-secret sftp "Contoso SFTP"

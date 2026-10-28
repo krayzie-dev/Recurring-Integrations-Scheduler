@@ -1,8 +1,10 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using RIS.Core.Configuration;
 using RIS.Core.Options;
+using RIS.Persistence;
 
 namespace RIS.Migration.Tests;
 
@@ -286,4 +288,52 @@ public sealed partial class ConverterTests
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
     }
+
+    [TestMethod]
+    public async Task Cli_Import4x_TakesOverSecretsOfThisMachine_WithoutWritingThemToFiles()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Inconclusive("DPAPI is Windows only.");
+        const string secret = "s3cret-from-4x";
+        // As 4.x stored it: DPAPI LocalMachine of the 4.x server, UTF-16, base64.
+        var encrypted = Convert.ToBase64String(System.Security.Cryptography.ProtectedData.Protect(
+            System.Text.Encoding.Unicode.GetBytes(secret), null, System.Security.Cryptography.DataProtectionScope.LocalMachine));
+        var folder = Directory.CreateTempSubdirectory("ris-cli-4x-").FullName;
+        var data = Path.Combine(folder, "data");
+        var report = Path.Combine(folder, "report");
+        var schedule = Path.Combine(folder, "Schedule.xml");
+        // The SFTP password of the sample stays undecryptable (another machine).
+        var xml = WithTriggers();
+        var first = xml.IndexOf("AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA", StringComparison.Ordinal);
+        await File.WriteAllTextAsync(schedule, xml[..first] + encrypted + xml[(first + 32)..].Replace(
+            "<key>AadClientSecret</key><value>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA", "<key>AadClientSecret</key><value>" + encrypted));
+
+        var exit = await Cli.Program.BuildCommand().Parse(["db", "import-4x", schedule, "--data", data, "--paused", "--report", report]).InvokeAsync();
+
+        Assert.AreEqual(0, exit);
+        var reported = await File.ReadAllTextAsync(Path.Combine(report, "jobs.json"));
+        Assert.IsFalse(reported.Contains(secret, StringComparison.Ordinal), "The report never contains secrets.");
+        StringAssert.Contains(reported, "SET-SECRET");
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        foreach (var file in Directory.GetFiles(data, "*", SearchOption.AllDirectories))
+        {
+            var bytes = await File.ReadAllBytesAsync(file);
+            Assert.IsFalse(Contains(bytes, System.Text.Encoding.UTF8.GetBytes(secret)) || Contains(bytes, System.Text.Encoding.Unicode.GetBytes(secret)), $"Plain secret in {file}");
+        }
+
+        var persistence = new PersistenceOptions { DataDirectory = data };
+        await using (var services = new ServiceCollection().AddLogging().AddRisPersistence(persistence).BuildServiceProvider())
+        {
+            var repository = services.GetRequiredService<ConfigurationRepository>();
+            var configuration = await repository.LoadAsync(CancellationToken.None);
+            Assert.AreEqual(secret, configuration.Connections.Single().ClientSecret, "Decrypted on the 4.x server and stored by RIS 5.");
+            Assert.IsTrue(configuration.SftpServers.All(s => SecretPlaceholder.IsPlaceholderOrEmpty(s.Password)), "Not decryptable: left to be set.");
+            Assert.IsTrue(configuration.Jobs.All(j => j.Schedule.Paused));
+        }
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+    }
+
+    private static bool Contains(byte[] haystack, byte[] needle) =>
+        haystack.AsSpan().IndexOf(needle) >= 0;
 }
