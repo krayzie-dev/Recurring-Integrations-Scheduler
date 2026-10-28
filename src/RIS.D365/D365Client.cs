@@ -14,6 +14,11 @@ public sealed record BlobWriteUrl(string BlobId, Uri BlobUrl);
 /// <summary>Message returned by Recurring Integrations dequeue.</summary>
 public sealed record DequeuedMessage(string CorrelationId, string PopReceipt, Uri DownloadLocation);
 
+/// <summary>Entity of a data project (DataManagementDefinitionGroupDetails): what a generated package manifest needs.</summary>
+public sealed record DataProjectEntity(
+    string EntityName, string SourceFormat, int ExecutionUnit, int Level, int Sequence,
+    bool RunBusinessValidation, bool RunBusinessLogic, bool FailExecutionUnitOnError, bool FailLevelOnError, string? ExcelSheetName, bool Disabled);
+
 /// <summary>Recurring Integrations job status (jobstatus API).</summary>
 public sealed class DataJobStatusDetail
 {
@@ -56,6 +61,9 @@ public interface IPackageApiClient
 
     /// <summary>Raw response of GetExecutionErrors (written to a file for the user).</summary>
     Task<string> GetExecutionErrorsAsync(string executionId, CancellationToken cancellationToken);
+
+    /// <summary>Entities of a data project in execution order (empty when the project does not exist).</summary>
+    Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string definitionGroupId, CancellationToken cancellationToken);
 
     /// <summary>Downloads content from a URL returned by D365 (SAS URL, no Authorization header).</summary>
     Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken);
@@ -162,6 +170,33 @@ internal sealed class D365Client(HttpClient http, D365ConnectionOptions connecti
         using var request = new HttpRequestMessage(HttpMethod.Post, paths.GetExecutionErrors) { Content = JsonContent.Create(new { executionId }) };
         using var response = await SendAsync("GetExecutionErrors", request, authorize: true, noRetry: false, cancellationToken);
         return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string definitionGroupId, CancellationToken cancellationToken)
+    {
+        const string fields = "EntityName,SourceFormat,ExecutionUnit,LevelInExecutionUnit,SequenceInLevel,RunBusinessValidation,RunBusinessLogic,"
+                              + "FailExecutionUnitOnError,FailLevelOnError,ExcelSheetName,Disable";
+        var filter = Uri.EscapeDataString($"DefinitionGroupId eq '{definitionGroupId.Replace("'", "''")}'");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"data/DataManagementDefinitionGroupDetails?$filter={filter}&$select={fields}");
+        using var response = await SendAsync("GetDataProjectEntities", request, authorize: true, noRetry: false, cancellationToken);
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            static string Text(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+            static int Number(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+            static bool Yes(JsonElement e, string name) => Text(e, name).Equals("Yes", StringComparison.OrdinalIgnoreCase);
+            return document.RootElement.GetProperty("value").EnumerateArray()
+                .Select(e => new DataProjectEntity(Text(e, "EntityName"), Text(e, "SourceFormat"), Number(e, "ExecutionUnit"), Number(e, "LevelInExecutionUnit"),
+                    Number(e, "SequenceInLevel"), Yes(e, "RunBusinessValidation"), Yes(e, "RunBusinessLogic"), Yes(e, "FailExecutionUnitOnError"),
+                    Yes(e, "FailLevelOnError"), Text(e, "ExcelSheetName") is { Length: > 0 } sheet ? sheet : null, Yes(e, "Disable")))
+                .OrderBy(e => e.ExecutionUnit).ThenBy(e => e.Level).ThenBy(e => e.Sequence)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            throw Unexpected("GetDataProjectEntities", $"Unexpected response of DataManagementDefinitionGroupDetails: {LogMasking.Truncate(payload)}", ex);
+        }
     }
 
     public async Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken)

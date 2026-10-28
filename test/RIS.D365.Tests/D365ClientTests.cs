@@ -198,6 +198,44 @@ public sealed class D365ClientTests : IDisposable
         Assert.IsFalse(masked.Contains("xyz", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public async Task GetDataProjectEntities_ReadsDetailsInExecutionOrder()
+    {
+        _server.Given(Request.Create().WithPath("/data/DataManagementDefinitionGroupDetails").WithParam("$filter", "DefinitionGroupId eq 'O''Brien project'").UsingGet())
+            .RespondWith(Response.Create().WithBodyAsJson(new
+            {
+                value = new object[]
+                {
+                    new { EntityName = "Vendor groups", SourceFormat = "CSV UTF", ExecutionUnit = 1, LevelInExecutionUnit = 2, SequenceInLevel = 1, RunBusinessValidation = "Yes", RunBusinessLogic = "No", FailExecutionUnitOnError = "No", FailLevelOnError = "No", ExcelSheetName = "", Disable = "No" },
+                    new { EntityName = "Customer groups", SourceFormat = "EXCEL", ExecutionUnit = 1, LevelInExecutionUnit = 1, SequenceInLevel = 1, RunBusinessValidation = "No", RunBusinessLogic = "Yes", FailExecutionUnitOnError = "Yes", FailLevelOnError = "No", ExcelSheetName = "Sheet1", Disable = "No" }
+                }
+            }));
+
+        var entities = await _client.GetDataProjectEntitiesAsync("O'Brien project", CancellationToken.None);
+
+        Assert.AreEqual(2, entities.Count);
+        Assert.AreEqual(new DataProjectEntity("Customer groups", "EXCEL", 1, 1, 1, false, true, true, false, "Sheet1", false), entities[0]);
+        Assert.AreEqual("Vendor groups", entities[1].EntityName);
+        Assert.IsNull(entities[1].ExcelSheetName);
+    }
+
+    [TestMethod]
+    public void ODataError_MessageIsTheReasonFromD365_NotTheStackTrace()
+    {
+        // Shape of a real ImportFromPackage error (org0516c10d, 28.10.2026), stack traces shortened.
+        const string body = """
+            {"error":{"code":"","message":"An error has occurred.","innererror":{"message":"Exception occurred while executing action ImportFromPackage on Entity DataManagementDefinitionGroup: The data project 'P' exists and overwrite has not been specified.","type":"System.InvalidOperationException","stacktrace":"   at A()","internalexception":{"message":"Exception has been thrown by the target of an invocation.","type":"System.Reflection.TargetInvocationException","stacktrace":"   at B()","internalexception":{"message":"The data project 'P' exists and overwrite has not been specified.","type":"Microsoft.Dynamics.Ax.Xpp.ErrorException","stacktrace":"   at C()"}}}}}
+            """;
+
+        var ex = new D365ApiException("ImportFromPackage", new Uri("https://aos/data/x"), System.Net.HttpStatusCode.BadRequest, body, new Dictionary<string, string>());
+
+        Assert.AreEqual("The data project 'P' exists and overwrite has not been specified.", ex.D365Message);
+        StringAssert.EndsWith(ex.Message, "failed with HTTP 400 BadRequest: The data project 'P' exists and overwrite has not been specified.");
+        Assert.IsFalse(ex.Message.Contains("stacktrace", StringComparison.Ordinal));
+        Assert.AreEqual(body, ex.ResponseBody, "The whole response is kept for the error report.");
+        Assert.IsNull(new D365ApiException("X", null, System.Net.HttpStatusCode.BadGateway, "<html>bad gateway</html>", new Dictionary<string, string>()).D365Message);
+    }
+
     private sealed class FakeTokenProvider : ID365TokenProvider
     {
         public Task<string> GetAuthorizationHeaderAsync(D365ConnectionOptions connection, CancellationToken cancellationToken) =>

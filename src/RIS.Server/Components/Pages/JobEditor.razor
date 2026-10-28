@@ -187,7 +187,8 @@ else
     private static JobDefinition Clone(JobDefinition job) =>
         JsonSerializer.Deserialize<JobDefinition>(JsonSerializer.Serialize(job, RisJson.Options), RisJson.Options)!;
 
-    private IReadOnlyList<string> Fields(JobStep step) => JobFieldCatalog.PropertiesOf(_job!.Options!.GetType(), step);
+    private IReadOnlyList<string> Fields(JobStep step) =>
+        JobFieldCatalog.PropertiesOf(_job!.Options!.GetType(), step).Where(p => JobFieldCatalog.IsRelevant(_job.Options, p)).ToList();
 
     private void Changed()
     {
@@ -274,6 +275,17 @@ else
             builder.AddAttribute(2, nameof(TestButton.Icon), Icons.Material.Filled.FolderOpen);
             builder.AddAttribute(3, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(folder));
             builder.AddAttribute(4, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.FolderAsync(folder)));
+            builder.CloseComponent();
+        }
+        else if (property == "DataProject" && _job!.Options is ImportJobOptions)
+        {
+            var connection = _job.Options.Connection;
+            var project = ((ImportJobOptions)_job.Options).DataProject;
+            builder.OpenComponent<TestButton>(0);
+            builder.AddAttribute(1, nameof(TestButton.Label), T["Test_ProjectEntities"].Value);
+            builder.AddAttribute(2, nameof(TestButton.Icon), Icons.Material.Filled.ListAlt);
+            builder.AddAttribute(3, nameof(TestButton.Disabled), string.IsNullOrWhiteSpace(connection) || string.IsNullOrWhiteSpace(project));
+            builder.AddAttribute(4, nameof(TestButton.Test), (Func<Task<TestResult>>)(() => Tests.DataProjectAsync(connection, project)));
             builder.CloseComponent();
         }
         else if (property == "Connection")

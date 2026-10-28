@@ -28,6 +28,8 @@ public static class ErrorCodes
     // Import / Upload
     public const string ImportRequestFailed = "RIS-IMP-001";
     public const string LegalEntityNotResolved = "RIS-IMP-002";
+    public const string DataProjectNotFound = "RIS-IMP-003";
+    public const string PackageFilesMismatch = "RIS-IMP-004";
     public const string UploadFailed = "RIS-UPL-001";
 
     // Download

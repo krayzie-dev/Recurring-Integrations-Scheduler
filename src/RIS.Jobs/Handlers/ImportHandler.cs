@@ -29,14 +29,28 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
 
         logger.LogInformation("Found {Count} file(s) in input folder {Folder}", files.Count, options.InputDir);
 
+        var client = clients.Create(run.Connection, options.ActionPaths);
         string? templateInputFileName = null;
-        if (!options.InputFilesArePackages)
+        IReadOnlyList<DataProjectEntity>? projectEntities = null;
+        if (options.Envelope == PackageEnvelope.Generated)
+        {
+            // Once per run: the envelope of every package is generated from the data project as it is now in D365.
+            projectEntities = await client.GetDataProjectEntitiesAsync(options.DataProject, cancellationToken);
+            if (!projectEntities.Any(e => !e.Disabled))
+            {
+                throw new RisException(ErrorCodes.DataProjectNotFound,
+                    $"Data project '{options.DataProject}' does not exist in D365 or has no enabled entities; input files were left in {options.InputDir}.",
+                    new Dictionary<string, object?> { ["DataProject"] = options.DataProject });
+            }
+            logger.LogInformation("Data project {DataProject}: {Entities}", options.DataProject,
+                string.Join(", ", projectEntities.Where(e => !e.Disabled).Select(e => $"{e.EntityName} ({e.SourceFormat})")));
+        }
+        else if (!options.InputFilesArePackages)
         {
             await using var template = await jobFiles.Files.OpenReadAsync(options.PackageTemplate!, options.Retry, cancellationToken);
             templateInputFileName = PackageManifest.GetInputFileName(template, options.PackageTemplate!);
         }
 
-        var client = clients.Create(run.Connection, options.ActionPaths);
         var counters = new ItemCounters();
         for (var i = 0; i < files.Count; i++)
         {
@@ -49,14 +63,14 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
             using var scope = logger.BeginScope(new Dictionary<string, object> { ["File"] = file });
             run.ReportProgress(i * 100 / files.Count, $"Importing {jobFiles.Files.FileSystem.Path.GetFileName(file)}");
             await ItemProcessing.RunAsync(logger, counters, $"Import of file {file}",
-                () => ImportFileAsync(run, client, options, file, templateInputFileName, counters, cancellationToken));
+                () => ImportFileAsync(run, client, options, file, templateInputFileName, projectEntities, counters, cancellationToken));
         }
 
         return counters.ToOutcome("Imported files").With("DataProject", options.DataProject);
     }
 
     private async Task ImportFileAsync(JobRunContext run, ID365Client client, ImportJobOptions options, string file,
-        string? templateInputFileName, ItemCounters counters, CancellationToken cancellationToken)
+        string? templateInputFileName, IReadOnlyList<DataProjectEntity>? projectEntities, ItemCounters counters, CancellationToken cancellationToken)
     {
         var logger = run.Logger;
         var fs = jobFiles.Files.FileSystem;
@@ -81,7 +95,21 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
         try
         {
             Stream package;
-            if (options.InputFilesArePackages)
+            if (projectEntities is not null)
+            {
+                tempPackage = fs.Path.Combine(fs.Path.GetTempPath(), $"ris-{Guid.NewGuid():N}.zip");
+                if (!await BuildGeneratedPackageAsync(run, options, file, projectEntities, tempPackage, cancellationToken))
+                {
+                    fs.File.Delete(tempPackage);
+                    tempPackage = null;
+                    package = await jobFiles.Files.OpenReadAsync(file, options.Retry, cancellationToken);
+                }
+                else
+                {
+                    package = fs.File.OpenRead(tempPackage);
+                }
+            }
+            else if (options.InputFilesArePackages)
             {
                 package = await jobFiles.Files.OpenReadAsync(file, options.Retry, cancellationToken);
             }
@@ -165,6 +193,52 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
                 var tokens = p.GetFileName(file).Split([options.MultiCompany.FileNameSeparator!], 10, StringSplitOptions.RemoveEmptyEntries);
                 var index = options.MultiCompany.TokenPosition - 1;
                 return index >= 0 && index < tokens.Length ? tokens[index] : null;
+        }
+    }
+
+    /// <summary>
+    /// Generated envelope: a data file, or a zip with data files of several entities, becomes a package. Returns false for a zip
+    /// that already is a package (has Manifest.xml): it is imported as it is.
+    /// </summary>
+    private async Task<bool> BuildGeneratedPackageAsync(JobRunContext run, ImportJobOptions options, string file,
+        IReadOnlyList<DataProjectEntity> entities, string tempPackage, CancellationToken cancellationToken)
+    {
+        var fs = jobFiles.Files.FileSystem;
+        var fileName = fs.Path.GetFileName(file);
+        try
+        {
+            await using var input = await jobFiles.Files.OpenReadAsync(file, options.Retry, cancellationToken);
+            await using var output = fs.File.Create(tempPackage);
+            if (fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                using var zip = new System.IO.Compression.ZipArchive(input, System.IO.Compression.ZipArchiveMode.Read, leaveOpen: true);
+                var dataFiles = zip.Entries.Where(e => e.Name.Length > 0).ToList();
+                if (dataFiles.Any(e => e.FullName.Equals(DataPackageBuilder.ManifestName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    run.Logger.LogDebug("{File} already is a data package (Manifest.xml); imported as it is", fileName);
+                    return false;
+                }
+
+                var parts = DataPackageBuilder.Match(options.DataProject, entities, dataFiles.Select(e => e.FullName).ToList(), options.AllowPartialPackages);
+                DataPackageBuilder.Write(output, options.DataProject, parts, name => zip.GetEntry(name)!.Open());
+                run.Logger.LogInformation("Package {File}: {Parts}", fileName, string.Join(", ", parts.Select(p => $"{p.FileName} -> {p.Entity.EntityName}")));
+            }
+            else
+            {
+                var parts = DataPackageBuilder.Match(options.DataProject, entities, [fileName], options.AllowPartialPackages);
+                DataPackageBuilder.Write(output, options.DataProject, parts, _ => input);
+            }
+            return true;
+        }
+        catch (RisException ex) when (ex.ErrorCode == ErrorCodes.PackageFilesMismatch)
+        {
+            await MoveToErrorsAsync(options, file, new ErrorReport(ex.ErrorCode, ex.Message, null), cancellationToken);
+            throw new RisException(ex.ErrorCode, $"{ex.Message} File '{fileName}' moved to errors.", ex.Context, ex);
+        }
+        catch (System.IO.InvalidDataException ex)
+        {
+            await MoveToErrorsAsync(options, file, new ErrorReport(ErrorCodes.PackageFilesMismatch, $"'{fileName}' is not a valid zip file: {ex.Message}", null), cancellationToken);
+            throw new RisException(ErrorCodes.PackageFilesMismatch, $"'{fileName}' is not a valid zip file. File moved to errors.", null, ex);
         }
     }
 

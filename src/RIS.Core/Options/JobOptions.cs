@@ -146,6 +146,20 @@ public sealed class ExportJobOptions : JobOptionsBase
             .Concat(ValidatePattern(FileNamePattern, Options.FileNamePattern.ExportTokens));
 }
 
+/// <summary>How an input data file becomes a D365 data package.</summary>
+public enum PackageEnvelope
+{
+    /// <summary>Copy of <see cref="ImportJobOptions.PackageTemplate"/> with the file put in (as in 4.x).</summary>
+    Template,
+
+    /// <summary>
+    /// Manifest.xml and PackageHeader.xml generated from the entities of the data project read from D365; files are matched
+    /// to entities by name. Works for single files and for zip files with data files of several entities (no manifest).
+    /// Zip files that already contain Manifest.xml are imported as they are.
+    /// </summary>
+    Generated
+}
+
 /// <summary>
 /// Import of files/packages using Package API (ImportFromPackage). 4.x: Job.Import.
 /// </summary>
@@ -169,6 +183,15 @@ public sealed class ImportJobOptions : JobOptionsBase
     /// <summary>Package template (zip with Manifest.xml) used to wrap single files.</summary>
     public string? PackageTemplate { get; set; }
 
+    /// <summary>Template (4.x) or envelope generated from the data project in D365.</summary>
+    public PackageEnvelope Envelope { get; set; } = PackageEnvelope.Template;
+
+    /// <summary>
+    /// Generated envelope: accept a package without files for some entities of the data project. Off by default because
+    /// D365 then imports the remaining entities and reports success without a word about the missing ones.
+    /// </summary>
+    public bool AllowPartialPackages { get; set; }
+
     public bool OverwriteDataProject { get; set; }
     public bool ExecuteImport { get; set; } = true;
 
@@ -190,9 +213,9 @@ public sealed class ImportJobOptions : JobOptionsBase
         foreach (var r in RequireFolder(UploadErrorsDir, nameof(UploadErrorsDir))) yield return r;
         foreach (var r in RequireStatusExtension(StatusFileExtension, nameof(StatusFileExtension))) yield return r;
 
-        if (!InputFilesArePackages && string.IsNullOrWhiteSpace(PackageTemplate))
+        if (Envelope == PackageEnvelope.Template && !InputFilesArePackages && string.IsNullOrWhiteSpace(PackageTemplate))
         {
-            yield return new ValidationResult("PackageTemplate is required when input files are not packages.", [nameof(PackageTemplate)]);
+            yield return new ValidationResult("PackageTemplate is required when input files are not packages (or use the generated envelope).", [nameof(PackageTemplate)]);
         }
 
         if (MultiCompany is null && string.IsNullOrWhiteSpace(Company))

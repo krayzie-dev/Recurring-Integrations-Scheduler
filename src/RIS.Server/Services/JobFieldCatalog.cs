@@ -29,8 +29,10 @@ public static class JobFieldCatalog
         ["EntityName"] = (JobStep.D365, 3),
         ["IsDataPackage"] = (JobStep.D365, 4),
         ["Company"] = (JobStep.D365, 5),
+        ["Envelope"] = (JobStep.D365, 5),
         ["InputFilesArePackages"] = (JobStep.D365, 6),
         ["PackageTemplate"] = (JobStep.D365, 7),
+        ["AllowPartialPackages"] = (JobStep.D365, 7),
         ["OverwriteDataProject"] = (JobStep.D365, 8),
         ["ExecuteImport"] = (JobStep.D365, 9),
         ["GetExecutionErrors"] = (JobStep.D365, 10),
@@ -77,10 +79,22 @@ public static class JobFieldCatalog
             .Select(p => p.Name)
             .ToList();
 
+    /// <summary>
+    /// Fields that do not apply to the current settings are not shown (e.g. the package template with a generated envelope).
+    /// Their values are kept, so switching back restores them.
+    /// </summary>
+    public static bool IsRelevant(JobOptionsBase options, string property) => (options, property) switch
+    {
+        (ImportJobOptions { Envelope: PackageEnvelope.Generated }, "PackageTemplate" or "InputFilesArePackages") => false,
+        (ImportJobOptions { Envelope: PackageEnvelope.Template }, "AllowPartialPackages") => false,
+        (ImportJobOptions { Envelope: PackageEnvelope.Template, InputFilesArePackages: true }, "PackageTemplate") => false,
+        _ => true
+    };
+
     public static JobOptionsBase NewOptions(JobType type) => type switch
     {
         // In the wizard the data project usually exists already; D365 then refuses the import without overwrite.
-        JobType.Import => new ImportJobOptions { OverwriteDataProject = true },
+        JobType.Import => new ImportJobOptions { OverwriteDataProject = true, Envelope = PackageEnvelope.Generated },
         JobType.Upload => new UploadJobOptions(),
         JobType.Download => new DownloadJobOptions(),
         JobType.ExecutionMonitor => new ExecutionMonitorJobOptions(),

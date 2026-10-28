@@ -658,4 +658,17 @@
   <data name="Audit_NoFieldChanges" xml:space="preserve"><value>Żadne pole się nie zmieniło (np. ustawiono tylko sekret albo zapisano obiekt bez zmian).</value></data>
   <data name="Audit_SecretStored" xml:space="preserve"><value>*** (ukryty)</value></data>
   <data name="Audit_SecretChanged" xml:space="preserve"><value>*** (nowa wartość, ukryta)</value></data>
+  <data name="Field_Envelope" xml:space="preserve"><value>Koperta pakietu</value></data>
+  <data name="FieldHint_Envelope" xml:space="preserve"><value>Jak plik z danymi staje się pakietem D365</value></data>
+  <data name="FieldHelp_Envelope" xml:space="preserve"><value>Generowana (zalecane): Manifest.xml i PackageHeader.xml są tworzone z encji projektu danych odczytanych z D365 – bez pliku szablonu. Pojedynczy plik trafia do jedynej encji projektu; ZIP z plikami kilku encji (nazwanymi jak encje, np. „Customer groups.csv”) staje się jednym pakietem; ZIP, który już zawiera Manifest.xml, jest importowany bez zmian. Kolumny są mapowane po nazwie. Szablon: kopia szablonu pakietu (jak w 4.x) – potrzebny przy własnym mapowaniu, transformacjach lub wartościach domyślnych w D365.</value></data>
+  <data name="Enum_PackageEnvelope_Generated" xml:space="preserve"><value>Generowana z projektu danych (zalecane)</value></data>
+  <data name="Enum_PackageEnvelope_Template" xml:space="preserve"><value>Z szablonu pakietu (4.x)</value></data>
+  <data name="Field_AllowPartialPackages" xml:space="preserve"><value>Dopuszczaj niepełne pakiety</value></data>
+  <data name="FieldHint_AllowPartialPackages" xml:space="preserve"><value>Importuj pakiet, nawet gdy brakuje plików niektórych encji</value></data>
+  <data name="FieldHelp_AllowPartialPackages" xml:space="preserve"><value>Tylko dla koperty generowanej. Wyłączone: pakiet bez pliku dla każdej encji projektu trafia do folderu błędów. Samo D365 nie zgłasza brakujących plików – importuje pozostałe encje i raportuje sukces.</value></data>
+  <data name="Test_ProjectEntities" xml:space="preserve"><value>Pokaż encje projektu</value></data>
+  <data name="Test_ProjectEmpty" xml:space="preserve"><value>Najpierw podaj projekt danych.</value></data>
+  <data name="Test_ProjectMissing" xml:space="preserve"><value>Projekt danych '{0}' nie istnieje w D365 albo nie ma włączonych encji.</value></data>
+  <data name="Test_ProjectOk" xml:space="preserve"><value>Projekt {0}: {1}</value></data>
+  <data name="Test_ProjectEntity" xml:space="preserve"><value>{0}. {1} ({2}, poziom {3}) – plik „{4}”</value></data>
 </root>

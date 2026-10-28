@@ -39,7 +39,7 @@ public sealed class ConnectionTestResults
 /// </summary>
 public sealed class ConnectionTestService(
     IRisConfigurationStore store, ID365TokenProvider tokens, IHttpClientFactory http, ISftpTransfer sftp, IStringLocalizer<UiText> text,
-    ConnectionTestResults? results = null)
+    ConnectionTestResults? results = null, ID365ClientFactory? clients = null)
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
@@ -77,6 +77,27 @@ public sealed class ConnectionTestService(
         }
         return null;
     }, text["Test_D365Ok"], ct);
+
+    /// <summary>
+    /// Entities of a data project as the import with a generated envelope sees them: execution order and the file name each
+    /// entity expects in a package.
+    /// </summary>
+    public async Task<TestResult> DataProjectAsync(string connectionName, string? project, CancellationToken ct = default)
+    {
+        string success = "";
+        var result = await RunAsync(async token =>
+        {
+            if (string.IsNullOrWhiteSpace(project)) return text["Test_ProjectEmpty"].Value;
+            var connection = store.Current.FindConnection(connectionName);
+            if (connection is null) return $"[{ErrorCodes.ConnectionNotFound}] Connection '{connectionName}' does not exist.";
+            var entities = (await clients!.Create(connection).GetDataProjectEntitiesAsync(project, token)).Where(e => !e.Disabled).ToList();
+            if (entities.Count == 0) return text["Test_ProjectMissing", project].Value;
+            success = text["Test_ProjectOk", project, string.Join(" · ", entities.Select((e, i) =>
+                text["Test_ProjectEntity", i + 1, e.EntityName, e.SourceFormat, e.Level, RIS.Jobs.DataPackageBuilder.ExpectedFileName(e)].Value))].Value;
+            return null;
+        }, "", ct);
+        return result.Succeeded ? result with { Message = success } : result;
+    }
 
     /// <summary>Folder exists and the service account can list it and create/delete a file.</summary>
     public Task<TestResult> FolderAsync(string? path, CancellationToken ct = default) => RunAsync(token =>

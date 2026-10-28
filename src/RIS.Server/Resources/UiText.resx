@@ -584,4 +584,17 @@
   <data name="Audit_NoFieldChanges" xml:space="preserve"><value>No field changed (e.g. only the secret was set, or the object was saved unchanged).</value></data>
   <data name="Audit_SecretStored" xml:space="preserve"><value>*** (hidden)</value></data>
   <data name="Audit_SecretChanged" xml:space="preserve"><value>*** (new value, hidden)</value></data>
+  <data name="Field_Envelope" xml:space="preserve"><value>Package envelope</value></data>
+  <data name="FieldHint_Envelope" xml:space="preserve"><value>How a data file becomes a D365 data package</value></data>
+  <data name="FieldHelp_Envelope" xml:space="preserve"><value>Generated (recommended): Manifest.xml and PackageHeader.xml are created from the entities of the data project read from D365 – no template file. A single file goes to the only entity of the project; a zip with data files of several entities (named after the entities, e.g. "Customer groups.csv") becomes one package; a zip that already contains Manifest.xml is imported as it is. Columns are mapped by name. Template: copy of the package template (as in 4.x) – needed for own mapping, transformations or default values in D365.</value></data>
+  <data name="Enum_PackageEnvelope_Generated" xml:space="preserve"><value>Generated from the data project (recommended)</value></data>
+  <data name="Enum_PackageEnvelope_Template" xml:space="preserve"><value>From a package template (4.x)</value></data>
+  <data name="Field_AllowPartialPackages" xml:space="preserve"><value>Allow incomplete packages</value></data>
+  <data name="FieldHint_AllowPartialPackages" xml:space="preserve"><value>Import a package even if files of some entities are missing</value></data>
+  <data name="FieldHelp_AllowPartialPackages" xml:space="preserve"><value>Generated envelope only. Off: a package without a file for every entity of the project goes to the errors folder. D365 itself does not report missing files – it imports the remaining entities and reports success.</value></data>
+  <data name="Test_ProjectEntities" xml:space="preserve"><value>Show project entities</value></data>
+  <data name="Test_ProjectEmpty" xml:space="preserve"><value>Enter the data project first.</value></data>
+  <data name="Test_ProjectMissing" xml:space="preserve"><value>Data project '{0}' does not exist in D365 or has no enabled entities.</value></data>
+  <data name="Test_ProjectOk" xml:space="preserve"><value>Project {0}: {1}</value></data>
+  <data name="Test_ProjectEntity" xml:space="preserve"><value>{0}. {1} ({2}, level {3}) – file "{4}"</value></data>
 </root>

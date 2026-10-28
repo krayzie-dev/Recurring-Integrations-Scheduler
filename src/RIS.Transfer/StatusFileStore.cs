@@ -38,7 +38,9 @@ public sealed class StatusFileStore(IFileStore files, ILogger<StatusFileStore> l
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() }
+        Converters = { new JsonStringEnumConverter() },
+        // Status files are read by people too: quotes, apostrophes and national characters as they are (no ").
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     static StatusFileStore() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);

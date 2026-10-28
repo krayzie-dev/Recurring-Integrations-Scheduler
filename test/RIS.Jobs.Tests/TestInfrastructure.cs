@@ -49,6 +49,7 @@ public sealed class FakeD365Client : ID365Client, ID365ClientFactory
     public Func<Exception?> AzureWriteUrlError { get; set; } = () => null;
     public List<(string FileName, byte[] Package)> UploadedPackages { get; } = [];
     public List<(string Name, string? Entity, string? Company)> Enqueued { get; } = [];
+    public List<DataProjectEntity> ProjectEntities { get; } = [];
 
     public ID365Client Create(D365ConnectionOptions connection, D365ActionPaths? actionPaths = null) => this;
 
@@ -102,6 +103,12 @@ public sealed class FakeD365Client : ID365Client, ID365ClientFactory
 
     public Task<string> GetExecutionErrorsAsync(string executionId, CancellationToken cancellationToken) =>
         Task.FromResult("{\"value\":\"Row 1: invalid account\"}");
+
+    public Task<IReadOnlyList<DataProjectEntity>> GetDataProjectEntitiesAsync(string definitionGroupId, CancellationToken cancellationToken)
+    {
+        Calls.Add($"GetDataProjectEntities {definitionGroupId}");
+        return Task.FromResult<IReadOnlyList<DataProjectEntity>>(ProjectEntities);
+    }
 
     public Task<Stream> OpenDownloadAsync(Uri url, CancellationToken cancellationToken)
     {
