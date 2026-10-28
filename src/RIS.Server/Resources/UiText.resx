@@ -597,4 +597,32 @@
   <data name="Test_ProjectMissing" xml:space="preserve"><value>Data project '{0}' does not exist in D365 or has no enabled entities.</value></data>
   <data name="Test_ProjectOk" xml:space="preserve"><value>Project {0}: {1}</value></data>
   <data name="Test_ProjectEntity" xml:space="preserve"><value>{0}. {1} ({2}, level {3}) – file "{4}"</value></data>
+  <data name="Nav_Maintenance" xml:space="preserve"><value>Data maintenance</value></data>
+  <data name="Maint_CleanupNow" xml:space="preserve"><value>Clean up now</value></data>
+  <data name="Maint_Cleaning" xml:space="preserve"><value>Cleaning up…</value></data>
+  <data name="Maint_Intro" xml:space="preserve"><value>What RIS stores and for how long. Run history is trimmed continuously by the scheduler; the other data by a daily cleanup. Nothing here touches the files in the job folders.</value></data>
+  <data name="Maint_Data" xml:space="preserve"><value>Data</value></data>
+  <data name="Maint_Items" xml:space="preserve"><value>Items</value></data>
+  <data name="Maint_Oldest" xml:space="preserve"><value>Oldest</value></data>
+  <data name="Maint_Size" xml:space="preserve"><value>Size</value></data>
+  <data name="Maint_Retention" xml:space="preserve"><value>Kept</value></data>
+  <data name="Maint_Location" xml:space="preserve"><value>Location</value></data>
+  <data name="Maint_Store_RunHistory" xml:space="preserve"><value>Run history</value></data>
+  <data name="Maint_StoreHelp_RunHistory" xml:space="preserve"><value>Runs with summary, metrics and captured log (quartz.db): days for all / failed runs; newest runs per job / in total</value></data>
+  <data name="Maint_Store_Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Configuration changes (ris.db, also connections and jobs)</value></data>
+  <data name="Maint_Store_Logs" xml:space="preserve"><value>Log files</value></data>
+  <data name="Maint_StoreHelp_Logs" xml:space="preserve"><value>Service log and one folder per job; folders of deleted jobs are removed when empty</value></data>
+  <data name="Maint_Store_Backups" xml:space="preserve"><value>Backups</value></data>
+  <data name="Maint_StoreHelp_Backups" xml:space="preserve"><value>Database copies before schema updates / before upgrades by the setup</value></data>
+  <data name="Maint_LastCleanup" xml:space="preserve"><value>Last cleanup</value></data>
+  <data name="Maint_LogFiles" xml:space="preserve"><value>Log files deleted</value></data>
+  <data name="Maint_LogFolders" xml:space="preserve"><value>Empty log folders deleted</value></data>
+  <data name="Maint_Vacuum" xml:space="preserve"><value>ris.db compacted</value></data>
+  <data name="Maint_NotYet" xml:space="preserve"><value>Not run since the service started.</value></data>
+  <data name="Maint_Next" xml:space="preserve"><value>Next cleanup: {0}</value></data>
+  <data name="Maint_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Maint_SettingsHelp" xml:space="preserve"><value>Change them in %ProgramData%\RIS5\appsettings.json and restart the service. Current values:</value></data>
+  <data name="Maint_Done" xml:space="preserve"><value>Cleanup finished.</value></data>
+  <data name="Maint_DoneWithErrors" xml:space="preserve"><value>Cleanup finished with errors – see below.</value></data>
 </root>

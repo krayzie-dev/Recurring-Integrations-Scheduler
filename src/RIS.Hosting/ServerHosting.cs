@@ -65,7 +65,11 @@ public static class ServerHosting
             hostOptions.LogDirectory = Path.Combine(persistence.DataDirectory, hostOptions.LogDirectory);
         }
 
+        var retention = new RetentionOptions();
+        configuration.GetSection(RetentionOptions.SectionName).Bind(retention);
+
         services.AddSingleton(hostOptions);
+        services.AddSingleton(retention);
         services.AddSerilog((_, logger) => RisHosting.ConfigureLogging(logger, hostOptions), writeToProviders: true);
         services.AddRisPersistence(persistence);
         services.AddRisD365(http =>
@@ -80,7 +84,11 @@ public static class ServerHosting
         services.AddHostedService<RisStartup>();
         services.AddQuartz(q =>
         {
-            q.UseExecutionLogCapture(capture => capture.MaxLines = 500);
+            q.UseExecutionLogCapture(capture =>
+            {
+                capture.MaxLines = 2000;
+                capture.MaxBytes = retention.RunLogKilobytes * 1024;
+            });
             q.UsePersistentStore(store =>
             {
                 store.UseSqlite(persistence.QuartzConnectionString);
@@ -89,11 +97,23 @@ public static class ServerHosting
                 store.UseWeaselForSqlite(weasel => weasel.AutoCreate = JasperFx.AutoCreate.CreateOrUpdate);
             });
         });
+        // Without these Quartz keeps 24 h / 2000 runs. The store trims itself (on write, on read and on a timer).
+        services.AddQuartzExecutionHistory(history =>
+        {
+            history.Retention = TimeSpan.FromDays(retention.RunHistoryDays);
+            history.RetentionByResult[JobRunResult.Failed] = TimeSpan.FromDays(Math.Max(retention.FailedRunHistoryDays, retention.RunHistoryDays));
+            history.MaxEntriesPerJob = retention.MaxRunsPerJob;
+            history.MaxEntriesPerScheduler = retention.MaxRuns;
+            history.RecordInput = true;
+        });
         services.AddQuartzHostedService(quartz => quartz.WaitForJobsToComplete = true);
         services.AddSingleton<ScheduleSynchronizer>();
         services.AddHostedService(sp => sp.GetRequiredService<ScheduleSynchronizer>());
         services.AddHostedService<RunningJobsInterrupter>();
         services.AddHostedService<ConfigurationChangeWatcher>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<DataMaintenanceService>();
+        services.AddHostedService(sp => sp.GetRequiredService<DataMaintenanceService>());
         return services;
     }
 }

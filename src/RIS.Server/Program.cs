@@ -72,6 +72,7 @@ builder.Services.AddScoped<RIS.Server.Services.ExportService>();
 builder.Services.AddScoped<RIS.Server.Services.BulkEditService>();
 builder.Services.AddScoped<RIS.Server.Services.ConnectionTestService>();
 builder.Services.AddSingleton<RIS.Server.Services.ConnectionTestResults>();
+builder.Services.AddScoped<RIS.Server.Services.MaintenanceService>();
 
 var health = builder.Configuration.GetSection("Ris:Health").Get<HealthOptions>() ?? new HealthOptions();
 builder.Services.AddSingleton(health);

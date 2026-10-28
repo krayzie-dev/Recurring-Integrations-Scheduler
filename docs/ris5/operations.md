@@ -115,6 +115,22 @@ resume in the Jobs page).
 - Service stop interrupts running jobs within seconds. An interrupted export keeps running in D365; its execution id is in
   the log (Warning). It is not repeated automatically (a repeated export could duplicate data).
 
+## Data retention
+
+What RIS keeps and for how long is shown on **Data maintenance** (`/maintenance`, Admin) together with sizes, the oldest
+item, the last cleanup and a "Clean up now" button. Settings (`%ProgramData%\RIS5ppsettings.json`, restart the service):
+
+| Setting (`Ris:Retention`) | Default | Meaning |
+|---|---|---|
+| `RunHistoryDays` / `FailedRunHistoryDays` | 30 / 90 | Run history (quartz.db: summary, metrics, captured log). Trimmed by the scheduler itself, when written, when read and on a timer. |
+| `MaxRunsPerJob` / `MaxRuns` | 1000 / 200000 | Newest runs kept per job (failures not counted) / in total |
+| `RunLogKilobytes` | 64 | Captured log per run (oldest lines dropped first) |
+| `AuditDays` | 365 | Configuration changes; the newest entry always stays |
+| `UpgradeBackupsToKeep` / `SettingsBackupsToKeep` | 5 / 5 | `backupefore-upgrade-*` (setup) / `appsettings.json.*.bak` (setup reconfiguration) |
+| `CleanupAt` | 03:30 | Daily cleanup (also 10 min after start): audit, log files older than `Ris:LogRetentionDays` (30), empty log folders of deleted jobs, old backups; ris.db is compacted after a large purge |
+
+Up to 5.0.0-local.13 the run history used the Quartz defaults: 24 h and 2000 runs.
+
 ## Backup
 
 Back up the whole data directory, at least `ris.db`, `quartz.db` and `keys\`. Without `keys\` stored secrets cannot be

@@ -1,0 +1,140 @@
+@page "/maintenance"
+@attribute [Authorize(Policy = RisRoles.CanAdminister)]
+@inherits RisPageBase
+@inject MaintenanceService Maintenance
+
+<PageTitle>RIS 5 – @T["Nav_Maintenance"]</PageTitle>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudText Typo="Typo.h5">@T["Nav_Maintenance"]</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CleaningServices" OnClick="CleanupAsync" Disabled="_cleaning">
+        @(_cleaning ? T["Maint_Cleaning"] : T["Maint_CleanupNow"])
+    </MudButton>
+</MudStack>
+
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@T["Maint_Intro"]</MudText>
+
+<MudSimpleTable Dense="true" Bordered="true" Hover="true" Elevation="0" Class="mb-4">
+    <thead>
+        <tr>
+            <th>@T["Maint_Data"]</th>
+            <th style="text-align: right">@T["Maint_Items"]</th>
+            <th>@T["Maint_Oldest"]</th>
+            <th style="text-align: right">@T["Maint_Size"]</th>
+            <th>@T["Maint_Retention"]</th>
+            <th>@T["Maint_Location"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var store in _stores)
+        {
+            <tr>
+                <td><b>@T["Maint_Store_" + store.Key]</b><div class="mud-text-secondary" style="font-size: .75rem">@T["Maint_StoreHelp_" + store.Key]</div></td>
+                <td style="text-align: right">@(store.Items is { } n ? UiFormat.Number((int)Math.Min(n, int.MaxValue)) : "–")</td>
+                <td>@Prefs.Format(store.OldestUtc, "g")</td>
+                <td style="text-align: right">@Bytes(store.Bytes)</td>
+                <td>@store.Retention</td>
+                <td class="ris-mono" style="font-size: .75rem">@store.Location</td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Outlined="true" Class="pa-3">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@T["Maint_LastCleanup"]</MudText>
+            @if (Maintenance.LastCleanup is { } last)
+            {
+                <MudAlert Severity="@(last.Succeeded ? Severity.Success : Severity.Warning)" Dense="true">
+                    @Prefs.Format(last.StartedAt, "g") · @UiFormat.Duration(last.Duration)
+                </MudAlert>
+                <MudSimpleTable Dense="true" Elevation="0" Class="mt-2">
+                    <tbody>
+                        <tr><td>@T["Maint_Store_Audit"]</td><td>@last.AuditEntriesDeleted</td></tr>
+                        <tr><td>@T["Maint_LogFiles"]</td><td>@last.LogFilesDeleted</td></tr>
+                        <tr><td>@T["Maint_LogFolders"]</td><td>@last.LogFoldersDeleted</td></tr>
+                        <tr><td>@T["Maint_Store_Backups"]</td><td>@last.BackupsDeleted</td></tr>
+                        <tr><td>@T["Maint_Vacuum"]</td><td>@(last.Vacuumed ? T["Common_Yes"] : T["Common_No"])</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+                @foreach (var error in last.Errors)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error" Class="d-block">@error</MudText>
+                }
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["Maint_NotYet"]</MudText>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">@T["Maint_Next", Prefs.Format(Maintenance.NextCleanup, "g")]</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudPaper Outlined="true" Class="pa-3">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@T["Maint_Settings"]</MudText>
+            <MudText Typo="Typo.body2" Class="mb-2">@T["Maint_SettingsHelp"]</MudText>
+            <pre class="ris-log ris-mono" style="font-size: .75rem">@SettingsSnippet</pre>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private IReadOnlyList<DataStore> _stores = [];
+    private bool _cleaning;
+
+    protected override TimeSpan? RefreshInterval => null;
+
+    protected override async Task LoadAsync() => _stores = await Maintenance.StoresAsync(Disposed);
+
+    private async Task CleanupAsync()
+    {
+        _cleaning = true;
+        try
+        {
+            var result = await Maintenance.CleanupNowAsync(Disposed);
+            Snackbar.Add(result.Succeeded ? T["Maint_Done"] : T["Maint_DoneWithErrors"], result.Succeeded ? Severity.Success : Severity.Warning);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _cleaning = false;
+        }
+    }
+
+    private static string Bytes(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
+        < 1024L * 1024 * 1024 => $"{bytes / 1024.0 / 1024:0.#} MB",
+        _ => $"{bytes / 1024.0 / 1024 / 1024:0.##} GB"
+    };
+
+    private string SettingsSnippet
+    {
+        get
+        {
+            var r = Maintenance.Retention;
+            return $$"""
+                "Ris": {
+                  "Retention": {
+                    "RunHistoryDays": {{r.RunHistoryDays}},
+                    "FailedRunHistoryDays": {{r.FailedRunHistoryDays}},
+                    "MaxRunsPerJob": {{r.MaxRunsPerJob}},
+                    "MaxRuns": {{r.MaxRuns}},
+                    "RunLogKilobytes": {{r.RunLogKilobytes}},
+                    "AuditDays": {{r.AuditDays}},
+                    "UpgradeBackupsToKeep": {{r.UpgradeBackupsToKeep}},
+                    "SettingsBackupsToKeep": {{r.SettingsBackupsToKeep}},
+                    "CleanupAt": "{{r.CleanupAt:HH\:mm}}"
+                  },
+                  "LogRetentionDays": {{HostLogDays}}
+                }
+                """;
+        }
+    }
+
+    [Inject] private RIS.Hosting.RisHostOptions Host { get; set; } = null!;
+
+    private int HostLogDays => Host.LogRetentionDays;
+}

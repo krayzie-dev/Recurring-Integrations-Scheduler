@@ -671,4 +671,32 @@
   <data name="Test_ProjectMissing" xml:space="preserve"><value>Projekt danych '{0}' nie istnieje w D365 albo nie ma włączonych encji.</value></data>
   <data name="Test_ProjectOk" xml:space="preserve"><value>Projekt {0}: {1}</value></data>
   <data name="Test_ProjectEntity" xml:space="preserve"><value>{0}. {1} ({2}, poziom {3}) – plik „{4}”</value></data>
+  <data name="Nav_Maintenance" xml:space="preserve"><value>Utrzymanie danych</value></data>
+  <data name="Maint_CleanupNow" xml:space="preserve"><value>Wyczyść teraz</value></data>
+  <data name="Maint_Cleaning" xml:space="preserve"><value>Czyszczenie…</value></data>
+  <data name="Maint_Intro" xml:space="preserve"><value>Co RIS przechowuje i jak długo. Historia uruchomień jest przycinana na bieżąco przez scheduler, pozostałe dane – przez codzienne czyszczenie. Nic tutaj nie dotyka plików w folderach zadań.</value></data>
+  <data name="Maint_Data" xml:space="preserve"><value>Dane</value></data>
+  <data name="Maint_Items" xml:space="preserve"><value>Pozycji</value></data>
+  <data name="Maint_Oldest" xml:space="preserve"><value>Najstarsza</value></data>
+  <data name="Maint_Size" xml:space="preserve"><value>Rozmiar</value></data>
+  <data name="Maint_Retention" xml:space="preserve"><value>Przechowywane</value></data>
+  <data name="Maint_Location" xml:space="preserve"><value>Lokalizacja</value></data>
+  <data name="Maint_Store_RunHistory" xml:space="preserve"><value>Historia uruchomień</value></data>
+  <data name="Maint_StoreHelp_RunHistory" xml:space="preserve"><value>Uruchomienia z podsumowaniem, metrykami i logiem (quartz.db): dni dla wszystkich / nieudanych; najnowsze uruchomienia na zadanie / łącznie</value></data>
+  <data name="Maint_Store_Audit" xml:space="preserve"><value>Audyt</value></data>
+  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Zmiany konfiguracji (ris.db, razem z połączeniami i zadaniami)</value></data>
+  <data name="Maint_Store_Logs" xml:space="preserve"><value>Pliki logów</value></data>
+  <data name="Maint_StoreHelp_Logs" xml:space="preserve"><value>Log usługi i folder dla każdego zadania; foldery usuniętych zadań są usuwane, gdy są puste</value></data>
+  <data name="Maint_Store_Backups" xml:space="preserve"><value>Kopie zapasowe</value></data>
+  <data name="Maint_StoreHelp_Backups" xml:space="preserve"><value>Kopie baz przed aktualizacją schematu / przed aktualizacją instalatorem</value></data>
+  <data name="Maint_LastCleanup" xml:space="preserve"><value>Ostatnie czyszczenie</value></data>
+  <data name="Maint_LogFiles" xml:space="preserve"><value>Usunięte pliki logów</value></data>
+  <data name="Maint_LogFolders" xml:space="preserve"><value>Usunięte puste foldery logów</value></data>
+  <data name="Maint_Vacuum" xml:space="preserve"><value>ris.db skompaktowana</value></data>
+  <data name="Maint_NotYet" xml:space="preserve"><value>Nie uruchomiono od startu usługi.</value></data>
+  <data name="Maint_Next" xml:space="preserve"><value>Następne czyszczenie: {0}</value></data>
+  <data name="Maint_Settings" xml:space="preserve"><value>Ustawienia</value></data>
+  <data name="Maint_SettingsHelp" xml:space="preserve"><value>Zmień je w %ProgramData%\RIS5\appsettings.json i uruchom usługę ponownie. Obecne wartości:</value></data>
+  <data name="Maint_Done" xml:space="preserve"><value>Czyszczenie zakończone.</value></data>
+  <data name="Maint_DoneWithErrors" xml:space="preserve"><value>Czyszczenie zakończone z błędami – szczegóły poniżej.</value></data>
 </root>

@@ -247,6 +247,33 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         return await db.Audit.AsNoTracking().OrderByDescending(a => a.Id).Take(take).ToListAsync(cancellationToken);
     }
 
+    /// <summary>Number of audit entries and the oldest one (maintenance page).</summary>
+    public async Task<(int Count, DateTime? OldestUtc)> GetAuditStatsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        var count = await db.Audit.CountAsync(cancellationToken);
+        var oldest = count == 0 ? (DateTime?)null : await db.Audit.MinAsync(a => a.TimestampUtc, cancellationToken);
+        return (count, oldest);
+    }
+
+    /// <summary>
+    /// Deletes audit entries older than <paramref name="olderThanUtc"/>. The newest entry always stays: its id is the
+    /// configuration version (<see cref="GetVersionAsync"/>) and must never go back.
+    /// </summary>
+    public async Task<int> PurgeAuditAsync(DateTime olderThanUtc, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        var newest = await db.Audit.MaxAsync(a => (long?)a.Id, cancellationToken) ?? 0;
+        return await db.Audit.Where(a => a.TimestampUtc < olderThanUtc && a.Id < newest).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>Returns the space of deleted rows to the file system (after a large purge).</summary>
+    public async Task VacuumAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        await db.Database.ExecuteSqlRawAsync("VACUUM", cancellationToken);
+    }
+
     /// <summary>Changes counter: id of the last audit entry (every change is audited). Lets a running service notice changes made by another process (ris db import).</summary>
     public async Task<long> GetVersionAsync(CancellationToken cancellationToken = default)
     {
