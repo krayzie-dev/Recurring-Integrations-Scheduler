@@ -17,7 +17,7 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 
 - RIS runs as the **RIS5** service on a Windows server. Open the UI in a browser, e.g. `http://localhost:5080` on the server or `https://server:5443` from another computer (when HTTPS is enabled).
 - You sign in with your Windows (domain) account. Permissions come from roles assigned to groups or users.
-- Configuration (connections, jobs, secrets) is stored in `ris.db`, schedules and run history in `quartz.db` – both in `%ProgramData%\RIS5`.
+- Configuration (D365 instances, jobs, secrets) is stored in `ris.db`, schedules and run history in `quartz.db` – both in `%ProgramData%\RIS5`.
 
 ## Key terms
 
@@ -25,7 +25,7 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 |---|---|
 | **Job** | One integration: what, from where, to where and when. It has a name and a group (key `Group.Name`). |
 | **Job type** | Export, Import, Upload, Download, Execution monitor, Processing monitor – see [Job types](04-job-types.md). |
-| **Connection** | A D365 environment and the Microsoft Entra ID application RIS signs in with (client secret or certificate). Many jobs share one connection. |
+| **D365 instance** | A D365 environment and the Microsoft Entra ID application RIS signs in with (client secret or certificate). Many jobs share one instance. |
 | **Data project** | A project in D365 *Data management* that defines entities and file format. RIS export and import run data projects. |
 | **Recurring data job** | A recurring integration in D365 identified by an *activity ID*. Used by Upload and Download. |
 | **Monitor** | A job that checks the result of an import or upload in D365 and moves the file to a "processed" or "errors" folder. Paired with the import or upload job. |
@@ -38,7 +38,7 @@ This manual is available in the application (**Help** in the menu or the ❔ ico
 |---|---|
 | **Viewer** | View the dashboard, jobs, plan, history and run details; export lists. |
 | **Operator** | Everything a Viewer can, plus run, pause and resume jobs (also in bulk). |
-| **Admin** | Everything: jobs, connections, SFTP servers, bulk edit, audit, data maintenance. |
+| **Admin** | Everything: jobs, D365 instances, SFTP servers, bulk edit, audit, data maintenance. |
 
 Roles are assigned in the settings (the installer asks for administrators and operators) – see [Installation](02-installation.md#roles).
 
@@ -47,7 +47,7 @@ Roles are assigned in the settings (the installer asks for administrators and op
 - Browser UI (no WinForms client, no .NET Remoting), light and dark theme, English and Polish.
 - Configuration saved immediately to the database with an audit trail (who, when, what) – no manual `Schedule.xml` saving.
 - Run history with the log of every run, Gantt charts of the plan and history, dashboard with alerts.
-- Job wizard with field descriptions, connection tests and a schedule builder (including "every 10 minutes from 8 to 16 on weekdays").
+- Job wizard with field descriptions, tests of D365, folders and SFTP and a schedule builder (including "every 10 minutes from 8 to 16 on weekdays").
 - Import package envelope generated automatically from the data project (no template), also for multi-entity packages.
 - Clear error codes (`RIS-…`), Windows Event Log with fixed event ids, `/health` endpoint for monitoring.
 - The schedule rhythm does not shift after a restart; missed runs are handled per job setting.

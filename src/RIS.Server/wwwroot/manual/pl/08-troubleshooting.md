@@ -11,8 +11,8 @@
 
 | Objaw | Przyczyna i rozwiązanie |
 |---|---|
-| `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | Wklejono *Secret ID* zamiast **wartości** sekretu albo sekret wygasł. Utwórz nowy sekret, wklej kolumnę *Value* w połączeniu i użyj **Testuj połączenie**. |
-| `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Zły client id albo tenant w połączeniu. |
+| `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | Wklejono *Secret ID* zamiast **wartości** sekretu albo sekret wygasł. Utwórz nowy sekret, wklej kolumnę *Value* w instancji D365 i użyj **Testuj połączenie**. |
+| `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Zły client id albo tenant w instancji D365. |
 | `RIS-HTTP-001` 401/403 przy wywołaniu D365 | Aplikacji nie dodano w D365 (*Aplikacje Microsoft Entra ID*) albo jej użytkownik nie ma uprawnień do zarządzania danymi lub firmy. |
 | `RIS-IMP-001` … *exists and overwrite has not been specified* | Projekt danych istnieje w D365 – włącz **Nadpisz projekt danych** w zadaniu. |
 | Po imporcie RIS zadanie cykliczne D365 wczytuje dane do złych pól | Import z nadpisaniem zmienił mapowanie projektu. Użyj osobnych projektów danych dla RIS i dla zadań cyklicznych; mapowanie przywróci import pliku z pełnym zestawem kolumn. |
@@ -37,7 +37,7 @@ Każdy błąd zaczyna się od kodu, np. `[RIS-EXP-001]`. Ten sam kod jest w pods
 | Kod | Znaczenie | Co zrobić |
 |---|---|---|
 | RIS-CFG-001 | Nieprawidłowa konfiguracja | Komunikat wymienia błędne ustawienia (`ris validate`). |
-| RIS-CFG-002 | Zadanie wskazuje nieistniejące połączenie | Dodaj połączenie albo popraw zadanie. |
+| RIS-CFG-002 | Zadanie wskazuje nieistniejącą instancję D365 | Dodaj instancję albo popraw zadanie. |
 | RIS-CFG-003 | Folder nie istnieje albo brak dostępu | Sprawdź ścieżkę i uprawnienia konta usługi. |
 | RIS-CFG-004 | Nieprawidłowy szablon pakietu | Wyeksportuj nowy szablon z D365 albo użyj koperty generowanej. |
 | RIS-AUTH-001 | Logowanie do Entra ID nie powiodło się | Tenant, client id, sekret/certyfikat (ważność); kod AADSTS w komunikacie. |

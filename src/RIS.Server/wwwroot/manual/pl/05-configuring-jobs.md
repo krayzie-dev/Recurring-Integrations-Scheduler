@@ -9,7 +9,7 @@
 | Krok | Zawartość |
 |---|---|
 | **1. Zadanie** | Typ (karta z opisem i schematem przepływu), nazwa, grupa, opis. Przy Imporcie i Wysyłce przełącznik *Utwórz też zadanie monitorujące*. Lista *Na podstawie istniejącego zadania* kopiuje wszystkie ustawienia. |
-| **2. Dynamics 365** | Połączenie, projekt danych lub activity ID, firma, opcje importu. Przyciski **Testuj połączenie** i **Pokaż encje projektu**. |
+| **2. Dynamics 365** | Instancja D365, projekt danych lub activity ID, firma, opcje importu. Przyciski **Testuj połączenie** i **Pokaż encje projektu**. |
 | **3. Pliki i foldery** | Foldery wejścia, sukcesu i błędów, wybór i kolejność plików, rozpakowanie, SFTP. Przy folderach przycisk **Sprawdź dostęp** (test kontem usługi: istnienie, odczyt, zapis). |
 | **4. Harmonogram** | Konstruktor harmonogramu, strefa czasowa, przegapione terminy, wstrzymanie – patrz [Harmonogram](#schedule). |
 | **5. Zaawansowane** | Odpytywanie statusu (polling), ponawianie żądań, wstrzymanie po błędzie, ścieżki akcji OData. |
@@ -24,7 +24,7 @@ Zadanie można też **powielić** (przycisk *Duplikuj* na stronie zadania) – k
 Cel: codziennie o 02:00 wyeksportować faktury sprzedaży (projekt danych `CustInvoiceJour`) z firmy USMF do `D:\Integrations\Invoices\Out` i rozpakować pakiet.
 
 1. **Typ**: Eksport, nazwa `CustInvoiceJour`, grupa `Export jobs`.
-2. **Dynamics 365**: połączenie `CONTOSO-PROD`, projekt danych `CustInvoiceJour` (dokładnie jak w D365), firma `USMF`.
+2. **Dynamics 365**: instancja D365 `CONTOSO-PROD`, projekt danych `CustInvoiceJour` (dokładnie jak w D365), firma `USMF`.
 3. **Pliki**: folder pobranych `D:\Integrations\Invoices\Out`, zaznacz *Rozpakuj pakiet*. Opcjonalnie *Dodaj znacznik czasu*, *Usuń pakiet po rozpakowaniu*, wysyłka na SFTP.
 4. **Harmonogram**: *Codziennie* o `02:00`.
 5. **Podsumowanie → Zapisz**.
@@ -36,7 +36,7 @@ Po każdym uruchomieniu w historii widać Execution Id, status D365, liczbę spr
 Cel: pliki faktur zakupowych pojawiające się w `D:\Integrations\VendorInvoices\In` importować co 15 minut w dni robocze 7–18 i sprawdzać wynik.
 
 1. **Typ**: Import, nazwa `Vendor invoices import`, grupa `Finance`, zaznacz **Utwórz też zadanie monitorujące**.
-2. **Dynamics 365**: połączenie, projekt danych `Vendor invoices`, firma `USMF`, **Koperta pakietu: Generowana z projektu danych**, **Nadpisz projekt danych** włączone.
+2. **Dynamics 365**: instancja D365, projekt danych `Vendor invoices`, firma `USMF`, **Koperta pakietu: Generowana z projektu danych**, **Nadpisz projekt danych** włączone.
 
    ![Krok Dynamics 365 zadania importu](img/editor-d365.png)
 
@@ -110,7 +110,7 @@ RIS pobiera wszystkie komunikaty z kolejki, zapisuje pakiety i **potwierdza odbi
 
 Na liście zadań zaznacz zadania i wybierz **Edycja zbiorcza** (rola Admin):
 
-- **Wspólne pola** – połączenie, grupa, opis, strefa czasowa, przegapione terminy, polling, ponawianie, wstrzymanie po błędzie,
+- **Wspólne pola** – instancja D365, grupa, opis, strefa czasowa, przegapione terminy, polling, ponawianie, wstrzymanie po błędzie,
 - **Harmonogram** – przesunięcie o ±N minut, ten sam cron lub interwał, *rozłożenie startów* (kolejne zadania co N minut),
 - **Zamiana w ścieżkach** – np. `\\stary-serwer\udział` → `\\nowy-serwer\udział` we wszystkich folderach.
 

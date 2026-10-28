@@ -17,7 +17,7 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 
 - RIS działa jako usługa **RIS5** na serwerze Windows. Interfejs otwierasz w przeglądarce, np. `http://localhost:5080` na serwerze lub `https://serwer:5443` z innego komputera (jeśli włączono HTTPS).
 - Logowanie odbywa się kontem Windows (domenowym). Uprawnienia wynikają z ról przypisanych grupom lub użytkownikom.
-- Konfiguracja (połączenia, zadania, sekrety) jest w bazie `ris.db`, harmonogram i historia uruchomień w `quartz.db` – obie w `%ProgramData%\RIS5`.
+- Konfiguracja (instancje D365, zadania, sekrety) jest w bazie `ris.db`, harmonogram i historia uruchomień w `quartz.db` – obie w `%ProgramData%\RIS5`.
 
 ## Podstawowe pojęcia
 
@@ -25,7 +25,7 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 |---|---|
 | **Zadanie (job)** | Jedna integracja: co, skąd, dokąd i kiedy. Ma nazwę i grupę (klucz `Grupa.Nazwa`). |
 | **Typ zadania** | Eksport, Import, Wysyłka (Upload), Pobieranie (Download), Monitor wykonania, Monitor przetwarzania – patrz [Typy zadań](04-job-types.md). |
-| **Połączenie** | Środowisko D365 i aplikacja Entra ID, którą RIS się loguje (client secret albo certyfikat). Wiele zadań korzysta z jednego połączenia. |
+| **Instancja D365** | Środowisko D365 i aplikacja Entra ID, którą RIS się loguje (client secret albo certyfikat). Wiele zadań korzysta z jednej instancji. |
 | **Projekt danych** | Projekt w D365 *Zarządzanie danymi*, który określa encje i format plików. Eksport i import RIS uruchamiają projekty danych. |
 | **Zadanie cykliczne (recurring data job)** | Integracja cykliczna w D365 identyfikowana przez *activity ID*. Używają jej typy Wysyłka i Pobieranie. |
 | **Monitor** | Zadanie sprawdzające wynik importu lub wysyłki w D365 i przenoszące plik do folderu „przetworzone” albo „błędy”. Tworzy parę z zadaniem importu lub wysyłki. |
@@ -38,7 +38,7 @@ Ta instrukcja jest dostępna w aplikacji (**Pomoc** w menu lub ikona ❔ w górn
 |---|---|
 | **Viewer** | Oglądać pulpit, zadania, harmonogram, historię i szczegóły uruchomień, eksportować listy. |
 | **Operator** | To co Viewer oraz uruchamiać, wstrzymywać i wznawiać zadania (także zbiorczo). |
-| **Admin** | Wszystko: zadania, połączenia, serwery SFTP, edycja zbiorcza, audyt, utrzymanie danych. |
+| **Admin** | Wszystko: zadania, instancje D365, serwery SFTP, edycja zbiorcza, audyt, utrzymanie danych. |
 
 Role przypisuje się w ustawieniach (instalator pyta o administratorów i operatorów) – patrz [Instalacja](02-installation.md#roles).
 
@@ -47,7 +47,7 @@ Role przypisuje się w ustawieniach (instalator pyta o administratorów i operat
 - Interfejs w przeglądarce (bez klienta WinForms i bez .NET Remoting), jasny i ciemny motyw, polski i angielski.
 - Konfiguracja zapisywana od razu w bazie z audytem zmian (kto, kiedy, co) – bez ręcznego zapisywania `Schedule.xml`.
 - Historia uruchomień z logiem każdego przebiegu, Gantt planu i historii, pulpit z alertami.
-- Kreator zadań z opisami pól, testem połączeń, konstruktorem harmonogramu (także „co 10 minut od 8 do 16 w dni robocze”).
+- Kreator zadań z opisami pól, testem połączenia z D365, folderów i SFTP, konstruktorem harmonogramu (także „co 10 minut od 8 do 16 w dni robocze”).
 - Koperta pakietu importu generowana automatycznie z projektu danych (bez szablonu), również dla pakietów z wieloma encjami.
 - Czytelne kody błędów (`RIS-…`), dziennik zdarzeń Windows ze stałymi identyfikatorami, endpoint `/health` dla monitoringu.
 - Rytm harmonogramu nie przesuwa się po restarcie; przegapione terminy obsługiwane zgodnie z ustawieniem.

@@ -7,7 +7,7 @@ Tak – to osobna usługa (`RIS5`) z osobnymi danymi. Importuj zadania 4.x jako 
 Zaszyfrowane w `ris.db` kluczami z `%ProgramData%\RIS5\keys`. Nie są wyświetlane w interfejsie, zwracane przez API ani zapisywane w audycie i logach. Można je tylko nadpisać.
 
 ### Jak zmienić sekret, który wygasa?
-*Połączenia → edycja połączenia → wklej nową wartość w polu Client secret → Testuj połączenie → Zapisz*. Zadania korzystają z nowego sekretu od następnego uruchomienia. W audycie pojawi się wpis `*** (nowa wartość, ukryta)`.
+*Instancje D365 → edycja instancji → wklej nową wartość w polu Client secret → Testuj połączenie → Zapisz*. Zadania korzystają z nowego sekretu od następnego uruchomienia. W audycie pojawi się wpis `*** (nowa wartość, ukryta)`.
 
 ### Co się stanie, gdy serwer zostanie wyłączony w czasie zaplanowanego uruchomienia?
 Po starcie usługa wykryje przegapiony termin: przy ustawieniu *Uruchom raz po starcie* uruchomi zadanie jeden raz, przy *Pomiń* poczeka na następny termin. Rytm harmonogramu nie przesuwa się.
@@ -31,7 +31,7 @@ Import z *Nadpisz projekt danych* zastępuje mapowanie projektu. Używaj osobnyc
 W edytorze zadania przy polu folderu **Sprawdź dostęp** – test tworzy i usuwa plik próbny kontem usługi i pokazuje nazwę konta.
 
 ### Jak wstrzymać wszystkie zadania na czas prac serwisowych D365?
-Lista zadań → zaznacz wszystkie (lub filtr po połączeniu) → *Wstrzymaj* z powodem → po pracach *Wznów*. Wstrzymanie przetrwa restart usługi.
+Lista zadań → zaznacz wszystkie (lub filtr po instancji D365) → *Wstrzymaj* z powodem → po pracach *Wznów*. Wstrzymanie przetrwa restart usługi.
 
 ### Jak długo przechowywana jest historia uruchomień?
 Domyślnie 30 dni (nieudane – 90 dni), maksymalnie 1000 uruchomień na zadanie. Zmienisz to w `Ris:Retention` – patrz [Utrzymanie](07-maintenance.md).

@@ -9,7 +9,7 @@
   <data name="Nav_Jobs" xml:space="preserve"><value>Zadania</value></data>
   <data name="Nav_Plan" xml:space="preserve"><value>Harmonogram</value></data>
   <data name="Nav_History" xml:space="preserve"><value>Historia</value></data>
-  <data name="Nav_Connections" xml:space="preserve"><value>Połączenia</value></data>
+  <data name="Nav_Connections" xml:space="preserve"><value>Instancje D365</value></data>
   <data name="Nav_SftpServers" xml:space="preserve"><value>Serwery SFTP</value></data>
   <data name="Nav_Audit" xml:space="preserve"><value>Audyt</value></data>
   <data name="Nav_Settings" xml:space="preserve"><value>Ustawienia</value></data>
@@ -150,7 +150,7 @@
   <data name="Job_Name" xml:space="preserve"><value>Zadanie</value></data>
   <data name="Job_Group" xml:space="preserve"><value>Grupa</value></data>
   <data name="Job_Type" xml:space="preserve"><value>Typ</value></data>
-  <data name="Job_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Job_Connection" xml:space="preserve"><value>Instancja D365</value></data>
   <data name="Job_Schedule" xml:space="preserve"><value>Harmonogram</value></data>
   <data name="Job_State" xml:space="preserve"><value>Stan</value></data>
   <data name="Job_NextRun" xml:space="preserve"><value>Następne uruchomienie</value></data>
@@ -211,7 +211,7 @@
   <data name="Run_Log" xml:space="preserve"><value>Log zadania</value></data>
   <data name="Run_NoLog" xml:space="preserve"><value>Brak przechwyconego logu dla tego uruchomienia.</value></data>
   <data name="Error_RIS_CFG_001" xml:space="preserve"><value>Nieprawidłowa konfiguracja zadania; komunikat wskazuje błędne ustawienia.</value></data>
-  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>Połączenie wskazane w zadaniu nie istnieje.</value></data>
+  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>Instancja D365 wskazana w zadaniu nie istnieje.</value></data>
   <data name="Error_RIS_CFG_003" xml:space="preserve"><value>Folder nie istnieje albo konto usługi nie ma dostępu (udziały UNC wymagają konta domenowego).</value></data>
   <data name="Error_RIS_CFG_004" xml:space="preserve"><value>Nieprawidłowy szablon pakietu (brak Manifest.xml); wyeksportuj nowy szablon z D365.</value></data>
   <data name="Error_RIS_AUTH_001" xml:space="preserve"><value>Błąd logowania do Entra ID: sprawdź tenant, client id, ważność sekretu lub certyfikatu; komunikat zawiera kod AADSTS.</value></data>
@@ -253,7 +253,7 @@
   <data name="Gantt_Today" xml:space="preserve"><value>Dziś</value></data>
   <data name="Gantt_GroupBy" xml:space="preserve"><value>Grupuj wg</value></data>
   <data name="Gantt_GroupBy_Group" xml:space="preserve"><value>Grupa</value></data>
-  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>Instancja D365</value></data>
   <data name="Gantt_GroupBy_Type" xml:space="preserve"><value>Typ</value></data>
   <data name="Gantt_GroupBy_None" xml:space="preserve"><value>Bez grupowania</value></data>
   <data name="Gantt_Every" xml:space="preserve"><value>co {0}</value></data>
@@ -304,7 +304,7 @@
   <data name="Secret" xml:space="preserve"><value>Sekret</value></data>
   <data name="Secret_Set" xml:space="preserve"><value>Ustawiony</value></data>
   <data name="Secret_Missing" xml:space="preserve"><value>Brak</value></data>
-  <data name="Connections_Add" xml:space="preserve"><value>Nowe połączenie</value></data>
+  <data name="Connections_Add" xml:space="preserve"><value>Nowa instancja D365</value></data>
   <data name="Sftp_Add" xml:space="preserve"><value>Nowy serwer SFTP</value></data>
   <data name="Usage_Jobs" xml:space="preserve"><value>Używane przez zadania</value></data>
   <data name="Reference_NoRename" xml:space="preserve"><value>Zmiana nazwy nie jest obsługiwana: utwórz nowy obiekt i zmień zadania.</value></data>
@@ -324,7 +324,7 @@
   <data name="Field_KeyPath" xml:space="preserve"><value>Plik klucza</value></data>
   <data name="Field_ConnectTimeout" xml:space="preserve"><value>Limit czasu połączenia</value></data>
   <data name="Field_OperationTimeout" xml:space="preserve"><value>Limit czasu operacji</value></data>
-  <data name="Field_Connection" xml:space="preserve"><value>Połączenie</value></data>
+  <data name="Field_Connection" xml:space="preserve"><value>Instancja D365</value></data>
   <data name="Field_Cron" xml:space="preserve"><value>Wyrażenie cron</value></data>
   <data name="Field_Interval" xml:space="preserve"><value>Interwał</value></data>
   <data name="Field_StartAt" xml:space="preserve"><value>Start (punkt odniesienia)</value></data>
@@ -420,7 +420,7 @@
   <data name="StepHelp_Files" xml:space="preserve"><value>Foldery odczytuje i zapisuje KONTO USŁUGI, nie Ty. Udziały sieciowe (\\serwer\udział) wymagają konta domenowego lub gMSA. Użyj „Sprawdź dostęp” przy folderze.</value></data>
   <data name="StepHelp_Schedule" xml:space="preserve"><value>Kiedy zadanie się uruchamia. Godziny są w wybranej strefie czasowej. Rytm nie przesuwa się po restarcie usługi.</value></data>
   <data name="StepHelp_Advanced" xml:space="preserve"><value>Wartości domyślne pasują do większości zadań. Zmieniaj tylko w razie potrzeby: czekanie na D365, ponawianie, zachowanie po błędzie, własne akcje OData.</value></data>
-  <data name="StepHelp_Summary" xml:space="preserve"><value>Sprawdź opis i najbliższe terminy. Zapis sprawdza całą konfigurację (np. czy połączenie istnieje), a zadanie od razu trafia do harmonogramu.</value></data>
+  <data name="StepHelp_Summary" xml:space="preserve"><value>Sprawdź opis i najbliższe terminy. Zapis sprawdza całą konfigurację (np. czy instancja D365 istnieje), a zadanie od razu trafia do harmonogramu.</value></data>
   <data name="JobTypeHelp_Export" xml:space="preserve"><value>Uruchamia eksport projektu danych w D365, czeka na zakończenie i pobiera pakiet do folderu (opcjonalnie rozpakowany, ze znacznikiem czasu, wysłany na SFTP).</value></data>
   <data name="JobTypeHelp_Import" xml:space="preserve"><value>Pobiera pliki z folderu (lub SFTP), w razie potrzeby pakuje je do pakietu danych i importuje do projektu danych. Połącz z monitorem wykonania, aby zobaczyć wynik w D365.</value></data>
   <data name="JobTypeHelp_Upload" xml:space="preserve"><value>Wysyła pliki z folderu do integracji cyklicznej (enqueue). Połącz z monitorem przetwarzania, aby sprawdzić, czy D365 przetworzył komunikat.</value></data>
@@ -450,7 +450,7 @@
   <data name="Wizard_NoProblems" xml:space="preserve"><value>Brak problemów w tym kroku.</value></data>
   <data name="Wizard_NoFields" xml:space="preserve"><value>W tym kroku nie ma ustawień dla tego typu zadania.</value></data>
   <data name="Wizard_Saved2" xml:space="preserve"><value>Zapisano {0} i {1}.</value></data>
-  <data name="Wizard_NewConnection" xml:space="preserve"><value>Nowe połączenie</value></data>
+  <data name="Wizard_NewConnection" xml:space="preserve"><value>Nowa instancja D365</value></data>
   <data name="Sched_Mode" xml:space="preserve"><value>Jak często</value></data>
   <data name="Sched_ModeDaily" xml:space="preserve"><value>Codziennie / w wybrane dni</value></data>
   <data name="Sched_ModeEvery" xml:space="preserve"><value>Co N minut lub godzin</value></data>
@@ -482,8 +482,8 @@
   <data name="Enum_LegalEntitySource_FileName" xml:space="preserve"><value>Fragment nazwy pliku</value></data>
   <data name="Enum_D365AuthMode_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
   <data name="Enum_D365AuthMode_Certificate" xml:space="preserve"><value>Certyfikat</value></data>
-  <data name="FieldHint_Connection" xml:space="preserve"><value>Środowisko D365 i rejestracja aplikacji (strona Połączenia)</value></data>
-  <data name="FieldHelp_Connection" xml:space="preserve"><value>Połączenie ze środowiskiem D365: adres AOS, tenant Entra ID, client id oraz sekret lub certyfikat. Definiowane raz na stronie Połączenia i współdzielone przez zadania.</value></data>
+  <data name="FieldHint_Connection" xml:space="preserve"><value>Środowisko D365 i rejestracja aplikacji (strona Instancje D365)</value></data>
+  <data name="FieldHelp_Connection" xml:space="preserve"><value>Instancja D365: adres AOS, tenant Entra ID, client id oraz sekret lub certyfikat. Definiowana raz na stronie Instancje D365 i współdzielona przez zadania.</value></data>
   <data name="FieldHint_DataProject" xml:space="preserve"><value>Nazwa projektu danych w D365 Zarządzanie danymi</value></data>
   <data name="FieldHelp_DataProject" xml:space="preserve"><value>Projekt danych (definition group) w D365 → Zarządzanie danymi. Eksport: projekt do wyeksportowania. Import: projekt, do którego trafia pakiet. Musi istnieć w środowisku.</value></data>
   <data name="FieldHint_ActivityId" xml:space="preserve"><value>Id cyklicznego zadania danych (GUID)</value></data>
@@ -648,8 +648,8 @@
   <data name="Reconnect_Retry" xml:space="preserve"><value>Spróbuj ponownie</value></data>
   <data name="Reconnect_Rejected" xml:space="preserve"><value>Serwer został uruchomiony ponownie. Przeładowuję stronę…</value></data>
   <data name="Reconnect_Reload" xml:space="preserve"><value>Przeładuj</value></data>
-  <data name="Conn_InUseTitle" xml:space="preserve"><value>Połączenie {0} jest używane</value></data>
-  <data name="Conn_InUseText" xml:space="preserve"><value>Nie można go usunąć, dopóki korzystają z niego zadania. Najpierw zmień połączenie w tych zadaniach (albo usuń te zadania):</value></data>
+  <data name="Conn_InUseTitle" xml:space="preserve"><value>Instancja D365 {0} jest używana</value></data>
+  <data name="Conn_InUseText" xml:space="preserve"><value>Nie można jej usunąć, dopóki korzystają z niej zadania. Najpierw zmień instancję D365 w tych zadaniach (albo usuń te zadania):</value></data>
   <data name="Sftp_InUseTitle" xml:space="preserve"><value>Serwer SFTP {0} jest używany</value></data>
   <data name="Sftp_InUseText" xml:space="preserve"><value>Nie można go usunąć, dopóki zadania przesyłają przez niego pliki. Najpierw zmień serwer SFTP w tych zadaniach (albo usuń te zadania):</value></data>
   <data name="Reference_ShowJobs" xml:space="preserve"><value>Pokaż zadania</value></data>
@@ -684,7 +684,7 @@
   <data name="Maint_Store_RunHistory" xml:space="preserve"><value>Historia uruchomień</value></data>
   <data name="Maint_StoreHelp_RunHistory" xml:space="preserve"><value>Uruchomienia z podsumowaniem, metrykami i logiem (quartz.db): dni dla wszystkich / nieudanych; najnowsze uruchomienia na zadanie / łącznie</value></data>
   <data name="Maint_Store_Audit" xml:space="preserve"><value>Audyt</value></data>
-  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Zmiany konfiguracji (ris.db, razem z połączeniami i zadaniami)</value></data>
+  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Zmiany konfiguracji (ris.db, razem z instancjami D365 i zadaniami)</value></data>
   <data name="Maint_Store_Logs" xml:space="preserve"><value>Pliki logów</value></data>
   <data name="Maint_StoreHelp_Logs" xml:space="preserve"><value>Log usługi i folder dla każdego zadania; foldery usuniętych zadań są usuwane, gdy są puste</value></data>
   <data name="Maint_Store_Backups" xml:space="preserve"><value>Kopie zapasowe</value></data>
@@ -706,4 +706,10 @@
   <data name="Help_Results" xml:space="preserve"><value>Rozdziały: {0}</value></data>
   <data name="Help_Print" xml:space="preserve"><value>Drukuj / PDF</value></data>
   <data name="Help_NotFound" xml:space="preserve"><value>Ten rozdział nie istnieje.</value></data>
+  <data name="HistoryFilter_Search" xml:space="preserve"><value>Filtruj: zadanie, podsumowanie, kod błędu</value></data>
+  <data name="HistoryFilter_ManualOnly" xml:space="preserve"><value>Uruchomione ręcznie</value></data>
+  <data name="HistoryFilter_Shown" xml:space="preserve"><value>Pokazano {0} z {1} uruchomień</value></data>
+  <data name="HistoryFilter_Clear" xml:space="preserve"><value>Wyczyść filtry</value></data>
+  <data name="HistoryFilter_NoMatch" xml:space="preserve"><value>Żadne uruchomienie nie pasuje do filtrów.</value></data>
+  <data name="HistoryFilter_Selected" xml:space="preserve"><value>Wybrano: {0}</value></data>
 </root>

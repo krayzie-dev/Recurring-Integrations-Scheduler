@@ -20,7 +20,7 @@ Run `RIS5-Setup-<version>.exe` as administrator. The wizard (English or Polish) 
    - *HTTP port* (default 5080) – local only (`http://localhost:5080`).
    - *HTTPS port* (e.g. 5443) and *certificate thumbprint* – access from other computers. The installer checks the certificate (exists, has a private key, is valid), grants the service account access to the key and adds the "RIS5 HTTPS" firewall rule.
    - *Administrators* and *Operators* – groups or users separated by `;` (e.g. `DOMAIN\RIS-Admins;DOMAIN\john.smith`). Default: local Administrators and the installing user.
-3. **Import from 4.x** – shown when a RIS 4.x `Schedule.xml` exists on the server. Jobs are imported **paused** (secrets are not imported – set them in Connections).
+3. **Import from 4.x** – shown when RIS 4.x runs on the server. Jobs are imported **paused**, with their secrets – see [Moving from RIS 4.x](#upgrade4x).
 
 Finally the installer saves the settings, creates the **RIS5** service (delayed automatic start, restart on failure), starts it and checks `/health`. The last page shows the result and the UI address.
 
@@ -94,9 +94,30 @@ Run the installer of the new version. It stops the service (running jobs are int
 
 *Settings → Apps → Recurring Integrations Scheduler 5*. The service and firewall rule are removed. The data in `%ProgramData%\RIS5` stays unless you confirm its removal (a silent uninstall never removes data).
 
-## Moving from RIS 4.x
+## Moving from RIS 4.x {#upgrade4x}
 
-1. Install RIS 5 next to 4.x with **Import from 4.x** (or later: `ris convert-schedule Schedule.xml -o jobs.json` and `ris db import jobs.json --paused`).
-2. Enter the secrets in **Connections** (4.x secrets are not migrated).
-3. Run single jobs with **Run now** on a test environment and compare results.
-4. Pause the jobs in 4.x and resume them in RIS 5 (in bulk on the job list).
+RIS 5 is installed **next to** RIS 4.x on the same server (separate service, data and ports), and jobs are switched one by one.
+
+**Before the installation**
+
+1. In the RIS 4.x client **save the schedule** (*Save schedule*). RIS 4.x keeps changes made in the client only in the memory of the service – the file on disk may be out of date.
+2. Check which account the RIS 4.x service runs as – the installer suggests the same account, because it has access to the integration folders.
+
+**Installation**
+
+3. Run the RIS 5 installer as administrator on the RIS 4.x server. The installer finds the 4.x schedule itself (through the 4.x service and its configuration file, so also in a non-default folder) and shows the **Import from RIS 4.x** page.
+4. Jobs are imported **paused**. The 4.x **secrets** (client secrets, SFTP passwords) are decrypted on this server and stored in RIS 5 – they are not written to any file. Import report: `%ProgramData%\RIS5\import-4x\import.log` (warnings and secrets that could not be taken over) and `jobs.json` (configuration without secrets).
+5. Silent installation: `/IMPORT4X=1` (default). For a domain account pass `/ACCOUNT` and `/PASSWORD` – without them the account of the 4.x service is used, but a regular domain account needs its password.
+
+**Checks after the installation**
+
+6. *D365 instances* – **Test all**. Enter the missing secrets (listed in the report) manually.
+7. *Jobs* (filter *Paused*) – review the jobs. **Start time**: RIS 4.x did not save the start time of "every N minutes/hours" schedules, so RIS 5 uses 00:00 – fix the jobs that should start at another time (in bulk: *Bulk edit → Schedule*).
+8. Use **Check access** next to folders and package templates – the test runs as the RIS 5 service account.
+
+**Switching jobs**
+
+9. For every job (the job and its **monitor together**): stop it in RIS 4.x → resume it in RIS 5 (*Resume*) → check the history after the first run. The RIS 5 monitor reads status files written by the 4.x import, so nothing in progress is lost.
+10. **Note:** a pause in RIS 4.x does not survive a restart of the 4.x service (e.g. after Windows updates) – the job then runs again, in parallel with RIS 5. After switching, **delete the job in RIS 4.x and save the schedule**; when all jobs are switched, disable the RIS 4.x service (`Set-Service RecurringIntegrationsScheduler -StartupType Disabled`).
+
+Manually (e.g. on another server): `ris db import-4x Schedule.xml --paused` (secrets are taken over only on the server where RIS 4.x encrypted them; elsewhere set them in *D365 instances*).

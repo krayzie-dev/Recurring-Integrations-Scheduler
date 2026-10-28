@@ -9,7 +9,7 @@
 | Step | Contents |
 |---|---|
 | **1. Job** | Type (card with a description and a flow diagram), name, group, description. For Import and Upload the *Also create the monitor job* switch. *Based on an existing job* copies all settings. |
-| **2. Dynamics 365** | Connection, data project or activity ID, company, import options. Buttons **Test connection** and **Show project entities**. |
+| **2. Dynamics 365** | D365 instance, data project or activity ID, company, import options. Buttons **Test connection** and **Show project entities**. |
 | **3. Files and folders** | Input, success and error folders, file selection and order, extraction, SFTP. Next to folders the **Check access** button (test as the service account: exists, read, write). |
 | **4. Schedule** | Schedule builder, time zone, missed runs, paused – see [Schedule](#schedule). |
 | **5. Advanced** | Status polling, request retries, pause on error, OData action paths. |
@@ -24,7 +24,7 @@ You can also **duplicate** a job (*Duplicate* on the job page) – the copy open
 Goal: every day at 02:00 export sales invoices (data project `CustInvoiceJour`) from company USMF to `D:\Integrations\Invoices\Out` and extract the package.
 
 1. **Type**: Export, name `CustInvoiceJour`, group `Export jobs`.
-2. **Dynamics 365**: connection `CONTOSO-PROD`, data project `CustInvoiceJour` (exactly as in D365), company `USMF`.
+2. **Dynamics 365**: D365 instance `CONTOSO-PROD`, data project `CustInvoiceJour` (exactly as in D365), company `USMF`.
 3. **Files**: download folder `D:\Integrations\Invoices\Out`, tick *Unzip package*. Optionally *Add timestamp*, delete the package after extraction, send to SFTP.
 4. **Schedule**: *Daily* at `02:00`.
 5. **Summary → Save**.
@@ -36,7 +36,7 @@ After each run the history shows the Execution Id, D365 status, number of status
 Goal: import vendor invoice files arriving in `D:\Integrations\VendorInvoices\In` every 15 minutes on weekdays 7–18 and check the result.
 
 1. **Type**: Import, name `Vendor invoices import`, group `Finance`, tick **Also create the monitor job**.
-2. **Dynamics 365**: connection, data project `Vendor invoices`, company `USMF`, **Package envelope: Generated from the data project**, **Overwrite data project** on.
+2. **Dynamics 365**: D365 instance, data project `Vendor invoices`, company `USMF`, **Package envelope: Generated from the data project**, **Overwrite data project** on.
 
    ![Dynamics 365 step of an import job](img/editor-d365.png)
 
@@ -110,7 +110,7 @@ RIS downloads all messages from the queue, saves the packages and **acknowledges
 
 On the job list select jobs and choose **Bulk edit** (Admin role):
 
-- **Common fields** – connection, group, description, time zone, missed runs, polling, retries, pause on error,
+- **Common fields** – D365 instance, group, description, time zone, missed runs, polling, retries, pause on error,
 - **Schedule** – shift by ±N minutes, same cron or interval, *stagger starts* (next job every N minutes),
 - **Replace in paths** – e.g. `\\old-server\share` → `\\new-server\share` in all folders.
 

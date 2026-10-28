@@ -16,7 +16,7 @@ Strony odświeżają się same, gdy zadanie startuje lub się kończy.
 
 ![Lista zadań](img/jobs.png)
 
-- **Szukaj** przeszukuje nazwę, opis, połączenie, podsumowanie i harmonogram. Filtry: grupa, typ, połączenie, szybkie filtry *Z błędami*, *Wstrzymane*, *W trakcie*.
+- **Szukaj** przeszukuje nazwę, opis, instancję D365, podsumowanie i harmonogram. Filtry: grupa, typ, instancja D365, szybkie filtry *Z błędami*, *Wstrzymane*, *W trakcie*.
 - Kolorowy pasek przy typie oznacza typ zadania (te same kolory co ramki pasków na wykresach).
 - **Akcje zbiorcze** po zaznaczeniu: *Uruchom teraz*, *Wstrzymaj* (z powodem widocznym dla wszystkich), *Wznów*, *Edycja zbiorcza*, *Usuń*.
 - Ikona pobierania eksportuje widoczne lub zaznaczone zadania do Excela, CSV albo JSON (definicje bez sekretów).
@@ -44,14 +44,16 @@ Wykres Gantta zaplanowanych uruchomień na dzień lub tydzień:
 - **Wypełnienie paska** – stan (zaplanowane, wstrzymane – przerywane), **ramka** – typ zadania (legenda pod paskiem narzędzi).
 - Zadania uruchamiane częściej niż co 30 minut są pokazane jako **pas** („co 5 min”).
 - Długość paska to mediana czasu trwania ostatnich uruchomień.
-- Grupowanie: grupa, połączenie, typ. Linia czerwona = teraz. Kliknięcie paska otwiera zadanie.
+- Grupowanie: grupa, instancja D365, typ. Linia czerwona = teraz. Kliknięcie paska otwiera zadanie.
 - Eksport: PNG, PDF (wydruk), Excel, CSV.
 
 ## Historia uruchomień
 
 ![Historia tygodnia](img/history.png)
 
-Ten sam wykres dla rzeczywistych uruchomień: kolor = wynik (sukces, błąd, przerwane, w trakcie), ▲ = przegapiony termin, ramka = typ. Uruchomienia, które przy danej skali nachodzą na siebie, są łączone w jeden pasek z liczbą („12 uruchomień”). Pod wykresem tabela uruchomień ze stronicowaniem; przełącznik *Tylko błędy*.
+Ten sam wykres dla rzeczywistych uruchomień: kolor = wynik (sukces, błąd, przerwane, w trakcie), ▲ = przegapiony termin, ramka = typ. Uruchomienia, które przy danej skali nachodzą na siebie, są łączone w jeden pasek z liczbą („12 uruchomień”). Pod wykresem tabela uruchomień ze stronicowaniem; przełącznik *Tylko błędy*. Nad tabelą są **filtry**: tekst (zadanie, podsumowanie, treść błędu, identyfikator uruchomienia), grupa, wynik, kod błędu i *Uruchomione ręcznie*. Licznik pokazuje, ile uruchomień pasuje („Pokazano 28 z 291”), a eksport do Excela i CSV obejmuje tylko przefiltrowane uruchomienia. Te same filtry są w zakładce *Historia* na stronie zadania.
+
+![Filtry listy uruchomień: tekst „Sales” i wynik „Błąd”](img/history-filter.png)
 
 ## Audyt
 

@@ -1,4 +1,4 @@
-# Pierwsze kroki: połączenia
+# Pierwsze kroki: instancje D365
 
 Zanim utworzysz zadanie, RIS musi umieć zalogować się do D365. Robi to **aplikacja Microsoft Entra ID** (dawniej Azure AD) – w imieniu tej aplikacji RIS wywołuje API D365.
 
@@ -23,11 +23,11 @@ W D365: *Administrowanie systemem → Konfiguracja → Aplikacje Microsoft Entra
 
 Dla typów Wysyłka i Pobieranie dodatkowo, w zadaniu cyklicznym D365 (*recurring data job*) wskaż tę aplikację w polu **Application ID** i zaznacz *Enabled* – patrz [Przykłady](05-configuring-jobs.md#upload).
 
-## 3. Połączenie w RIS
+## 3. Instancja D365 w RIS
 
-*Połączenia → Nowe połączenie* (rola Admin).
+*Instancje D365 → Nowa instancja D365* (rola Admin).
 
-![Formularz połączenia](img/connection-dialog.png)
+![Formularz instancji D365](img/connection-dialog.png)
 
 | Pole | Przykład | Uwagi |
 |---|---|---|
@@ -41,9 +41,9 @@ Dla typów Wysyłka i Pobieranie dodatkowo, w zadaniu cyklicznym D365 (*recurrin
 
 Przycisk **Testuj połączenie** w oknie sprawdza wartości z formularza **przed zapisem** – kontem usługi loguje się do Entra ID i odczytuje listę projektów danych. Wynik pojawia się pod przyciskiem.
 
-![Lista połączeń z ostatnim testem](img/connections.png)
+![Lista instancji D365 z ostatnim testem](img/connections.png)
 
-Na liście połączeń kolumna **Ostatni test** pokazuje wynik i czas ostatniego testu, przycisk ⟲ w wierszu testuje jedno połączenie, a **Testuj wszystkie** – wszystkie naraz. Liczba w kolumnie *Używane przez zadania* prowadzi do listy zadań przefiltrowanej po połączeniu. Połączenia używanego przez zadania nie można usunąć – RIS pokaże, które zadania z niego korzystają.
+Na liście instancji kolumna **Ostatni test** pokazuje wynik i czas ostatniego testu, przycisk ⟲ w wierszu testuje jedną instancję, a **Testuj wszystkie** – wszystkie naraz. Liczba w kolumnie *Używane przez zadania* prowadzi do listy zadań przefiltrowanej po instancji. Instancji używanej przez zadania nie można usunąć – RIS pokaże, które zadania z niego korzystają.
 
 ## 4. Serwery SFTP (opcjonalnie)
 

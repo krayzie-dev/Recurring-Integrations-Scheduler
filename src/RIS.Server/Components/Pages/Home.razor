@@ -86,7 +86,7 @@ else
                     <MudSpacer />
                     <MudButton Href="/history" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowForward">@T["Nav_History"]</MudButton>
                 </MudStack>
-                <HistoryTable Runs="_data.RecentFailures" OnOpen="id => _drawer!.OpenAsync(id)" />
+                <HistoryTable Runs="_data.RecentFailures" OnOpen="id => _drawer!.OpenAsync(id)" Filterable="false" />
             </MudPaper>
         </MudItem>
     </MudGrid>

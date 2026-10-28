@@ -16,7 +16,7 @@ Pages refresh by themselves when a job starts or finishes.
 
 ![Job list](img/jobs.png)
 
-- **Search** looks in name, description, connection, summary and schedule. Filters: group, type, connection, quick filters *Failing*, *Paused*, *Running*.
+- **Search** looks in name, description, D365 instance, summary and schedule. Filters: group, type, D365 instance, quick filters *Failing*, *Paused*, *Running*.
 - The coloured bar at the type marks the job type (the same colours as the bar borders in the charts).
 - **Bulk actions** after selecting: *Run now*, *Pause* (with a reason visible to everyone), *Resume*, *Bulk edit*, *Delete*.
 - The download icon exports the visible or selected jobs to Excel, CSV or JSON (definitions without secrets).
@@ -44,14 +44,16 @@ A Gantt chart of scheduled runs for a day or a week:
 - **Bar fill** – state (scheduled, paused – dashed), **border** – job type (legend below the toolbar).
 - Jobs running more often than every 30 minutes are shown as a **band** ("every 5 min").
 - Bar length is the median duration of recent runs.
-- Grouping: group, connection, type. Red line = now. Clicking a bar opens the job.
+- Grouping: group, D365 instance, type. Red line = now. Clicking a bar opens the job.
 - Export: PNG, PDF (print), Excel, CSV.
 
 ## Run history
 
 ![Week history](img/history.png)
 
-The same chart for actual runs: colour = result (success, failure, cancelled, running), ▲ = missed run, border = type. Runs that overlap at the current scale are merged into one bar with a count ("12 runs"). Below the chart a paged run table; *Failures only* switch.
+The same chart for actual runs: colour = result (success, failure, cancelled, running), ▲ = missed run, border = type. Runs that overlap at the current scale are merged into one bar with a count ("12 runs"). Below the chart a paged run table; *Failures only* switch. Above the table there are **filters**: text (job, summary, error text, run id), group, result, error code and *Started manually*. A counter shows how many runs match ("Showing 28 of 291 runs"), and the Excel and CSV export contains only the filtered runs. The same filters are on the *History* tab of the job page.
+
+![Run list filters: text "Sales" and result "Failed"](img/history-filter.png)
 
 ## Audit
 

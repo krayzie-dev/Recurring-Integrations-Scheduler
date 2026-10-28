@@ -123,6 +123,9 @@ public sealed class UiTests
         var history = await GetPageAsync("/history", "Viewer", "en-US");
         StringAssert.Contains(history, "id=\"history-gantt\"");
         StringAssert.Contains(history, "class=\"bar succeeded\"");
+        StringAssert.Contains(history, "ris-history-filters", "Filter bar above the run list.");
+        StringAssert.Contains(history, "Filter: job, summary, error code");
+        StringAssert.Contains(await GetPageAsync("/", "Admin", "pl-PL"), "Instancje D365", "Menu: D365 instances.");
     }
 
 

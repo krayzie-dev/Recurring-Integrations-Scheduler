@@ -20,7 +20,7 @@ Uruchom `RIS5-Setup-<wersja>.exe` jako administrator. Kreator (polski lub angiel
    - *Port HTTP* (domyślnie 5080) – działa tylko lokalnie na serwerze (`http://localhost:5080`).
    - *Port HTTPS* (np. 5443) i *odcisk certyfikatu* – dostęp z innych komputerów. Instalator sprawdza certyfikat (istnieje, ma klucz prywatny, jest ważny), nadaje kontu usługi dostęp do klucza i dodaje regułę zapory „RIS5 HTTPS”.
    - *Administratorzy* i *Operatorzy* – grupy lub użytkownicy rozdzieleni `;` (np. `DOMENA\RIS-Admins;DOMENA\jan.kowalski`). Domyślnie lokalni Administratorzy i instalujący użytkownik.
-3. **Import z 4.x** – pojawia się, gdy na serwerze jest `Schedule.xml` z RIS 4.x. Zadania są importowane jako **wstrzymane** (sekretów nie importuje się – ustawisz je w połączeniach).
+3. **Import z 4.x** – pojawia się, gdy na serwerze działa RIS 4.x. Zadania są importowane jako **wstrzymane**, razem z sekretami – patrz [Przejście z RIS 4.x](#upgrade4x).
 
 Na koniec instalator zapisuje ustawienia, tworzy usługę **RIS5** (start automatyczny opóźniony, restart po awarii), uruchamia ją i sprawdza `/health`. Ostatnia strona pokazuje wynik i adres interfejsu.
 
@@ -94,9 +94,30 @@ Uruchom instalator nowej wersji. Zatrzymuje on usługę (trwające zadania są p
 
 *Ustawienia → Aplikacje → Recurring Integrations Scheduler 5*. Usługa i reguła zapory są usuwane. Dane w `%ProgramData%\RIS5` zostają, chyba że potwierdzisz ich usunięcie (deinstalacja cicha nigdy nie usuwa danych).
 
-## Przejście z RIS 4.x
+## Przejście z RIS 4.x {#upgrade4x}
 
-1. Zainstaluj RIS 5 obok 4.x z opcją **Import z 4.x** (lub później: `ris convert-schedule Schedule.xml -o jobs.json` i `ris db import jobs.json --paused`).
-2. Uzupełnij sekrety w **Połączenia** (sekrety 4.x nie są przenoszone).
-3. Uruchamiaj pojedyncze zadania przyciskiem **Uruchom teraz** na środowisku testowym i porównuj wyniki.
-4. Wstrzymaj zadania w 4.x i wznów je w RIS 5 (zbiorczo na liście zadań).
+RIS 5 instaluje się **obok** RIS 4.x na tym samym serwerze (osobna usługa, osobne dane i porty), a zadania przełącza się pojedynczo.
+
+**Przed instalacją**
+
+1. W kliencie RIS 4.x **zapisz harmonogram** (*Save schedule*). RIS 4.x trzyma zmiany wprowadzone w kliencie tylko w pamięci usługi – plik na dysku może być nieaktualny.
+2. Sprawdź, na jakim koncie działa usługa RIS 4.x – instalator podpowie to samo konto, bo ma ono dostęp do folderów integracji.
+
+**Instalacja**
+
+3. Uruchom instalator RIS 5 jako administrator na serwerze RIS 4.x. Instalator sam znajduje harmonogram 4.x (przez usługę 4.x i jej plik konfiguracji, więc także w niestandardowym folderze) i pokazuje stronę **Import z RIS 4.x**.
+4. Zadania są importowane jako **wstrzymane**. **Sekrety** 4.x (client secret, hasła SFTP) są odszyfrowywane na tym serwerze i zapisywane w RIS 5 – nie trafiają do żadnego pliku. Raport importu: `%ProgramData%\RIS5\import-4x\import.log` (lista ostrzeżeń i sekretów, których nie dało się przenieść) oraz `jobs.json` (konfiguracja bez sekretów).
+5. Instalacja cicha: `/IMPORT4X=1` (domyślnie). Dla konta domenowego podaj `/ACCOUNT` i `/PASSWORD` – bez nich użyte zostanie konto usługi 4.x, ale zwykłe konto domenowe wymaga hasła.
+
+**Sprawdzenie po instalacji**
+
+6. *Instancje D365* – **Testuj wszystkie**. Brakujące sekrety (wymienione w raporcie) wpisz ręcznie.
+7. *Zadania* (filtr *Wstrzymane*) – przejrzyj zadania. **Godzina startu**: RIS 4.x nie zapisywał godziny startu harmonogramów „co N minut/godzin”, więc RIS 5 przyjmuje 00:00 – popraw zadania, które miały ruszać o innej porze (można zbiorczo: *Edycja zbiorcza → Harmonogram*).
+8. Przy folderach i szablonach pakietów użyj **Sprawdź dostęp** – test wykonuje się kontem usługi RIS 5.
+
+**Przełączanie zadań**
+
+9. Dla każdego zadania (zadanie i jego **monitor razem**): zatrzymaj je w RIS 4.x → wznów w RIS 5 (*Wznów*) → po pierwszym uruchomieniu sprawdź historię. Monitor RIS 5 czyta pliki statusu zostawione przez import 4.x, więc nic, co jest w trakcie, nie zginie.
+10. **Uwaga:** wstrzymanie w RIS 4.x nie przetrwa restartu usługi 4.x (np. po łatkach Windows) – zadanie ruszy wtedy znowu i będzie działać równolegle z RIS 5. Po przełączeniu **usuń zadanie w RIS 4.x i zapisz harmonogram**, a po przełączeniu wszystkich zadań wyłącz usługę RIS 4.x (`Set-Service RecurringIntegrationsScheduler -StartupType Disabled`).
+
+Ręcznie (np. na innym serwerze): `ris db import-4x Schedule.xml --paused` (sekrety przenoszą się tylko na serwerze, na którym RIS 4.x je zaszyfrował; gdzie indziej ustaw je w *Instancjach D365*).

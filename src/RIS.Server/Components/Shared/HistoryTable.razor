@@ -1,7 +1,50 @@
 @using RIS.Server.Services
-@* Table of runs; a click opens the run details. *@
+@* Table of runs with a filter bar (text, group, result, error code, manual); a click opens the run details.
+   The filters stay when the runs are refreshed. *@
 
-<MudDataGrid T="RunDetails" Items="Runs" Dense="true" Hover="true" Striped="true" RowsPerPage="25" Elevation="0" Outlined="true"
+@if (Filterable && Runs.Count > 0)
+{
+    <div class="d-flex flex-wrap gap-3 align-center mb-2 ris-no-print ris-history-filters">
+        <MudTextField T="string" Value="_text" ValueChanged="SetTextAsync" Immediate="true" DebounceInterval="250" Clearable="true"
+                      Placeholder="@T["HistoryFilter_Search"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FilterList"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 300px; max-width: 360px" />
+        @if (ShowJob && _allGroups.Count > 1)
+        {
+            <MudSelect T="string" Label="@T["Job_Group"]" MultiSelection="true" SelectedValues="_groups" SelectedValuesChanged="SetGroups"
+                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 180px">
+                @foreach (var group in _allGroups)
+                {
+                    <MudSelectItem T="string" Value="group">@group</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        <MudSelect T="string" Label="@T["Run_Result"]" MultiSelection="true" SelectedValues="_results" SelectedValuesChanged="SetResults"
+                   MultiSelectionTextFunc="SelectedResults" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 170px">
+            @foreach (var result in _allResults)
+            {
+                <MudSelectItem T="string" Value="result">@T["Result_" + result]</MudSelectItem>
+            }
+        </MudSelect>
+        @if (_allCodes.Count > 0)
+        {
+            <MudSelect T="string" Label="@T["Run_ErrorCode"]" MultiSelection="true" SelectedValues="_codes" SelectedValuesChanged="SetCodes"
+                       MultiSelectionTextFunc="Selected" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Clearable="true" Style="min-width: 170px">
+                @foreach (var errorCode in _allCodes)
+                {
+                    <MudSelectItem T="string" Value="errorCode">@errorCode</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        <MudSwitch T="bool" Value="_manualOnly" ValueChanged="SetManualOnly" Color="Color.Primary" Label="@T["HistoryFilter_ManualOnly"]" />
+        @if (Active)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">@T["HistoryFilter_Shown", _filtered.Count, Runs.Count]</MudText>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.FilterListOff" OnClick="Clear">@T["HistoryFilter_Clear"]</MudButton>
+        }
+    </div>
+}
+
+<MudDataGrid T="RunDetails" Items="_filtered" Dense="true" Hover="true" Striped="true" RowsPerPage="25" Elevation="0" Outlined="true"
              RowClick="args => OnOpen.InvokeAsync(args.Item.RunId)" RowClass="ris-clickable" SortMode="SortMode.Single">
     <Columns>
         <PropertyColumn Property="r => r.FiredAtUtc" Title="@T["Run_Started"]">
@@ -25,7 +68,7 @@
             <CellTemplate>@if (context.Item.Manual) { <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" /> }</CellTemplate>
         </PropertyColumn>
     </Columns>
-    <NoRecordsContent><MudText Class="pa-4">@T["History_None"]</MudText></NoRecordsContent>
+    <NoRecordsContent><MudText Class="pa-4">@(Active ? T["HistoryFilter_NoMatch"] : T["History_None"])</MudText></NoRecordsContent>
     <PagerContent><MudDataGridPager T="RunDetails" PageSizeOptions="[25, 50, 100, 500]" /></PagerContent>
 </MudDataGrid>
 
@@ -33,5 +76,75 @@
     [Parameter] public IReadOnlyList<RunDetails> Runs { get; set; } = [];
     [Parameter] public EventCallback<string> OnOpen { get; set; }
     [Parameter] public bool ShowJob { get; set; } = true;
+    /// <summary>Filter bar above the table (off for short lists, e.g. the failures on the dashboard).</summary>
+    [Parameter] public bool Filterable { get; set; } = true;
     [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+
+    private string? _text;
+    private IReadOnlyCollection<string> _groups = [];
+    private IReadOnlyCollection<string> _results = [];
+    private IReadOnlyCollection<string> _codes = [];
+    private bool _manualOnly;
+    private IReadOnlyList<string> _allGroups = [];
+    private IReadOnlyList<string> _allResults = [];
+    private IReadOnlyList<string> _allCodes = [];
+    private IReadOnlyList<RunDetails> _filtered = [];
+    private IReadOnlyList<RunDetails>? _source;
+
+    private bool Active => !string.IsNullOrWhiteSpace(_text) || _groups.Count > 0 || _results.Count > 0 || _codes.Count > 0 || _manualOnly;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_source, Runs)) return;
+        _source = Runs;
+        _allGroups = Runs.Select(r => r.Group).Distinct().Order(StringComparer.CurrentCultureIgnoreCase).ToList();
+        _allResults = Runs.Select(r => r.Result).Where(r => !string.IsNullOrEmpty(r)).Distinct().Order().ToList();
+        _allCodes = Runs.Select(r => r.ErrorCode).OfType<string>().Distinct().Order().ToList();
+        Apply();
+    }
+
+    /// <summary>Runs shown by the filters (exports use them).</summary>
+    public IReadOnlyList<RunDetails> Filtered => _filtered;
+
+    private string Selected(IReadOnlyList<string> values) => values.Count == 0 ? string.Empty : values.Count == 1 ? values[0] : T["HistoryFilter_Selected", values.Count];
+
+    private string SelectedResults(IReadOnlyList<string> values) => values.Count == 0 ? string.Empty : values.Count == 1 ? T["Result_" + values[0]] : T["HistoryFilter_Selected", values.Count];
+
+    private Task SetTextAsync(string? value) { _text = value; Apply(); return Task.CompletedTask; }
+    private void SetGroups(IEnumerable<string>? values) { _groups = values?.ToList() ?? []; Apply(); }
+    private void SetResults(IEnumerable<string>? values) { _results = values?.ToList() ?? []; Apply(); }
+    private void SetCodes(IEnumerable<string>? values) { _codes = values?.ToList() ?? []; Apply(); }
+    private void SetManualOnly(bool value) { _manualOnly = value; Apply(); }
+
+    private void Clear()
+    {
+        _text = null;
+        _groups = _results = _codes = [];
+        _manualOnly = false;
+        Apply();
+    }
+
+    private void Apply()
+    {
+        if (!Active)
+        {
+            _filtered = Runs;
+            return;
+        }
+
+        var words = (_text ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _filtered = Runs.Where(r =>
+                (_groups.Count == 0 || _groups.Contains(r.Group)) &&
+                (_results.Count == 0 || _results.Contains(r.Result)) &&
+                (_codes.Count == 0 || (r.ErrorCode is { } code && _codes.Contains(code))) &&
+                (!_manualOnly || r.Manual) &&
+                words.All(w => Matches(r, w)))
+            .ToList();
+    }
+
+    private static bool Matches(RunDetails run, string word) =>
+        run.Job.Contains(word, StringComparison.CurrentCultureIgnoreCase) ||
+        (run.Summary?.Contains(word, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
+        (run.Error?.Contains(word, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
+        run.RunId.Contains(word, StringComparison.OrdinalIgnoreCase);
 }

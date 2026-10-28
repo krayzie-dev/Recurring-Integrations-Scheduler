@@ -29,7 +29,7 @@ else
 
     <MudText Typo="Typo.h6" Class="mt-4 mb-2 ris-no-print">@T["History_Runs", _runs.Count]</MudText>
     <div class="ris-no-print">
-        <HistoryTable Runs="_runs" OnOpen="id => _drawer!.OpenAsync(id)" />
+        <HistoryTable @ref="_table" Runs="_runs" OnOpen="id => _drawer!.OpenAsync(id)" />
     </div>
 }
 
@@ -43,6 +43,7 @@ else
     private Timeline? _timeline;
     private IReadOnlyList<RunDetails> _runs = [];
     private RunDrawer? _drawer;
+    private HistoryTable? _table;
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,5 +70,5 @@ else
     }
 
     private async Task ExportAsync(string format) =>
-        await ExportService.DownloadAsync(JS, Exports.History(_runs, format, Prefs.Zone));
+        await ExportService.DownloadAsync(JS, Exports.History(_table?.Filtered ?? _runs, format, Prefs.Zone));
 }

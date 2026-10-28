@@ -11,8 +11,8 @@
 
 | Symptom | Cause and fix |
 |---|---|
-| `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | The *Secret ID* was pasted instead of the secret **value**, or the secret expired. Create a new secret, paste the *Value* column in the connection and use **Test connection**. |
-| `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Wrong client id or tenant in the connection. |
+| `RIS-AUTH-001` … `AADSTS7000215: Invalid client secret` | The *Secret ID* was pasted instead of the secret **value**, or the secret expired. Create a new secret, paste the *Value* column in the D365 instance and use **Test connection**. |
+| `RIS-AUTH-001` … `AADSTS700016: Application … was not found` | Wrong client id or tenant in the D365 instance. |
 | `RIS-HTTP-001` 401/403 calling D365 | The application is not registered in D365 (*Microsoft Entra ID applications*) or its user lacks data management or company permissions. |
 | `RIS-IMP-001` … *exists and overwrite has not been specified* | The data project exists in D365 – turn on **Overwrite data project** in the job. |
 | After a RIS import a D365 recurring data job loads data into wrong fields | The overwrite import changed the project mapping. Use separate data projects for RIS and for recurring jobs; importing a file with the full column set restores the mapping. |
@@ -37,7 +37,7 @@ Every error starts with a code, e.g. `[RIS-EXP-001]`. The same code is in the ru
 | Code | Meaning | What to do |
 |---|---|---|
 | RIS-CFG-001 | Invalid configuration | The message lists the invalid settings (`ris validate`). |
-| RIS-CFG-002 | The job refers to a missing connection | Add the connection or fix the job. |
+| RIS-CFG-002 | The job refers to a missing D365 instance | Add the instance or fix the job. |
 | RIS-CFG-003 | Folder missing or not accessible | Check the path and the service account permissions. |
 | RIS-CFG-004 | Invalid package template | Export a new template from D365 or use the generated envelope. |
 | RIS-AUTH-001 | Entra ID sign-in failed | Tenant, client id, secret/certificate (expiry); AADSTS code in the message. |

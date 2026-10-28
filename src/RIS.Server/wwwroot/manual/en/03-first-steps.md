@@ -1,4 +1,4 @@
-# First steps: connections
+# First steps: D365 instances
 
 Before you create a job, RIS must be able to sign in to D365. It uses a **Microsoft Entra ID application** (formerly Azure AD) – RIS calls the D365 APIs on behalf of this application.
 
@@ -23,11 +23,11 @@ In D365: *System administration → Setup → Microsoft Entra ID applications* �
 
 For Upload and Download also enter this application in the **Application ID** field of the D365 recurring data job and tick *Enabled* – see [Examples](05-configuring-jobs.md#upload).
 
-## 3. The connection in RIS
+## 3. The D365 instance in RIS
 
-*Connections → New connection* (Admin role).
+*D365 instances → New D365 instance* (Admin role).
 
-![Connection form](img/connection-dialog.png)
+![D365 instance form](img/connection-dialog.png)
 
 | Field | Example | Notes |
 |---|---|---|
@@ -41,9 +41,9 @@ For Upload and Download also enter this application in the **Application ID** fi
 
 **Test connection** in the dialog checks the values in the form **before saving** – as the service account it signs in to Entra ID and reads the list of data projects. The result appears below the button.
 
-![Connection list with last test](img/connections.png)
+![D365 instance list with last test](img/connections.png)
 
-In the connection list the **Last test** column shows the result and time of the last test, the ⟲ button in a row tests one connection and **Test all** tests all of them. The number in *Used by jobs* opens the job list filtered by the connection. A connection used by jobs cannot be deleted – RIS shows which jobs use it.
+In the instance list the **Last test** column shows the result and time of the last test, the ⟲ button in a row tests one instance and **Test all** tests all of them. The number in *Used by jobs* opens the job list filtered by the instance. An instance used by jobs cannot be deleted – RIS shows which jobs use it.
 
 ## 4. SFTP servers (optional)
 

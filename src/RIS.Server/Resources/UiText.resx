@@ -9,7 +9,7 @@
   <data name="Nav_Jobs" xml:space="preserve"><value>Jobs</value></data>
   <data name="Nav_Plan" xml:space="preserve"><value>Schedule</value></data>
   <data name="Nav_History" xml:space="preserve"><value>History</value></data>
-  <data name="Nav_Connections" xml:space="preserve"><value>Connections</value></data>
+  <data name="Nav_Connections" xml:space="preserve"><value>D365 instances</value></data>
   <data name="Nav_SftpServers" xml:space="preserve"><value>SFTP servers</value></data>
   <data name="Nav_Audit" xml:space="preserve"><value>Audit</value></data>
   <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
@@ -76,7 +76,7 @@
   <data name="Job_Name" xml:space="preserve"><value>Job</value></data>
   <data name="Job_Group" xml:space="preserve"><value>Group</value></data>
   <data name="Job_Type" xml:space="preserve"><value>Type</value></data>
-  <data name="Job_Connection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Job_Connection" xml:space="preserve"><value>D365 instance</value></data>
   <data name="Job_Schedule" xml:space="preserve"><value>Schedule</value></data>
   <data name="Job_State" xml:space="preserve"><value>State</value></data>
   <data name="Job_NextRun" xml:space="preserve"><value>Next run</value></data>
@@ -137,7 +137,7 @@
   <data name="Run_Log" xml:space="preserve"><value>Job log</value></data>
   <data name="Run_NoLog" xml:space="preserve"><value>No log captured for this run.</value></data>
   <data name="Error_RIS_CFG_001" xml:space="preserve"><value>Job configuration is invalid; the message lists the invalid settings.</value></data>
-  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>Connection referenced by the job is not defined.</value></data>
+  <data name="Error_RIS_CFG_002" xml:space="preserve"><value>D365 instance referenced by the job is not defined.</value></data>
   <data name="Error_RIS_CFG_003" xml:space="preserve"><value>Folder does not exist or the service account has no access (UNC shares need a domain account).</value></data>
   <data name="Error_RIS_CFG_004" xml:space="preserve"><value>Package template is invalid (no Manifest.xml); export a fresh template from D365.</value></data>
   <data name="Error_RIS_AUTH_001" xml:space="preserve"><value>Authentication to Entra ID failed: check tenant, client id, secret or certificate expiry; the message contains the AADSTS code.</value></data>
@@ -179,7 +179,7 @@
   <data name="Gantt_Today" xml:space="preserve"><value>Today</value></data>
   <data name="Gantt_GroupBy" xml:space="preserve"><value>Group by</value></data>
   <data name="Gantt_GroupBy_Group" xml:space="preserve"><value>Group</value></data>
-  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Gantt_GroupBy_Connection" xml:space="preserve"><value>D365 instance</value></data>
   <data name="Gantt_GroupBy_Type" xml:space="preserve"><value>Type</value></data>
   <data name="Gantt_GroupBy_None" xml:space="preserve"><value>None</value></data>
   <data name="Gantt_Every" xml:space="preserve"><value>every {0}</value></data>
@@ -230,7 +230,7 @@
   <data name="Secret" xml:space="preserve"><value>Secret</value></data>
   <data name="Secret_Set" xml:space="preserve"><value>Set</value></data>
   <data name="Secret_Missing" xml:space="preserve"><value>Missing</value></data>
-  <data name="Connections_Add" xml:space="preserve"><value>New connection</value></data>
+  <data name="Connections_Add" xml:space="preserve"><value>New D365 instance</value></data>
   <data name="Sftp_Add" xml:space="preserve"><value>New SFTP server</value></data>
   <data name="Usage_Jobs" xml:space="preserve"><value>Used by jobs</value></data>
   <data name="Reference_NoRename" xml:space="preserve"><value>Renaming is not supported: create a new one and change the jobs.</value></data>
@@ -250,7 +250,7 @@
   <data name="Field_KeyPath" xml:space="preserve"><value>Key file</value></data>
   <data name="Field_ConnectTimeout" xml:space="preserve"><value>Connect timeout</value></data>
   <data name="Field_OperationTimeout" xml:space="preserve"><value>Operation timeout</value></data>
-  <data name="Field_Connection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Field_Connection" xml:space="preserve"><value>D365 instance</value></data>
   <data name="Field_Cron" xml:space="preserve"><value>Cron expression</value></data>
   <data name="Field_Interval" xml:space="preserve"><value>Interval</value></data>
   <data name="Field_StartAt" xml:space="preserve"><value>Start (reference point)</value></data>
@@ -346,7 +346,7 @@
   <data name="StepHelp_Files" xml:space="preserve"><value>Folders are read and written by the SERVICE ACCOUNT, not by you. Network shares (\\server\share) need a domain account or gMSA. Use "Check access" next to a folder.</value></data>
   <data name="StepHelp_Schedule" xml:space="preserve"><value>When the job runs. Times are in the selected time zone. The rhythm does not move after a service restart.</value></data>
   <data name="StepHelp_Advanced" xml:space="preserve"><value>Defaults work for most jobs. Change only when needed: waiting for D365, retries, behaviour after errors, custom OData actions.</value></data>
-  <data name="StepHelp_Summary" xml:space="preserve"><value>Check the description and the next runs. Saving validates the whole configuration (e.g. that the connection exists) and the job is scheduled at once.</value></data>
+  <data name="StepHelp_Summary" xml:space="preserve"><value>Check the description and the next runs. Saving validates the whole configuration (e.g. that the D365 instance exists) and the job is scheduled at once.</value></data>
   <data name="JobTypeHelp_Export" xml:space="preserve"><value>Starts an export of a data project in D365, waits until it finishes and downloads the package to a folder (optionally unzipped, timestamped, sent to SFTP).</value></data>
   <data name="JobTypeHelp_Import" xml:space="preserve"><value>Takes files from a folder (or SFTP), wraps them into a data package if needed and imports them into a data project. Pair it with an execution monitor to see the result in D365.</value></data>
   <data name="JobTypeHelp_Upload" xml:space="preserve"><value>Sends files from a folder to a recurring integration (enqueue). Pair it with a processing monitor to see whether D365 processed the message.</value></data>
@@ -376,7 +376,7 @@
   <data name="Wizard_NoProblems" xml:space="preserve"><value>No problems in this step.</value></data>
   <data name="Wizard_NoFields" xml:space="preserve"><value>Nothing to set in this step for this job type.</value></data>
   <data name="Wizard_Saved2" xml:space="preserve"><value>Saved {0} and {1}.</value></data>
-  <data name="Wizard_NewConnection" xml:space="preserve"><value>New connection</value></data>
+  <data name="Wizard_NewConnection" xml:space="preserve"><value>New D365 instance</value></data>
   <data name="Sched_Mode" xml:space="preserve"><value>How often</value></data>
   <data name="Sched_ModeDaily" xml:space="preserve"><value>Daily / on weekdays</value></data>
   <data name="Sched_ModeEvery" xml:space="preserve"><value>Every N minutes or hours</value></data>
@@ -408,8 +408,8 @@
   <data name="Enum_LegalEntitySource_FileName" xml:space="preserve"><value>Part of the file name</value></data>
   <data name="Enum_D365AuthMode_ClientSecret" xml:space="preserve"><value>Client secret</value></data>
   <data name="Enum_D365AuthMode_Certificate" xml:space="preserve"><value>Certificate</value></data>
-  <data name="FieldHint_Connection" xml:space="preserve"><value>D365 environment and app registration (Connections page)</value></data>
-  <data name="FieldHelp_Connection" xml:space="preserve"><value>Connection to the D365 environment: AOS URL, Entra ID tenant, client id and secret or certificate. Defined once on the Connections page and shared by jobs.</value></data>
+  <data name="FieldHint_Connection" xml:space="preserve"><value>D365 environment and app registration (D365 instances page)</value></data>
+  <data name="FieldHelp_Connection" xml:space="preserve"><value>D365 instance: AOS URL, Entra ID tenant, client id and secret or certificate. Defined once on the D365 instances page and shared by jobs.</value></data>
   <data name="FieldHint_DataProject" xml:space="preserve"><value>Name of the data project in D365 Data management</value></data>
   <data name="FieldHelp_DataProject" xml:space="preserve"><value>Data project (definition group) in D365 → Data management. Export: the project to export. Import: the project the package is imported into. Must exist in the environment.</value></data>
   <data name="FieldHint_ActivityId" xml:space="preserve"><value>Id of the recurring data job (GUID)</value></data>
@@ -574,8 +574,8 @@
   <data name="Reconnect_Retry" xml:space="preserve"><value>Retry</value></data>
   <data name="Reconnect_Rejected" xml:space="preserve"><value>The server was restarted. Reloading the page…</value></data>
   <data name="Reconnect_Reload" xml:space="preserve"><value>Reload</value></data>
-  <data name="Conn_InUseTitle" xml:space="preserve"><value>Connection {0} is in use</value></data>
-  <data name="Conn_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs use it. First change the connection in these jobs (or delete the jobs):</value></data>
+  <data name="Conn_InUseTitle" xml:space="preserve"><value>D365 instance {0} is in use</value></data>
+  <data name="Conn_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs use it. First change the D365 instance in these jobs (or delete the jobs):</value></data>
   <data name="Sftp_InUseTitle" xml:space="preserve"><value>SFTP server {0} is in use</value></data>
   <data name="Sftp_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs transfer files through it. First change the SFTP server in these jobs (or delete the jobs):</value></data>
   <data name="Reference_ShowJobs" xml:space="preserve"><value>Show jobs</value></data>
@@ -610,7 +610,7 @@
   <data name="Maint_Store_RunHistory" xml:space="preserve"><value>Run history</value></data>
   <data name="Maint_StoreHelp_RunHistory" xml:space="preserve"><value>Runs with summary, metrics and captured log (quartz.db): days for all / failed runs; newest runs per job / in total</value></data>
   <data name="Maint_Store_Audit" xml:space="preserve"><value>Audit</value></data>
-  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Configuration changes (ris.db, also connections and jobs)</value></data>
+  <data name="Maint_StoreHelp_Audit" xml:space="preserve"><value>Configuration changes (ris.db, also D365 instances and jobs)</value></data>
   <data name="Maint_Store_Logs" xml:space="preserve"><value>Log files</value></data>
   <data name="Maint_StoreHelp_Logs" xml:space="preserve"><value>Service log and one folder per job; folders of deleted jobs are removed when empty</value></data>
   <data name="Maint_Store_Backups" xml:space="preserve"><value>Backups</value></data>
@@ -632,4 +632,10 @@
   <data name="Help_Results" xml:space="preserve"><value>{0} chapter(s)</value></data>
   <data name="Help_Print" xml:space="preserve"><value>Print / PDF</value></data>
   <data name="Help_NotFound" xml:space="preserve"><value>This chapter does not exist.</value></data>
+  <data name="HistoryFilter_Search" xml:space="preserve"><value>Filter: job, summary, error code</value></data>
+  <data name="HistoryFilter_ManualOnly" xml:space="preserve"><value>Started manually</value></data>
+  <data name="HistoryFilter_Shown" xml:space="preserve"><value>Showing {0} of {1} runs</value></data>
+  <data name="HistoryFilter_Clear" xml:space="preserve"><value>Clear filters</value></data>
+  <data name="HistoryFilter_NoMatch" xml:space="preserve"><value>No runs match the filters.</value></data>
+  <data name="HistoryFilter_Selected" xml:space="preserve"><value>{0} selected</value></data>
 </root>

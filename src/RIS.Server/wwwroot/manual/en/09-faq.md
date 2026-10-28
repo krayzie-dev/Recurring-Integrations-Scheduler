@@ -7,7 +7,7 @@ Yes – it is a separate service (`RIS5`) with separate data. Import the 4.x job
 Encrypted in `ris.db` with the keys from `%ProgramData%\RIS5\keys`. They are never shown in the UI, returned by the API or written to the audit and logs. They can only be overwritten.
 
 ### How do I change an expiring secret?
-*Connections → edit the connection → paste the new value in Client secret → Test connection → Save*. Jobs use the new secret from their next run. The audit shows `*** (new value, hidden)`.
+*D365 instances → edit the instance → paste the new value in Client secret → Test connection → Save*. Jobs use the new secret from their next run. The audit shows `*** (new value, hidden)`.
 
 ### What happens when the server is down at a scheduled time?
 After start the service detects the missed run: with *Run once after start* it runs the job once, with *Skip* it waits for the next scheduled time. The schedule rhythm does not shift.
@@ -31,7 +31,7 @@ An import with *Overwrite data project* replaces the project mapping. Use separa
 In the job editor next to the folder field use **Check access** – the test creates and deletes a probe file as the service account and shows the account name.
 
 ### How do I pause all jobs during D365 maintenance?
-Job list → select all (or filter by connection) → *Pause* with a reason → after the maintenance *Resume*. A pause survives a service restart.
+Job list → select all (or filter by D365 instance) → *Pause* with a reason → after the maintenance *Resume*. A pause survives a service restart.
 
 ### How long is run history kept?
 30 days by default (failed runs 90 days), at most 1000 runs per job. Change it in `Ris:Retention` – see [Maintenance](07-maintenance.md).
