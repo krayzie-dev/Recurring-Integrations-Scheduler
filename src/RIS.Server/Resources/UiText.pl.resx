@@ -643,4 +643,14 @@
   <data name="Runs_In" xml:space="preserve"><value>Za</value></data>
   <data name="Runs_None" xml:space="preserve"><value>Brak zaplanowanych uruchomień</value></data>
   <data name="Flow_Optional" xml:space="preserve"><value>Krok opcjonalny</value></data>
+  <data name="Reconnect_Trying" xml:space="preserve"><value>Utracono połączenie z serwerem RIS. Trwa ponowne łączenie… (np. usługa jest restartowana)</value></data>
+  <data name="Reconnect_Failed" xml:space="preserve"><value>Nie udało się ponownie połączyć z serwerem.</value></data>
+  <data name="Reconnect_Retry" xml:space="preserve"><value>Spróbuj ponownie</value></data>
+  <data name="Reconnect_Rejected" xml:space="preserve"><value>Serwer został uruchomiony ponownie. Przeładowuję stronę…</value></data>
+  <data name="Reconnect_Reload" xml:space="preserve"><value>Przeładuj</value></data>
+  <data name="Conn_InUseTitle" xml:space="preserve"><value>Połączenie {0} jest używane</value></data>
+  <data name="Conn_InUseText" xml:space="preserve"><value>Nie można go usunąć, dopóki korzystają z niego zadania. Najpierw zmień połączenie w tych zadaniach (albo usuń te zadania):</value></data>
+  <data name="Sftp_InUseTitle" xml:space="preserve"><value>Serwer SFTP {0} jest używany</value></data>
+  <data name="Sftp_InUseText" xml:space="preserve"><value>Nie można go usunąć, dopóki zadania przesyłają przez niego pliki. Najpierw zmień serwer SFTP w tych zadaniach (albo usuń te zadania):</value></data>
+  <data name="Reference_ShowJobs" xml:space="preserve"><value>Pokaż zadania</value></data>
 </root>

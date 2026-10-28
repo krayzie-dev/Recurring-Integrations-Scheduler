@@ -11,6 +11,21 @@
 </head>
 <body>
     <Routes @rendermode="InteractiveServer" Preferences="_preferences" />
+    @* Replaces Blazor's default (white, text-less) reconnect dialog; Blazor toggles the components-reconnect-* classes. *@
+    <div id="components-reconnect-modal" class="ris-reconnect" data-nosnippet>
+        <div class="ris-reconnect-box">
+            <div class="ris-reconnect-spinner"></div>
+            <div class="ris-reconnect-state ris-reconnect-trying">@T["Reconnect_Trying"]</div>
+            <div class="ris-reconnect-state ris-reconnect-failed">
+                @T["Reconnect_Failed"]
+                <button type="button" onclick="Blazor.reconnect()">@T["Reconnect_Retry"]</button>
+            </div>
+            <div class="ris-reconnect-state ris-reconnect-rejected">
+                @T["Reconnect_Rejected"]
+                <button type="button" onclick="location.reload()">@T["Reconnect_Reload"]</button>
+            </div>
+        </div>
+    </div>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
     <script src="@Assets["js/ris.js"]"></script>
     <script src="_framework/blazor.web.js"></script>

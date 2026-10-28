@@ -38,3 +38,20 @@
 .ris-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ris-ellipsis { display: block; max-width: 640px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ris-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Reconnect dialog (App.razor): hidden until Blazor adds a components-reconnect-* class; colours follow the theme. */
+.ris-reconnect { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, .45); align-items: center; justify-content: center; }
+.ris-reconnect.components-reconnect-show, .ris-reconnect.components-reconnect-retrying, .ris-reconnect.components-reconnect-paused,
+.ris-reconnect.components-reconnect-failed, .ris-reconnect.components-reconnect-resume-failed, .ris-reconnect.components-reconnect-rejected { display: flex; }
+.ris-reconnect-box { min-width: 320px; max-width: 480px; padding: 24px 28px; border-radius: 8px; text-align: center; font-family: Roboto, Helvetica, Arial, sans-serif;
+    background: var(--mud-palette-surface, #fff); color: var(--mud-palette-text-primary, #222); box-shadow: 0 8px 32px rgba(0, 0, 0, .4); }
+.ris-reconnect-spinner { width: 36px; height: 36px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid var(--mud-palette-lines-default, #ccc);
+    border-top-color: var(--mud-palette-primary, #1976d2); animation: ris-spin 1s linear infinite; }
+@keyframes ris-spin { to { transform: rotate(360deg); } }
+.ris-reconnect-state { display: none; line-height: 1.5; }
+.ris-reconnect-state button { display: block; margin: 14px auto 0; padding: 4px 14px; border: 0; border-radius: 4px; cursor: pointer; background: var(--mud-palette-primary, #1976d2);
+    color: var(--mud-palette-primary-text, #fff); font: inherit; }
+.components-reconnect-show .ris-reconnect-trying, .components-reconnect-retrying .ris-reconnect-trying, .components-reconnect-paused .ris-reconnect-trying,
+.components-reconnect-failed .ris-reconnect-failed, .components-reconnect-resume-failed .ris-reconnect-failed,
+.components-reconnect-rejected .ris-reconnect-rejected { display: block; }
+.components-reconnect-failed .ris-reconnect-spinner, .components-reconnect-resume-failed .ris-reconnect-spinner { display: none; }

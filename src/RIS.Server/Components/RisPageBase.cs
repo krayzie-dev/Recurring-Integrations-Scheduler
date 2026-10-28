@@ -125,7 +125,10 @@ public abstract class RisPageBase : ComponentBase, IDisposable
         return results.All(r => r.Succeeded);
     }
 
-    protected async Task<bool> ConfirmAsync(string title, string message, string confirm, Color colour, IEnumerable<JobRef>? items = null)
+    protected Task<bool> ConfirmAsync(string title, string message, string confirm, Color colour, IEnumerable<JobRef>? items = null) =>
+        ConfirmAsync(title, message, confirm, colour, items?.Select(i => i.Key).ToList() ?? []);
+
+    protected async Task<bool> ConfirmAsync(string title, string message, string confirm, Color colour, IReadOnlyList<string> items)
     {
         var dialog = await Dialogs.ShowAsync<Shared.ConfirmDialog>(title, new DialogParameters<Shared.ConfirmDialog>
         {
@@ -133,7 +136,7 @@ public abstract class RisPageBase : ComponentBase, IDisposable
             { d => d.Message, message },
             { d => d.ConfirmText, confirm },
             { d => d.ConfirmColor, colour },
-            { d => d.Items, items?.Select(i => i.Key).ToList() ?? [] }
+            { d => d.Items, items }
         }, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
         var result = await dialog.Result;
         return result is { Canceled: false };

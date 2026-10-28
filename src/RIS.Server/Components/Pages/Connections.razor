@@ -172,6 +172,16 @@
 
     private async Task DeleteAsync(D365ConnectionOptions connection)
     {
+        // Used by jobs: explain and offer the filtered job list instead of a validation error after the attempt.
+        var jobs = UsedBy(connection.Name);
+        if (jobs.Count > 0)
+        {
+            if (await ConfirmAsync(T["Conn_InUseTitle", connection.Name], T["Conn_InUseText"], T["Reference_ShowJobs"], Color.Primary, jobs))
+            {
+                Navigation.NavigateTo($"/jobs?connection={Uri.EscapeDataString(connection.Name)}");
+            }
+            return;
+        }
         if (!await ConfirmAsync(T["Reference_DeleteTitle", connection.Name], T["Reference_DeleteText"], T["Common_Delete"], Color.Error)) return;
         try
         {

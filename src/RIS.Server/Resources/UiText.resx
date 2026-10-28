@@ -569,4 +569,14 @@
   <data name="Runs_In" xml:space="preserve"><value>In</value></data>
   <data name="Runs_None" xml:space="preserve"><value>No runs planned</value></data>
   <data name="Flow_Optional" xml:space="preserve"><value>Optional step</value></data>
+  <data name="Reconnect_Trying" xml:space="preserve"><value>Connection to the RIS server was lost. Reconnecting… (e.g. the service is restarting)</value></data>
+  <data name="Reconnect_Failed" xml:space="preserve"><value>Could not reconnect to the server.</value></data>
+  <data name="Reconnect_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="Reconnect_Rejected" xml:space="preserve"><value>The server was restarted. Reloading the page…</value></data>
+  <data name="Reconnect_Reload" xml:space="preserve"><value>Reload</value></data>
+  <data name="Conn_InUseTitle" xml:space="preserve"><value>Connection {0} is in use</value></data>
+  <data name="Conn_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs use it. First change the connection in these jobs (or delete the jobs):</value></data>
+  <data name="Sftp_InUseTitle" xml:space="preserve"><value>SFTP server {0} is in use</value></data>
+  <data name="Sftp_InUseText" xml:space="preserve"><value>It cannot be deleted while jobs transfer files through it. First change the SFTP server in these jobs (or delete the jobs):</value></data>
+  <data name="Reference_ShowJobs" xml:space="preserve"><value>Show jobs</value></data>
 </root>

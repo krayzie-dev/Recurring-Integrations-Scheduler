@@ -154,6 +154,13 @@
 
     private async Task DeleteAsync(SftpServerOptions server)
     {
+        // Used by jobs: explain instead of a validation error after the attempt.
+        var jobs = UsedBy(server.Name);
+        if (jobs.Count > 0)
+        {
+            await ConfirmAsync(T["Sftp_InUseTitle", server.Name], T["Sftp_InUseText"], T["Common_Close"], Color.Primary, jobs);
+            return;
+        }
         if (!await ConfirmAsync(T["Reference_DeleteTitle", server.Name], T["Reference_DeleteText"], T["Common_Delete"], Color.Error)) return;
         try
         {

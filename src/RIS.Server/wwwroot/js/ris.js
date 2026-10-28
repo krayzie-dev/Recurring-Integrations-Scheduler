@@ -71,3 +71,15 @@ window.ris = {
 
     print: () => window.print()
 };
+
+// The server no longer knows this page's session (service restarted, e.g. after an upgrade): reload instead of asking.
+(() => {
+    const watch = () => {
+        const modal = document.getElementById("components-reconnect-modal");
+        if (!modal) return;
+        new MutationObserver(() => {
+            if (modal.classList.contains("components-reconnect-rejected")) setTimeout(() => location.reload(), 1500);
+        }).observe(modal, { attributes: true, attributeFilter: ["class"] });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch); else watch();
+})();
