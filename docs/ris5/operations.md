@@ -177,7 +177,9 @@ Secret keys are protected by DPAPI of the machine by default and cannot be read 
   | 10000 + 100 × category + number | Error with a RIS code: categories CFG=1, AUTH=2, HTTP=3, EXP=4, IMP=5, UPL=6, DWN=7, MON=8, FS=9, SFTP=10, GEN=11 – e.g. RIS-HTTP-001 = 10301, RIS-IMP-004 = 10504 |
   | 3000 / 4000 | Other warnings / errors |
 
-  Versions up to 5.0.0-local.13 wrote to the Application log; the setup moves the source to RIS5.
+  Versions up to 5.0.0-local.13 wrote to the Application log; the setup moves the source to RIS5. Windows applies the
+  move (and the 20 MB size) after the next restart of the computer; until then the entries, already with the new ids,
+  still appear in Application.
 - `GET /api/v1/jobs`: `consecutiveFailures` and `lastResult` per job.
 
 ## Troubleshooting

@@ -12,6 +12,7 @@ else
     var height = GanttLayout.HeaderHeight + rows.Sum(r => r.IsGroup ? GanttLayout.GroupHeight : GanttLayout.RowHeight) + 4;
     var width = geo.Width;
     var now = DateTimeOffset.UtcNow;
+    var days = geo.Days();
     <div class="gantt-scroll">
         <svg id="@Id" class="gantt" width="@F(width)" height="@F(height)" viewBox="0 0 @F(width) @F(height)" xmlns="http://www.w3.org/2000/svg">
             @* Header: days and hours *@
@@ -21,13 +22,13 @@ else
                 <line class="grid" x1="@F(x)" x2="@F(x)" y1="@F(GanttLayout.HeaderHeight - 6)" y2="@F(height)" />
                 <g><text class="axis" x="@F(x + 2)" y="@F(GanttLayout.HeaderHeight - 10)">@geo.Label(hour, "HH")</text></g>
             }
-            @foreach (var day in geo.Days())
+            @foreach (var day in days)
             {
                 var x = geo.X(day);
                 <line class="grid-day" x1="@F(x)" x2="@F(x)" y1="0" y2="@F(height)" />
                 <g><text x="@F(x + 4)" y="14" font-weight="600">@geo.Label(day, DayFormat)</text></g>
             }
-            @if (geo.Days().Count == 0 || geo.Days()[0] > Timeline.FromUtc)
+            @if (days.Count == 0 || days[0] > Timeline.FromUtc)
             {
                 <g><text x="@F(GanttLayout.LabelWidth + 4)" y="14" font-weight="600">@geo.Label(Timeline.FromUtc, DayFormat)</text></g>
             }

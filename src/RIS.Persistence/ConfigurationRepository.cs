@@ -126,9 +126,10 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
     public Task SaveJobsAsync(IReadOnlyList<JobChange> changes, string? user, CancellationToken cancellationToken = default) =>
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
+            var entities = await JobsByKeyAsync(db, changes.Select(c => c.OriginalGroup), cancellationToken);
             foreach (var change in changes)
             {
-                var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == change.OriginalGroup && j.Name == change.OriginalName, cancellationToken)
+                var entity = entities.GetValueOrDefault((change.OriginalGroup, change.OriginalName))
                              ?? throw NotFound("Job", $"{change.OriginalGroup}.{change.OriginalName}");
                 var before = JobJson(ToDefinition(entity));
                 var originalKey = $"{change.OriginalGroup}.{change.OriginalName}";
@@ -241,13 +242,14 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
                 Replace(configuration.SftpServers, s => s.Name, ToOptions(entity));
             }
 
+            var existingJobs = await JobsByKeyAsync(db, imported.Jobs.Select(j => j.Group), cancellationToken);
             foreach (var job in imported.Jobs)
             {
-                var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == job.Group && j.Name == job.Name, cancellationToken);
-                if (entity is null)
+                if (!existingJobs.TryGetValue((job.Group, job.Name), out var entity))
                 {
                     entity = new JobDefinitionEntity { Name = job.Name, Group = job.Group, ScheduleJson = "", OptionsJson = "", Hash = "" };
                     db.Jobs.Add(entity);
+                    existingJobs[(job.Group, job.Name)] = entity;
                 }
                 Apply(entity, job);
                 Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
@@ -281,6 +283,14 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         var total = await query.CountAsync(cancellationToken);
         var items = await query.OrderByDescending(a => a.Id).Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 50_000)).ToListAsync(cancellationToken);
         return (items, total);
+    }
+
+    /// <summary>Tracked job entities of the given groups by (group, name), exact match as in the database.</summary>
+    private static async Task<Dictionary<(string Group, string Name), JobDefinitionEntity>> JobsByKeyAsync(RisDbContext db, IEnumerable<string> groups,
+        CancellationToken cancellationToken)
+    {
+        var wanted = groups.Distinct(StringComparer.Ordinal).ToList();
+        return (await db.Jobs.Where(j => wanted.Contains(j.Group)).ToListAsync(cancellationToken)).ToDictionary(j => (j.Group, j.Name));
     }
 
     /// <summary>Number of audit entries and the oldest one (maintenance page).</summary>

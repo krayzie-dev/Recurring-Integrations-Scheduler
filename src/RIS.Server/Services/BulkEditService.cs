@@ -84,13 +84,12 @@ public sealed class BulkEditService(IRisConfigurationStore store, ConfigurationR
 
         if (result.Count > 0)
         {
+            var originals = result.Select(r => $"{r.OriginalGroup}.{r.OriginalName}").ToHashSet(StringComparer.OrdinalIgnoreCase);
             var proposed = new RisConfiguration
             {
                 Connections = configuration.Connections,
                 SftpServers = configuration.SftpServers,
-                Jobs = configuration.Jobs
-                    .Where(j => !result.Any(r => string.Equals($"{r.OriginalGroup}.{r.OriginalName}", j.Key, StringComparison.OrdinalIgnoreCase)))
-                    .Concat(result.Select(r => r.Job)).ToList()
+                Jobs = configuration.Jobs.Where(j => !originals.Contains(j.Key)).Concat(result.Select(r => r.Job)).ToList()
             };
             var keys = result.Select(r => r.Job.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             // Only errors of the edited jobs (or global ones, e.g. duplicate keys) block the edit.

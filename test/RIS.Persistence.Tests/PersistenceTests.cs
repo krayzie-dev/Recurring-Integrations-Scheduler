@@ -252,6 +252,19 @@ public sealed class PersistenceTests
     }
 
     [TestMethod]
+    public async Task Import_SameJobTwice_LastOneWins_NoDuplicate()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+        var first = Job();
+        var second = Job("0 0 5 * * ?");
+        await _repository.ImportAsync(new RisConfiguration { Jobs = [first, second] }, "tester");
+
+        var jobs = (await _repository.LoadAsync()).Jobs;
+        Assert.AreEqual(1, jobs.Count);
+        Assert.AreEqual("0 0 5 * * ?", jobs[0].Schedule.Cron);
+    }
+
+    [TestMethod]
     public async Task DeleteJobs_OneTransaction_RejectedAsAWhole()
     {
         await _repository.SaveConnectionAsync(Connection(), "tester");
