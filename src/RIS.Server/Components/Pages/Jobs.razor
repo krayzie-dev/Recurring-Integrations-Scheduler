@@ -85,7 +85,8 @@
 }
 
 <MudDataGrid T="JobSummary" Items="_filtered" @bind-SelectedItems="_selected" MultiSelection="true" Dense="true" Hover="true" Striped="true"
-             SortMode="SortMode.Multiple" Loading="Loading" RowsPerPage="50" Elevation="0" Outlined="true" Comparer="_comparer">
+             SortMode="SortMode.Multiple" Loading="Loading" RowsPerPage="50" Elevation="0" Outlined="true" Comparer="_comparer"
+             RowClassFunc="@((job, _) => _selected.Contains(job, _comparer) ? "ris-row-selected" : null)">
     <Columns>
         <SelectColumn T="JobSummary" />
         <PropertyColumn Property="j => j.Key" Title="@T["Job_Name"]" CellClass="ris-wrap">

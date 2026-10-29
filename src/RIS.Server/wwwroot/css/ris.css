@@ -132,3 +132,26 @@
 .ris-filter-bar > .ris-filter-search { flex: 1 1 220px; max-width: 360px; }
 .ris-filter-bar .mud-input-control, .ris-toolbar .mud-input-control { margin-top: 0 !important; }
 .ris-nowrap, .mud-simple-table td.ris-nowrap { white-space: nowrap !important; word-break: normal; }
+
+/* Sticky columns (Actions) take part in stripes, hover and selection: an opaque surface with the row tint on top,
+   instead of MudBlazor's fixed gray background. */
+.mud-data-grid .mud-table-body .mud-table-cell.sticky-left,
+.mud-data-grid .mud-table-body .mud-table-cell.sticky-right {
+    background-color: var(--mud-palette-surface);
+    background-image: linear-gradient(var(--ris-row-tint, transparent), var(--ris-row-tint, transparent));
+}
+.mud-table-striped .mud-table-body .mud-table-row:nth-of-type(odd) { --ris-row-tint: var(--mud-palette-table-striped); }
+.mud-data-grid .mud-table-body .mud-table-row.ris-row-selected,
+.mud-data-grid .mud-table-body .mud-table-row.ris-row-selected:nth-of-type(odd) {
+    --ris-row-tint: rgba(var(--mud-palette-primary-rgb), 0.12);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.12) !important;
+}
+.mud-data-grid .mud-table-body .mud-table-row.ris-row-selected > .mud-table-cell:first-child { box-shadow: inset 3px 0 0 var(--mud-palette-primary); }
+@media (hover: hover) and (pointer: fine) {
+    .mud-table-hover .mud-table-body .mud-table-row:hover,
+    .mud-table-hover .mud-table-body .mud-table-row:nth-of-type(odd):hover { --ris-row-tint: var(--mud-palette-table-hover); }
+    .mud-data-grid.mud-table-hover .mud-table-body .mud-table-row.ris-row-selected:hover {
+        --ris-row-tint: rgba(var(--mud-palette-primary-rgb), 0.2);
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.2) !important;
+    }
+}

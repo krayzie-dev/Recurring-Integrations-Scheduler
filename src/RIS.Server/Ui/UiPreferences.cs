@@ -125,7 +125,11 @@ public static class RisTheme
             Warning = "#E65100",
             Error = "#C62828",
             Info = "#0277BD",
-            Background = "#F5F7FA"
+            Background = "#F5F7FA",
+            // Rows: faint stripes, a clearly different hovered row (tint of the primary colour).
+            TableStriped = "rgba(0,0,0,0.025)",
+            TableHover = "rgba(21,101,192,0.08)",
+            TableLines = "rgba(0,0,0,0.08)"
         },
         PaletteDark = new PaletteDark
         {
@@ -138,7 +142,11 @@ public static class RisTheme
             Info = "#4FC3F7",
             Background = "#12151C",
             Surface = "#1C212B",
-            DrawerBackground = "#171B23"
+            DrawerBackground = "#171B23",
+            // MudBlazor's dark defaults make stripes almost as bright as the hovered row.
+            TableStriped = "rgba(255,255,255,0.03)",
+            TableHover = "rgba(100,181,246,0.14)",
+            TableLines = "rgba(255,255,255,0.07)"
         },
         LayoutProperties = new LayoutProperties { DefaultBorderRadius = "6px" }
     };
