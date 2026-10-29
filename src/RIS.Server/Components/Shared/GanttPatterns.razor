@@ -1,0 +1,14 @@
+@* Hatch patterns of a chart (interrupted runs, paused jobs); ids are per chart, so several charts on a page do not clash. *@
+<defs>
+    <pattern id="@(Id)-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect class="hatch-bg" width="5" height="5" />
+        <rect class="hatch-line" width="2" height="5" />
+    </pattern>
+    <pattern id="@(Id)-phatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect class="phatch-line" width="1.5" height="6" />
+    </pattern>
+</defs>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+}

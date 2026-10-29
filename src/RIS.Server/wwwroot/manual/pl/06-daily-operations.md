@@ -43,18 +43,23 @@ Kliknięcie uruchomienia (w historii, na wykresie, na pulpicie) otwiera panel ze
 
 Wykres Gantta zaplanowanych uruchomień na dzień lub tydzień:
 
-- **Wypełnienie paska** – stan (zaplanowane, wstrzymane – przerywane), **ramka** – typ zadania (legenda pod paskiem narzędzi).
-- Zadania uruchamiane częściej niż co 30 minut są pokazane jako **pas** („co 5 min”).
+- **Styl wykresów** wybierasz ikoną palety w górnym pasku (zapamiętywany dla Ciebie, jak motyw). Legenda pod paskiem narzędzi zawsze opisuje wybrany styl:
+  - **A · Neon** – kolor paska = wynik; typ zadania to znacznik przy nazwie; pominięte uruchomienia to kropki.
+  - **B · Kolor typu, kształt wyniku** – kolor paska = typ zadania; błąd ma czerwoną krawędź, przerwane są kreskowane, pominięte to niski pasek.
+  - **C · Mapa cieplna** – kafelki (np. po 15 min) w kolorze najgorszego wyniku, nasycenie według liczby uruchomień; kliknięcie otwiera najnowsze uruchomienie z kafelka.
+  - **D · Spokój i alarm** – wszystko cienkie i stonowane, błędy grube i czerwone z licznikiem serii (×4) i kropką przy nazwie.
+- Wstrzymane zadania są kreskowane we wszystkich stylach.
+- Zadania częste (i uruchomienia, które przy danej skali by się stykały) są pokazane jako **seria** („co 5 min”) – w zależności od stylu grzebień, pas albo linia.
 - Długość paska to mediana czasu trwania ostatnich uruchomień.
 - **Skala**: 🔍− / 🔍+ zmniejsza lub zwiększa szerokość osi czasu (od 25% do 1200%), kliknięcie wartości procentowej wraca do 100%, ⛶ dopasowuje cały dzień lub tydzień do szerokości strony (tak otwiera się wykres). Opisy godzin zagęszczają się przy większej skali.
-- Grupowanie: grupa, instancja D365, typ. Linia czerwona = teraz. Kliknięcie paska otwiera zadanie.
+- Grupowanie: grupa, instancja D365, typ. Pionowa linia w kolorze tekstu = teraz (czerwień jest zarezerwowana dla błędów). Kliknięcie paska otwiera zadanie.
 - Eksport: PNG, PDF (wydruk), Excel, CSV.
 
 ## Historia uruchomień
 
 ![Historia tygodnia](img/history.png)
 
-Ten sam wykres dla rzeczywistych uruchomień: kolor = wynik (sukces, błąd, przerwane, w trakcie), ▲ = przegapiony termin, ramka = typ. Uruchomienia, które przy danej skali nachodzą na siebie, są łączone w jeden pasek z liczbą („12 uruchomień”). Pod wykresem tabela uruchomień ze stronicowaniem; przełącznik *Tylko błędy*. Nad tabelą są **filtry**: tekst (zadanie, podsumowanie, treść błędu, identyfikator uruchomienia), grupa, wynik, kod błędu i *Uruchomione ręcznie*. Licznik pokazuje, ile uruchomień pasuje („Pokazano 28 z 291”), a eksport do Excela i CSV obejmuje tylko przefiltrowane uruchomienia. Te same filtry są w zakładce *Historia* na stronie zadania.
+Ten sam wykres dla rzeczywistych uruchomień, w wybranym stylu (patrz wyżej): sukces, błąd, przerwane, w trakcie, pominięte (np. „brak plików”), ▲ = przegapiony termin. Uruchomienia, które przy danej skali nachodzą na siebie, są łączone w jedną serię z liczbą w podpowiedzi („12 uruchomień”); pominięte nie wyglądają już jak jedno długie uruchomienie. Pod wykresem tabela uruchomień ze stronicowaniem; przełącznik *Tylko błędy*. Nad tabelą są **filtry**: tekst (zadanie, podsumowanie, treść błędu, identyfikator uruchomienia), grupa, wynik, kod błędu i *Uruchomione ręcznie*. Licznik pokazuje, ile uruchomień pasuje („Pokazano 28 z 291”), a eksport do Excela i CSV obejmuje tylko przefiltrowane uruchomienia. Te same filtry są w zakładce *Historia* na stronie zadania.
 
 ![Filtry listy uruchomień: tekst „Sales” i wynik „Błąd”](img/history-filter.png)
 

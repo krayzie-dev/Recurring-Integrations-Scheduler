@@ -20,11 +20,25 @@ public enum DisplayTimeZone
     Utc
 }
 
+/// <summary>How the History and Schedule charts colour runs (each user picks one).</summary>
+public enum ChartStyle
+{
+    /// <summary>Colour = result, vivid; job type as a mark next to the name.</summary>
+    Neon,
+    /// <summary>Colour = job type; the result is the shape (red edge, hatching, low bar).</summary>
+    TypeColor,
+    /// <summary>Tiles per time slot, coloured by the worst result.</summary>
+    Heatmap,
+    /// <summary>Quiet thin marks; only failures stand out.</summary>
+    Calm
+}
+
 /// <summary>
 /// Per-user UI settings, kept in the "ris.prefs" cookie (written by JS without a page reload).
 /// The language is in the standard ASP.NET Core culture cookie.
 /// </summary>
-public sealed record UiPreferences(ThemeMode Theme = ThemeMode.System, DisplayTimeZone TimeZone = DisplayTimeZone.Server)
+public sealed record UiPreferences(ThemeMode Theme = ThemeMode.System, DisplayTimeZone TimeZone = DisplayTimeZone.Server,
+    ChartStyle Chart = ChartStyle.Neon)
 {
     public const string CookieName = "ris.prefs";
 
@@ -41,10 +55,11 @@ public sealed record UiPreferences(ThemeMode Theme = ThemeMode.System, DisplayTi
         var parts = (value ?? string.Empty).Split('|');
         var theme = parts.Length > 0 && Enum.TryParse<ThemeMode>(parts[0], out var t) ? t : ThemeMode.System;
         var zone = parts.Length > 1 && Enum.TryParse<DisplayTimeZone>(parts[1], out var z) ? z : DisplayTimeZone.Server;
-        return new UiPreferences(theme, zone);
+        var chart = parts.Length > 2 && Enum.TryParse<ChartStyle>(parts[2], out var c) && Enum.IsDefined(c) ? c : ChartStyle.Neon;
+        return new UiPreferences(theme, zone, chart);
     }
 
-    public string ToCookie() => $"{Theme}|{TimeZone}";
+    public string ToCookie() => $"{Theme}|{TimeZone}|{Chart}";
 
     public DateTimeOffset ToDisplay(DateTimeOffset value) =>
         TimeZone == DisplayTimeZone.Utc ? value.ToUniversalTime() : TimeZoneInfo.ConvertTime(value, TimeZoneInfo.Local);
@@ -99,12 +114,12 @@ public static class RisCultures
             return Results.LocalRedirect(string.IsNullOrEmpty(redirect) || !redirect.StartsWith('/') || redirect.StartsWith("//") ? "/" : redirect);
         }).RequireAuthorization();
 
-    /// <summary>Sets UI preferences (theme, displayed time zone) in the cookie; usable as a link, e.g. /prefs/set?theme=Dark.</summary>
+    /// <summary>Sets UI preferences (theme, displayed time zone, chart style) in the cookie; usable as a link, e.g. /prefs/set?theme=Dark&amp;chart=Heatmap.</summary>
     public static void MapPreferencesEndpoint(this IEndpointRouteBuilder app) =>
-        app.MapGet("/prefs/set", (ThemeMode? theme, DisplayTimeZone? zone, string? redirect, HttpContext context) =>
+        app.MapGet("/prefs/set", (ThemeMode? theme, DisplayTimeZone? zone, ChartStyle? chart, string? redirect, HttpContext context) =>
         {
             var current = UiPreferences.FromCookie(context.Request.Cookies[UiPreferences.CookieName]);
-            var updated = current with { Theme = theme ?? current.Theme, TimeZone = zone ?? current.TimeZone };
+            var updated = current with { Theme = theme ?? current.Theme, TimeZone = zone ?? current.TimeZone, Chart = chart ?? current.Chart };
             context.Response.Cookies.Append(UiPreferences.CookieName, updated.ToCookie(),
                 new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1), IsEssential = true, SameSite = SameSiteMode.Lax });
             return Results.LocalRedirect(string.IsNullOrEmpty(redirect) || !redirect.StartsWith('/') || redirect.StartsWith("//") ? "/" : redirect);

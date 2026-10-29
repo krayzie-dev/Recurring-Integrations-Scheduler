@@ -4,7 +4,8 @@
 .ris-clickable { cursor: pointer; }
 .ris-log { max-height: 60vh; overflow: auto; padding: 8px; border-radius: 4px; background: var(--mud-palette-background-gray); }
 
-/* Gantt (SVG): colours follow the MudBlazor theme, so light and dark mode need no extra code. */
+/* Gantt (SVG). Shapes come from GanttPainter per chart style (Neon, TypeColor, Heatmap, Calm); colours are variables per theme
+   (the chart element has is-dark / is-light), so the PNG export, which copies computed styles, keeps them. */
 .gantt-scroll { overflow-x: auto; }
 .gantt text { font-family: var(--mud-typography-default-family); font-size: 11px; fill: var(--mud-palette-text-primary); }
 .gantt .axis { fill: var(--mud-palette-text-secondary); }
@@ -13,19 +14,56 @@
 .gantt .row-alt { fill: var(--mud-palette-action-default-hover); }
 .gantt .group { fill: var(--mud-palette-background-gray); }
 .gantt .group-label { font-weight: 600; }
-.gantt .now { stroke: var(--mud-palette-error); stroke-width: 2; }
-.gantt .bar { stroke-width: 1; }
-.gantt .bar.planned { fill: var(--mud-palette-primary); fill-opacity: .85; }
-.gantt .bar.paused { fill: var(--mud-palette-text-disabled); fill-opacity: .5; stroke: var(--mud-palette-text-secondary); stroke-dasharray: 3 2; }
-.gantt .bar.band { fill: var(--mud-palette-primary); fill-opacity: .35; }
-.gantt .bar.band.paused { fill: var(--mud-palette-text-disabled); fill-opacity: .25; }
-.gantt .bar.succeeded { fill: var(--mud-palette-success); }
-.gantt .bar.partial { fill: var(--mud-palette-warning); }
-.gantt .bar.failed { fill: var(--mud-palette-error); }
-.gantt .bar.cancelled, .gantt .bar.skipped, .gantt .bar.vetoed { fill: var(--mud-palette-text-disabled); }
-.gantt .bar.running { fill: var(--mud-palette-info); }
-.gantt .misfire { fill: var(--mud-palette-warning); stroke: var(--mud-palette-surface); stroke-width: 1; }
-.gantt .bar:hover, .gantt .misfire:hover { stroke: var(--mud-palette-text-primary); stroke-width: 1.5; cursor: pointer; }
+.gantt.is-light {
+    --g-ok: #12A150; --g-fail: #E5173F; --g-run: #0A84D6; --g-int: #E59A00; --g-skip: #AEB6C4; --g-miss: #F07800;
+    --ris-type-export: #9333EA; --ris-type-import: #EA6A0A; --ris-type-upload: #C99A00;
+    --ris-type-download: #DB2777; --ris-type-executionmonitor: #0F9E94; --ris-type-processingmonitor: #4F5BD5;
+}
+.gantt.is-dark {
+    --g-ok: #2EE59D; --g-fail: #FF4D6D; --g-run: #3DB8FF; --g-int: #FFC23D; --g-skip: #566074; --g-miss: #FF9F43;
+    --ris-type-export: #C77DFF; --ris-type-import: #FF9A3C; --ris-type-upload: #F9D923;
+    --ris-type-download: #FF6FB5; --ris-type-executionmonitor: #22D3C5; --ris-type-processingmonitor: #8B9CFF;
+}
+/* "Now" in the text colour: red is for failures. */
+.gantt .now { stroke: var(--mud-palette-text-primary); stroke-width: 1.5; }
+.gantt .succeeded { fill: var(--g-ok); }
+.gantt .failed { fill: var(--g-fail); }
+.gantt .partial, .gantt .cancelled, .gantt .vetoed { fill: var(--g-int); }
+.gantt .running { fill: var(--g-run); }
+.gantt .skipped { fill: var(--g-skip); }
+.gantt .missed { fill: var(--g-miss); }
+.gantt .tf { fill: var(--ris-type); }
+.gantt .ts { stroke: var(--ris-type); }
+.gantt .hatch-bg { fill: var(--g-int); fill-opacity: .35; }
+.gantt .hatch-line { fill: var(--g-int); }
+.gantt .phatch-line { fill: var(--g-skip); }
+.gantt .faded { opacity: .4; }
+.gantt.is-dark .glow { filter: drop-shadow(0 0 3px var(--g-fail)); }
+.gantt.is-dark .glow-run { filter: drop-shadow(0 0 4px var(--g-run)); }
+@keyframes ris-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.gantt .pulse { animation: ris-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .gantt .pulse { animation: none; } }
+/* Neon: skipped runs are dots, frequent planned jobs a thin comb */
+.gantt .dots { stroke: var(--g-skip); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: .1 4.5; fill: none; }
+.gantt .comb { stroke-width: 2; stroke-linecap: round; opacity: .55; }
+.gantt .band-label { fill: var(--mud-palette-text-secondary); font-size: 10px; text-anchor: end; }
+/* Type colour: result as a shape */
+.gantt .band-fill { fill-opacity: .28; }
+.gantt .band-edge { fill: none; stroke-width: 1; stroke-dasharray: 4 3; }
+.gantt .low { fill-opacity: .4; }
+.gantt .edge.failed { fill: var(--g-fail); }
+.gantt .edge.partial { fill: var(--g-int); }
+/* Heatmap */
+.gantt .tile-count { fill: var(--mud-palette-surface); font-size: 9.5px; font-weight: 600; text-anchor: middle; }
+/* Calm: quiet marks, loud failures */
+.gantt .alarm { fill: var(--g-fail); }
+.gantt .streak { fill: var(--g-fail); font-size: 10px; font-weight: 600; }
+.gantt .calm-band { stroke-width: 3; stroke-linecap: round; opacity: .6; }
+.gantt .calm-skip { stroke-width: 1; opacity: .4; }
+.gantt .calm-tick { fill-opacity: .35; }
+.gantt .paused-line { stroke: var(--g-skip); stroke-width: 6; stroke-dasharray: 2 3; }
+.gantt .misfire { fill: var(--g-miss); stroke: var(--mud-palette-surface); stroke-width: 1; }
+.gantt .bar:hover, .gantt .tile:hover, .gantt .dots:hover, .gantt .misfire:hover { stroke: var(--mud-palette-text-primary); stroke-width: 1.5; cursor: pointer; }
 
 @media print {
     .mud-appbar, .mud-drawer, .ris-no-print { display: none !important; }
@@ -62,19 +100,18 @@
 .ris-diff-changed .ris-diff-after, .ris-diff-added .ris-diff-after { background: rgba(76, 175, 80, .18); }
 .ris-diff-same td { opacity: .6; }
 
-/* Job type colours: outline of Gantt bars and a mark next to the job, while the fill keeps showing the status. */
+/* Job type colours: the mark next to a job (lists, charts) and, in the "type colour" chart style, the fill of its bars.
+   Charts redefine them per theme (.gantt.is-dark / .is-light). */
 :root {
-    --ris-type-export: #ab47bc; --ris-type-import: #ff9800; --ris-type-upload: #fdd835;
-    --ris-type-download: #ec407a; --ris-type-executionmonitor: #8d6e63; --ris-type-processingmonitor: #5c6bc0;
+    --ris-type-export: #9333EA; --ris-type-import: #EA6A0A; --ris-type-upload: #C99A00;
+    --ris-type-download: #DB2777; --ris-type-executionmonitor: #0F9E94; --ris-type-processingmonitor: #4F5BD5;
 }
-.gantt .bar.t-export, .gantt .t-export { --ris-type: var(--ris-type-export); }
-.gantt .bar.t-import, .gantt .t-import { --ris-type: var(--ris-type-import); }
-.gantt .bar.t-upload, .gantt .t-upload { --ris-type: var(--ris-type-upload); }
-.gantt .bar.t-download, .gantt .t-download { --ris-type: var(--ris-type-download); }
-.gantt .bar.t-executionmonitor, .gantt .t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
-.gantt .bar.t-processingmonitor, .gantt .t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }
-.gantt .bar[class*=" t-"] { stroke: var(--ris-type); stroke-width: 2; }
-.gantt .bar.legend-type { fill: transparent; }
+.gantt .t-export { --ris-type: var(--ris-type-export); }
+.gantt .t-import { --ris-type: var(--ris-type-import); }
+.gantt .t-upload { --ris-type: var(--ris-type-upload); }
+.gantt .t-download { --ris-type: var(--ris-type-download); }
+.gantt .t-executionmonitor { --ris-type: var(--ris-type-executionmonitor); }
+.gantt .t-processingmonitor { --ris-type: var(--ris-type-processingmonitor); }
 .gantt .type-mark { fill: var(--ris-type); }
 .ris-type { border-left: 4px solid var(--ris-type, transparent); padding-left: 6px; }
 .ris-type.t-export { --ris-type: var(--ris-type-export); }

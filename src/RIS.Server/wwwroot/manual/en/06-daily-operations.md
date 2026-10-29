@@ -43,18 +43,23 @@ Clicking a run (in history, on a chart, on the dashboard) opens a panel with det
 
 A Gantt chart of scheduled runs for a day or a week:
 
-- **Bar fill** – state (scheduled, paused – dashed), **border** – job type (legend below the toolbar).
-- Jobs running more often than every 30 minutes are shown as a **band** ("every 5 min").
+- Pick the **chart style** with the palette icon in the top bar (remembered for you, like the theme). The legend below the toolbar always describes the chosen style:
+  - **A · Neon** – bar colour = result; the job type is a mark next to the name; skipped runs are dots.
+  - **B · Type colour, result shape** – bar colour = job type; a failure has a red edge, interrupted runs are hatched, skipped runs are a low bar.
+  - **C · Heatmap** – tiles (e.g. 15 min) in the colour of the worst result, intensity by the number of runs; clicking opens the newest run of the tile.
+  - **D · Calm and alarm** – everything thin and quiet, failures thick and red with a streak count (×4) and a dot next to the name.
+- Paused jobs are hatched in every style.
+- Frequent jobs (and runs that would touch at the current scale) are shown as a **series** ("every 5 min") – a comb, a band or a line, depending on the style.
 - Bar length is the median duration of recent runs.
 - **Scale**: 🔍− / 🔍+ shrinks or widens the time axis (25% to 1200%), clicking the percentage returns to 100%, ⛶ fits the whole day or week to the page width (the chart opens that way). Hour labels get denser at a larger scale.
-- Grouping: group, D365 instance, type. Red line = now. Clicking a bar opens the job.
+- Grouping: group, D365 instance, type. Vertical line in the text colour = now (red is kept for failures). Clicking a bar opens the job.
 - Export: PNG, PDF (print), Excel, CSV.
 
 ## Run history
 
 ![Week history](img/history.png)
 
-The same chart for actual runs: colour = result (success, failure, cancelled, running), ▲ = missed run, border = type. Runs that overlap at the current scale are merged into one bar with a count ("12 runs"). Below the chart a paged run table; *Failures only* switch. Above the table there are **filters**: text (job, summary, error text, run id), group, result, error code and *Started manually*. A counter shows how many runs match ("Showing 28 of 291 runs"), and the Excel and CSV export contains only the filtered runs. The same filters are on the *History* tab of the job page.
+The same chart for actual runs, in the chosen style (see above): success, failure, cancelled, running, skipped (e.g. "no files"), ▲ = missed run. Runs that overlap at the current scale are merged into one series with a count in the tooltip ("12 runs"); skipped runs no longer look like one long run. Below the chart a paged run table; *Failures only* switch. Above the table there are **filters**: text (job, summary, error text, run id), group, result, error code and *Started manually*. A counter shows how many runs match ("Showing 28 of 291 runs"), and the Excel and CSV export contains only the filtered runs. The same filters are on the *History* tab of the job page.
 
 ![Run list filters: text "Sales" and result "Failed"](img/history-filter.png)
 

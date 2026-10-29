@@ -701,4 +701,10 @@
   <data name="Paired_ResumeTitle" xml:space="preserve"><value>Resume jobs ({0})</value></data>
   <data name="Paired_ResumeText" xml:space="preserve"><value>Linked jobs (monitors) of the selected jobs are paused. A job whose monitor stays paused does not get its results checked.</value></data>
   <data name="Paired_ResumeToo" xml:space="preserve"><value>Resume the linked jobs too ({0})</value></data>
+  <data name="ChartStyle_Title" xml:space="preserve"><value>Chart style</value></data>
+  <data name="ChartStyle_Neon" xml:space="preserve"><value>A · Neon (colour = result)</value></data>
+  <data name="ChartStyle_TypeColor" xml:space="preserve"><value>B · Type colour, result shape</value></data>
+  <data name="ChartStyle_Heatmap" xml:space="preserve"><value>C · Heatmap</value></data>
+  <data name="ChartStyle_Calm" xml:space="preserve"><value>D · Calm and alarm</value></data>
+  <data name="Gantt_PlannedCount" xml:space="preserve"><value>Planned (intensity = number of runs)</value></data>
 </root>

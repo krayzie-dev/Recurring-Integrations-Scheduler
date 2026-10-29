@@ -117,7 +117,8 @@ public sealed class UiTests
 
         var plan = await GetPageAsync("/plan", "Viewer", "pl-PL");
         StringAssert.Contains(plan, "id=\"plan-gantt\"");
-        StringAssert.Contains(plan, "class=\"bar band\"", "Every 5 minutes is shown as a band.");
+        StringAssert.Contains(plan, "class=\"comb ts t-export", "Every 5 minutes is shown as a series (default chart style Neon).");
+        StringAssert.Contains(plan, "gantt style-neon", "Chart style and theme classes on the chart.");
         StringAssert.Contains(plan, "Frequent");
 
         var history = await GetPageAsync("/history", "Viewer", "en-US");

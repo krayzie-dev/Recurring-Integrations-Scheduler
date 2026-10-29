@@ -23,6 +23,14 @@
             <MudMenuItem Icon="@Icons.Material.Filled.LightMode" OnClick="() => SetThemeAsync(ThemeMode.Light)">@T["Theme_Light"]</MudMenuItem>
             <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="() => SetThemeAsync(ThemeMode.Dark)">@T["Theme_Dark"]</MudMenuItem>
         </MudMenu>
+        <MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit" Dense="true" title="@T["ChartStyle_Title"]">
+            <MudText Typo="Typo.caption" Class="px-4 pt-2 mud-text-secondary d-block">@T["ChartStyle_Title"]</MudText>
+            @foreach (var style in Enum.GetValues<ChartStyle>())
+            {
+                <MudMenuItem Icon="@(_preferences?.Chart == style ? Icons.Material.Filled.Check : Icons.Material.Filled.BarChart)"
+                             OnClick="() => SetChartStyleAsync(style)">@T["ChartStyle_" + style]</MudMenuItem>
+            }
+        </MudMenu>
         <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Inherit" Href="/help" title="@T["Nav_Help"]" />
         <MudMenu Icon="@Icons.Material.Filled.Schedule" Color="Color.Inherit" Dense="true">
             <MudMenuItem OnClick="() => SetTimeZoneAsync(DisplayTimeZone.Server)">@T["TimeZone_Server", UiPreferences.ServerZoneLabel]</MudMenuItem>
@@ -43,9 +51,11 @@
 
     <MudMainContent>
         <CascadingValue Value="_preferences">
-            <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-4">
-                @Body
-            </MudContainer>
+            <CascadingValue Name="IsDark" Value="_isDarkMode">
+                <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-4">
+                    @Body
+                </MudContainer>
+            </CascadingValue>
         </CascadingValue>
     </MudMainContent>
 </MudLayout>
@@ -106,6 +116,12 @@
     {
         _preferences = _preferences! with { Theme = mode };
         ApplyTheme();
+        await SavePreferencesAsync();
+    }
+
+    private async Task SetChartStyleAsync(ChartStyle style)
+    {
+        _preferences = _preferences! with { Chart = style };
         await SavePreferencesAsync();
     }
 

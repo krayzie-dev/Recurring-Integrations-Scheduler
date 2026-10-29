@@ -775,4 +775,10 @@
   <data name="Paired_ResumeTitle" xml:space="preserve"><value>Wznów zadania ({0})</value></data>
   <data name="Paired_ResumeText" xml:space="preserve"><value>Połączone zadania (monitory) wybranych zadań są wstrzymane. Gdy monitor zostaje wstrzymany, wyniki zadania nie są sprawdzane.</value></data>
   <data name="Paired_ResumeToo" xml:space="preserve"><value>Wznów też połączone zadania ({0})</value></data>
+  <data name="ChartStyle_Title" xml:space="preserve"><value>Styl wykresów</value></data>
+  <data name="ChartStyle_Neon" xml:space="preserve"><value>A · Neon (kolor = wynik)</value></data>
+  <data name="ChartStyle_TypeColor" xml:space="preserve"><value>B · Kolor typu, kształt wyniku</value></data>
+  <data name="ChartStyle_Heatmap" xml:space="preserve"><value>C · Mapa cieplna</value></data>
+  <data name="ChartStyle_Calm" xml:space="preserve"><value>D · Spokój i alarm</value></data>
+  <data name="Gantt_PlannedCount" xml:space="preserve"><value>Zaplanowane (nasycenie = liczba uruchomień)</value></data>
 </root>

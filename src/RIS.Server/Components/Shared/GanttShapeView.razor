@@ -1,0 +1,33 @@
+@* One shape drawn by GanttPainter; clickable when it stands for a run or a job. *@
+@switch (Shape.Kind)
+{
+    case GanttShapeKind.Rect:
+        <rect class="@Shape.Css" x="@F(Shape.X)" y="@F(Shape.Y)" width="@F(Math.Max(0, Shape.W))" height="@F(Shape.H)" rx="@F(Shape.Rx)"
+              fill="@Shape.Fill" opacity="@Opacity" @onclick="ClickAsync">@Title</rect>
+        break;
+    case GanttShapeKind.Circle:
+        <circle class="@Shape.Css" cx="@F(Shape.X)" cy="@F(Shape.Y)" r="@F(Shape.W)" opacity="@Opacity" @onclick="ClickAsync">@Title</circle>
+        break;
+    case GanttShapeKind.Line:
+        <line class="@Shape.Css" x1="@F(Shape.X)" y1="@F(Shape.Y)" x2="@F(Shape.X2)" y2="@F(Shape.Y2)" opacity="@Opacity" @onclick="ClickAsync">@Title</line>
+        break;
+    case GanttShapeKind.Polygon:
+        <polygon class="@Shape.Css" points="@Shape.Points" opacity="@Opacity" @onclick="ClickAsync">@Title</polygon>
+        break;
+    case GanttShapeKind.Text:
+        <g><text class="@Shape.Css" x="@F(Shape.X)" y="@F(Shape.Y)">@Shape.Text</text></g>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public GanttShape Shape { get; set; } = null!;
+    [Parameter] public EventCallback<TimelineItem> OnClick { get; set; }
+
+    private string? Opacity => Shape.Opacity >= 1 ? null : Shape.Opacity.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    private RenderFragment? Title => Shape.Title is null ? null : @<title>@Shape.Title</title>;
+
+    private Task ClickAsync() => Shape.Item is { } item ? OnClick.InvokeAsync(item) : Task.CompletedTask;
+
+    private static string F(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}

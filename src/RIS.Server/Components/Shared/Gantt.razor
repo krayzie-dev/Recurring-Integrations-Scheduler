@@ -1,5 +1,6 @@
 @using RIS.Server.Services
-@* Gantt chart (SVG). Colours come from theme CSS variables (ris.css), so light/dark mode work and PNG export copies them. *@
+@* Gantt chart (SVG). Shapes come from GanttPainter (per chart style), colours from CSS classes (ris.css), so light/dark mode
+   and the PNG export (which copies computed styles) need no extra code. *@
 
 @if (Timeline.Rows.Count == 0)
 {
@@ -13,8 +14,10 @@ else
     var width = geo.Width;
     var now = DateTimeOffset.UtcNow;
     var days = geo.Days();
+    var context = new GanttPaintContext(now, Id + "-hatch", Id + "-phatch", _ => "", CellTooltip, (key, arg) => T[key, arg]);
     <div class="gantt-scroll">
-        <svg id="@Id" class="gantt" width="@F(width)" height="@F(height)" viewBox="0 0 @F(width) @F(height)" xmlns="http://www.w3.org/2000/svg">
+        <svg id="@Id" class="@ChartCss(Style, IsDark)" width="@F(width)" height="@F(height)" viewBox="0 0 @F(width) @F(height)" xmlns="http://www.w3.org/2000/svg">
+            <GanttPatterns Id="@Id" />
             @* Header: days and hours *@
             @foreach (var hour in geo.Hours(HourStep))
             {
@@ -57,7 +60,7 @@ else
                 }
                 @if (data.Type is { } type)
                 {
-                    <rect class="@($"type-mark {TypeCss(type)}")" x="4" y="@F(rowY + 6)" width="6" height="10" rx="2"><title>@T["JobType_" + type]</title></rect>
+                    <rect class="@($"type-mark {GanttPainter.TypeCss(type)}")" x="4" y="@F(rowY + 6)" width="6" height="10" rx="2"><title>@T["JobType_" + type]</title></rect>
                 }
                 @if (data.Link is not null)
                 {
@@ -68,29 +71,9 @@ else
                     <g><text x="16" y="@F(rowY + 15)" class="axis">@Short(data.Label)<title>@data.Key</title></text></g>
                 }
 
-                @foreach (var item in Merge(data.Items, geo))
+                @foreach (var shape in GanttPainter.Paint(Style, data, rowY, geo, context with { Tooltip = item => Tooltip(data, item, geo) }))
                 {
-                    if (item.Kind == TimelineItemKind.Missed)
-                    {
-                        var mx = geo.X(item.StartUtc);
-                        if (mx < GanttLayout.LabelWidth || mx > width) continue;
-                        <polygon class="misfire" points="@F(mx),@F(rowY + 4) @F(mx + 5),@F(rowY + 13) @F(mx - 5),@F(rowY + 13)">
-                            <title>@T["Gantt_Missed"]: @geo.Label(item.StartUtc, "g") (@item.Status)</title>
-                        </polygon>
-                        continue;
-                    }
-
-                    if (geo.Bar(item.StartUtc, item.EndUtc) is not { } bar) continue;
-                    var band = item.Kind is TimelineItemKind.Band or TimelineItemKind.BandPaused;
-                    var inset = band ? 6 : 4;
-                    <rect class="@($"bar {Css(item)} {TypeCss(data.Type)}")" x="@F(bar.X)" y="@F(rowY + inset)" width="@F(bar.Width)" height="@F(GanttLayout.RowHeight - 2 * inset)"
-                          rx="2" @onclick="() => OnItemClick.InvokeAsync(item)">
-                        <title>@Tooltip(data, item, geo)</title>
-                    </rect>
-                    @if (band && bar.Width > 70)
-                    {
-                        <g><text class="axis" x="@F(bar.X + 4)" y="@F(rowY + 15)" font-size="10">@T["Gantt_Every", item.Label ?? ""]</text></g>
-                    }
+                    <GanttShapeView Shape="shape" OnClick="OnItemClick" />
                 }
                 y += GanttLayout.RowHeight;
             }
@@ -115,6 +98,14 @@ else
     [Parameter] public string Id { get; set; } = "gantt";
     [Parameter] public EventCallback<TimelineItem> OnItemClick { get; set; }
 
+    [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+    [CascadingParameter(Name = "IsDark")] public bool IsDark { get; set; }
+
+    private ChartStyle Style => Prefs.Chart;
+
+    /// <summary>Classes of the chart element: style and theme (the colours of both are CSS variables in ris.css).</summary>
+    public static string ChartCss(ChartStyle style, bool dark) => $"gantt style-{style.ToString().ToLowerInvariant()} {(dark ? "is-dark" : "is-light")}";
+
     private sealed record RenderRow(bool IsGroup, string Label, int Count, TimelineRow? Row);
 
     private List<RenderRow> Rows()
@@ -128,63 +119,32 @@ else
         return result;
     }
 
-    /// <summary>CSS class of the job type colour (outline of bars, mark before the name).</summary>
-    public static string TypeCss(JobType? type) => type is null ? "" : "t-" + type.Value.ToString().ToLowerInvariant();
+    /// <summary>CSS class of the job type colour (mark before the name, fill in the "type colour" style).</summary>
+    public static string TypeCss(JobType? type) => GanttPainter.TypeCss(type);
 
-    private static string Css(TimelineItem item) => item.Kind switch
-    {
-        TimelineItemKind.Planned => "planned",
-        TimelineItemKind.PlannedPaused => "paused",
-        TimelineItemKind.Band => "band",
-        TimelineItemKind.BandPaused => "band paused",
-        TimelineItemKind.Running => "running",
-        _ => (item.Status ?? "").ToLowerInvariant()
-    };
+    private string Tooltip(TimelineRow row, TimelineItem item, GanttLayout geo) => Tooltip(row.Key, item, geo);
 
-    /// <summary>
-    /// Runs (and running) whose bars touch at the current scale and have the same result become one bar with a count: a job
-    /// running every minute is ~10 000 bars in a week, which the browser would have to draw (and Blazor send) one by one.
-    /// Clicking the merged bar opens the newest run in it.
-    /// </summary>
-    private static IEnumerable<TimelineItem> Merge(IReadOnlyList<TimelineItem> items, GanttLayout geo)
-    {
-        TimelineItem? pending = null;
-        double pendingEnd = 0;
-        foreach (var item in items)
-        {
-            var mergeable = item.Kind is TimelineItemKind.Run && geo.Bar(item.StartUtc, item.EndUtc) is not null;
-            if (pending is not null && mergeable && Css(pending) == Css(item) && geo.X(item.StartUtc) <= pendingEnd + 1)
-            {
-                pending = pending with { EndUtc = item.EndUtc > pending.EndUtc ? item.EndUtc : pending.EndUtc, Count = pending.Count + item.Count, RunId = item.RunId, Label = null };
-                pendingEnd = Math.Max(pendingEnd, geo.Bar(item.StartUtc, item.EndUtc)!.Value.X + geo.Bar(item.StartUtc, item.EndUtc)!.Value.Width);
-                continue;
-            }
-            if (pending is not null) yield return pending;
-            if (mergeable)
-            {
-                pending = item;
-                var bar = geo.Bar(item.StartUtc, item.EndUtc)!.Value;
-                pendingEnd = bar.X + bar.Width;
-            }
-            else
-            {
-                pending = null;
-                yield return item;
-            }
-        }
-        if (pending is not null) yield return pending;
-    }
-
-    private string Tooltip(TimelineRow row, TimelineItem item, GanttLayout geo)
+    private string Tooltip(string rowKey, TimelineItem item, GanttLayout geo)
     {
         var time = $"{geo.Label(item.StartUtc, "g")} – {geo.Label(item.EndUtc, "t")}";
         return item.Kind switch
         {
-            TimelineItemKind.Band or TimelineItemKind.BandPaused => $"{row.Key}\n{time}\n{T["Gantt_Every", item.Label ?? ""]} · {T["Gantt_Runs", item.Count]}",
-            TimelineItemKind.Planned or TimelineItemKind.PlannedPaused => $"{row.Key}\n{time}" + (item.EndUtc > item.StartUtc ? $"\n{T["Gantt_EstimatedDuration", Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)]}" : ""),
-            _ when item.Count > 1 => $"{row.Key}\n{time}\n{T["Gantt_Runs", item.Count]} · {T["Result_" + (item.Status ?? "")]}",
-            _ => $"{row.Key}\n{time} ({Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)})\n{T["Result_" + (item.Status ?? "")]}" + (item.Label is null ? "" : $" {item.Label}")
+            TimelineItemKind.Missed => $"{rowKey}\n{T["Gantt_Missed"]}: {geo.Label(item.StartUtc, "g")} ({item.Status})",
+            TimelineItemKind.Band or TimelineItemKind.BandPaused => $"{rowKey}\n{time}\n{T["Gantt_Every", item.Label ?? ""]} · {T["Gantt_Runs", item.Count]}",
+            TimelineItemKind.Planned or TimelineItemKind.PlannedPaused => $"{rowKey}\n{time}" + (item.EndUtc > item.StartUtc ? $"\n{T["Gantt_EstimatedDuration", Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)]}" : ""),
+            _ when item.Count > 1 => $"{rowKey}\n{time}\n{T["Gantt_Runs", item.Count]} · {T["Result_" + (item.Status ?? "")]}",
+            _ => $"{rowKey}\n{time} ({Ui.UiFormat.Duration(item.EndUtc - item.StartUtc)})\n{T["Result_" + (item.Status ?? "")]}" + (item.Label is null ? "" : $" {item.Label}")
         };
+    }
+
+    private string CellTooltip(TimelineCell cell)
+    {
+        var geo = new GanttLayout(Timeline.FromUtc, Timeline.ToUtc, TimeWidth, Zone);
+        var time = $"{geo.Label(cell.StartUtc, "g")} – {geo.Label(cell.EndUtc, "t")}";
+        if (cell.Worst == "planned") return $"{time}\n{T["Gantt_Runs", cell.Count]}" + (cell.Paused ? $" · {T["State_Paused"]}" : "");
+        var parts = cell.ByResult.OrderByDescending(p => p.Value)
+            .Select(p => $"{p.Value} × {(p.Key == "missed" ? T["Gantt_Missed"].Value : T["Result_" + char.ToUpperInvariant(p.Key[0]) + p.Key[1..]].Value)}");
+        return $"{time}\n{T["Gantt_Runs", cell.Count]}: {string.Join(", ", parts)}";
     }
 
     private static string Short(string label) => label.Length > 34 ? label[..33] + "…" : label;
