@@ -54,6 +54,7 @@ public static class Program
         root.Subcommands.Add(RunCommand());
         root.Subcommands.Add(DbCommands.Build());
         root.Subcommands.Add(AccessCommands.Build());
+        root.Subcommands.Add(IdleGuardCommands.Build());
         return root;
     }
 

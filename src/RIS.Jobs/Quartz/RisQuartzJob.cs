@@ -19,7 +19,7 @@ public sealed class RisJobInput
 /// Result is stored as <see cref="JobRunReport"/> in Quartz execution history.
 /// </summary>
 public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, ILogger<RisQuartzJob> logger,
-    IJobPauseRecorder? pauseRecorder = null) : IJob<RisJobInput>
+    IJobPauseRecorder? pauseRecorder = null, IJobActivityRecorder? activityRecorder = null) : IJob<RisJobInput>
 {
     public async ValueTask Execute(IJobExecutionContext context, RisJobInput input, CancellationToken cancellationToken)
     {
@@ -47,6 +47,19 @@ public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, 
         }
         context.Result = report;
 
+        if (outcome.Status == JobOutcomeStatus.Succeeded && activityRecorder is not null)
+        {
+            // Real work (Quartz also counts "Skipped" as success): read by the idle guard.
+            try
+            {
+                await activityRecorder.RecordWorkAsync(key.Group, key.Name, DateTimeOffset.UtcNow, outcome.Summary, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Activity of job {JobKey} was not recorded: {Error}", jobKey, ex.Message);
+            }
+        }
+
         if (outcome.Status == JobOutcomeStatus.Failed && options.PauseOnError)
         {
             await context.Scheduler.PauseJobWith(key, new PauseDetails { Reason = PauseReasons.Error, RequestedBy = "RIS" }, cancellationToken);
@@ -65,6 +78,12 @@ public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, 
             logger.LogWarning("Job {JobKey} was paused because it failed and PauseOnError is set", jobKey);
         }
     }
+}
+
+/// <summary>Records a run that did real work (result Succeeded), for the idle guard.</summary>
+public interface IJobActivityRecorder
+{
+    Task RecordWorkAsync(string group, string name, DateTimeOffset finishedUtc, string? summary, CancellationToken cancellationToken);
 }
 
 /// <summary>Saves a pause set by RIS itself (PauseOnError) in the job configuration.</summary>

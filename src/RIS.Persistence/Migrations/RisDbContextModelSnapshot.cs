@@ -167,6 +167,36 @@ namespace RIS.Persistence.Migrations
                     b.ToTable("Connections", (string)null);
                 });
 
+            modelBuilder.Entity("RIS.Persistence.JobActivityEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Group")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("LastWorkSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastWorkUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Group", "Name")
+                        .IsUnique();
+
+                    b.ToTable("JobActivity", (string)null);
+                });
+
             modelBuilder.Entity("RIS.Persistence.JobDefinitionEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -248,6 +278,27 @@ namespace RIS.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("RoleMembers", (string)null);
+                });
+
+            modelBuilder.Entity("RIS.Persistence.SettingEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("Settings", (string)null);
                 });
 
             modelBuilder.Entity("RIS.Persistence.SftpServerEntity", b =>

@@ -146,6 +146,27 @@ public sealed class PersistenceTests
     }
 
     [TestMethod]
+    public async Task IdleGuardSettings_AreValidatedAndAudited_AndActivityIsRecorded()
+    {
+        var settings = _services.GetRequiredService<SettingsRepository>();
+        Assert.IsFalse((await settings.GetAsync<IdleGuardSettings>(IdleGuardSettings.Key)).Enabled, "Off by default.");
+
+        await settings.SaveAsync(IdleGuardSettings.Key, new IdleGuardSettings { PauseFailing = true, WindowDays = 10 }, "admin");
+        var saved = await settings.GetAsync<IdleGuardSettings>(IdleGuardSettings.Key);
+        Assert.IsTrue(saved.PauseFailing);
+        Assert.AreEqual(10, saved.WindowDays);
+        Assert.IsTrue((await _repository.GetAuditAsync()).Any(a => a.EntityType == "Setting" && a.EntityKey == IdleGuardSettings.Key && a.User == "admin"));
+        await Assert.ThrowsExactlyAsync<ConfigurationValidationException>(() => settings.SaveAsync(IdleGuardSettings.Key, new IdleGuardSettings { WindowDays = 0 }, "admin"));
+
+        var since = await settings.EnsureActivityTrackingAsync();
+        Assert.AreEqual(since, await settings.EnsureActivityTrackingAsync(), "Set once.");
+        var finished = new DateTimeOffset(2026, 10, 29, 10, 0, 0, TimeSpan.Zero);
+        await settings.RecordWorkAsync("Import jobs", "Vendors", finished, "Imported files: 1 succeeded");
+        await settings.RecordWorkAsync("Import jobs", "Vendors", finished.AddHours(1), "Imported files: 2 succeeded");
+        Assert.AreEqual(finished.AddHours(1), (await settings.GetLastWorkAsync())["import jobs.vendors"]);
+    }
+
+    [TestMethod]
     public void DefinitionHash_IgnoresPauseState_AndIsUnchangedForJobsThatAreNotPaused()
     {
         var job = Job();

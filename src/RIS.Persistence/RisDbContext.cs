@@ -104,6 +104,28 @@ public sealed class RoleMemberEntity
     public string? AddedBy { get; set; }
 }
 
+/// <summary>Application setting changed in the UI or CLI (e.g. the idle guard), JSON value; changes are audited.</summary>
+public sealed class SettingEntity
+{
+    public required string Key { get; set; }
+    public required string Value { get; set; }
+    public DateTime UpdatedUtc { get; set; }
+    public string? UpdatedBy { get; set; }
+}
+
+/// <summary>
+/// Last run of a job that did real work (result Succeeded; Quartz counts "Skipped" as success too, and its history keeps only
+/// the newest runs). Read by the idle guard. Written only on success, so a job that skips every 3 minutes writes nothing.
+/// </summary>
+public sealed class JobActivityEntity
+{
+    public int Id { get; set; }
+    public required string Group { get; set; }
+    public required string Name { get; set; }
+    public DateTime LastWorkUtc { get; set; }
+    public string? LastWorkSummary { get; set; }
+}
+
 public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbContext(options)
 {
     public DbSet<AppRegistrationEntity> AppRegistrations => Set<AppRegistrationEntity>();
@@ -112,6 +134,8 @@ public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbCon
     public DbSet<JobDefinitionEntity> Jobs => Set<JobDefinitionEntity>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<RoleMemberEntity> RoleMembers => Set<RoleMemberEntity>();
+    public DbSet<SettingEntity> Settings => Set<SettingEntity>();
+    public DbSet<JobActivityEntity> JobActivity => Set<JobActivityEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -154,6 +178,19 @@ public sealed class RisDbContext(DbContextOptions<RisDbContext> options) : DbCon
             e.Property(m => m.Role).UseCollation("NOCASE");
             e.Property(m => m.Sid).UseCollation("NOCASE");
             e.Property(m => m.Member).UseCollation("NOCASE");
+        });
+        modelBuilder.Entity<SettingEntity>(e =>
+        {
+            e.ToTable("Settings");
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).UseCollation("NOCASE");
+        });
+        modelBuilder.Entity<JobActivityEntity>(e =>
+        {
+            e.ToTable("JobActivity");
+            e.HasIndex(a => new { a.Group, a.Name }).IsUnique();
+            e.Property(a => a.Name).UseCollation("NOCASE");
+            e.Property(a => a.Group).UseCollation("NOCASE");
         });
     }
 }

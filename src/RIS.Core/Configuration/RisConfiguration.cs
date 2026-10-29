@@ -224,6 +224,10 @@ public static class PauseReasons
     public const string KeptAfterChange = "Paused by operator (kept after configuration change)";
     public const string Error = "Paused after a failed run (PauseOnError)";
     public const string Operator = "Paused by operator";
+    /// <summary>Idle guard: every run in its window failed.</summary>
+    public const string IdleFailing = "Paused by the idle guard (only failed runs)";
+    /// <summary>Idle guard: no run in its window did any work.</summary>
+    public const string IdleNoWork = "Paused by the idle guard (no work done)";
 }
 
 /// <summary>

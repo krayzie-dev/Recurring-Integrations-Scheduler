@@ -41,6 +41,18 @@ Example change in `%ProgramData%\RIS5\appsettings.json`:
 
 History is trimmed continuously by the scheduler; the rest by the daily cleanup. Files in job folders (In, Processed…) are **not** cleaned up by RIS.
 
+## Idle job guard
+
+On the *Data maintenance* page you can switch on a daily pause of jobs that only failed or did nothing in the last days. **It is off by default** – useful on test servers; on production a job may wait long for its file on purpose.
+
+- **Two switches**: *only failures* (every run in the period failed) and *does nothing* (no run did any work – only "Skipped", e.g. no files, and failures). On production you may switch on the first one only.
+- **Period** (default 7 days) and **minimum planned runs** (default 20). Only jobs whose schedule runs them at least that many times in the period are checked, so the period is many times their rhythm: every 5 minutes = 2016 runs a week, hourly 8–16 Mon–Fri = 45, daily = 7 and weekly = 1 (never paused).
+- **Skipped**: paused jobs, jobs running right now, jobs created, changed or resumed in the period, and jobs marked **Never pause automatically** in the editor (*Advanced* step).
+- *Only failures* also needs at least max(3, planned / 4) failures in a row – proof that the job really ran in the period. *Does nothing* counts from the installation of the version that records the last work of jobs (`ris.db`, table `JobActivity`), so it starts working a week after the upgrade.
+- **Show what would be paused** – a dry run, pauses nothing. **Check and pause now** – at once, with the saved settings. The daily check runs at the set time (default 06:00).
+- A pause is audited (by `RIS`), shown on the dashboard ("Needs attention", with the reason) and written to the Event Log (**2100**). Resume the job with the usual *Resume*; it then has a whole period again before the guard touches it.
+- Command line: `ris idle-guard status`, `ris idle-guard on [--only failing|idle] [--days 7] [--min-runs 20] [--at 06:00]`, `ris idle-guard off`.
+
 ## Logs
 
 - **Service log** – `logs\ris-YYYYMMDD.clef` (one JSON object per line, CLEF format; readable e.g. in Seq or with `Get-Content … | ConvertFrom-Json`).
@@ -56,6 +68,7 @@ Log **RIS5** (*Event Viewer → Applications and Services Logs → RIS5*, 20 MB,
 |---|---|
 | 1000 / 1001 | Service started (version, account, addresses) / stopping |
 | 2000 | Job run failed or partially succeeded |
+| 2100 | Job paused by the idle job guard |
 | 10000 + 100 × category + number | Error with a RIS code: CFG=1, AUTH=2, HTTP=3, EXP=4, IMP=5, UPL=6, DWN=7, MON=8, FS=9, SFTP=10, GEN=11 – e.g. RIS-HTTP-001 = **10301**, RIS-IMP-004 = **10504** |
 | 3000 / 4000 | Other warnings / errors |
 
@@ -105,6 +118,7 @@ Secret keys are protected by the machine's DPAPI by default and do not work on a
 | `ris db export -o jobs.json` | Configuration to a file (secrets as `<SET-SECRET>`) |
 | `ris db import jobs.json [--paused]` | Add/update app registrations, D365 instances, SFTP servers and jobs |
 | `ris access list` / `add <role> <account>` / `remove <role> <account>` | Access (roles) – as on the *Access* page |
+| `ris idle-guard status` / `on` / `off` | Idle job guard – as on the *Data maintenance* page |
 | `ris db set-secret app-registration <name>` | Set the secret of an app registration (typed without echo); `connection <name>` sets the secret of the default app registration of the instance |
 | `ris convert-schedule Schedule.xml -o jobs.json` | Convert a RIS 4.x configuration |
 | `ris validate jobs.json` | Check a configuration file and its folders |

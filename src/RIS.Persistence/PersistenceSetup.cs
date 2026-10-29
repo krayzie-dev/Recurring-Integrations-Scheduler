@@ -137,6 +137,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
         services.AddSingleton<ConfigurationRepository>();
+        services.AddSingleton<SettingsRepository>();
         services.AddSingleton<DbConfigurationStore>();
         services.AddSingleton<IRisConfigurationStore>(sp => sp.GetRequiredService<DbConfigurationStore>());
         return services;

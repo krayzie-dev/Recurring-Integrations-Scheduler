@@ -2,6 +2,8 @@
 @attribute [Authorize(Policy = RisRoles.CanAdminister)]
 @inherits RisPageBase
 @inject MaintenanceService Maintenance
+@inject RIS.Hosting.IdleGuardService IdleGuard
+@inject RIS.Persistence.SettingsRepository Settings
 
 <PageTitle>RIS 5 – @T["Nav_Maintenance"]</PageTitle>
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
@@ -79,7 +81,143 @@
     </MudItem>
 </MudGrid>
 
+@* Idle guard: settings, preview and the last check *@
+<MudPaper Outlined="true" Class="pa-3 mt-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="2" Class="mb-1">
+        <MudText Typo="Typo.subtitle1"><b>@T["Idle_Title"]</b></MudText>
+        <MudChip T="string" Size="Size.Small" Color="@(_guard.Enabled ? Color.Warning : Color.Default)" Variant="Variant.Outlined">
+            @(_guard.Enabled ? T["Idle_On"] : T["Idle_Off"])
+        </MudChip>
+    </MudStack>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3" Style="max-width: 90ch">@T["Idle_Intro"]</MudText>
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="6">
+            <MudSwitch T="bool" @bind-Value="_guard.PauseFailing" Color="Color.Warning" Label="@T["Idle_PauseFailing"]" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block ml-14 mb-2">@T["Idle_PauseFailingHelp"]</MudText>
+            <MudSwitch T="bool" @bind-Value="_guard.PauseIdle" Color="Color.Warning" Label="@T["Idle_PauseIdle"]" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block ml-14">@T["Idle_PauseIdleHelp"]</MudText>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="3">
+                <MudNumericField T="int" @bind-Value="_guard.WindowDays" Label="@T["Idle_WindowDays"]" Min="1" Max="90" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 150px" />
+                <MudNumericField T="int" @bind-Value="_guard.MinPlannedRuns" Label="@T["Idle_MinPlannedRuns"]" Min="2" Max="100000" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 210px" />
+                <MudTimePicker Time="_guard.CheckAt.ToTimeSpan()" TimeChanged="t => _guard.CheckAt = TimeOnly.FromTimeSpan(t ?? _guard.CheckAt.ToTimeSpan())"
+                               Label="@T["Idle_CheckAt"]" AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 150px" />
+            </MudStack>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-1">@T["Idle_MinPlannedRunsHelp", _guard.WindowDays]</MudText>
+        </MudItem>
+    </MudGrid>
+    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mt-3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveGuardAsync" Disabled="_guardBusy">@T["Common_Save"]</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Visibility" OnClick="PreviewGuardAsync" Disabled="_guardBusy">@T["Idle_Preview"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Filled.PauseCircle" OnClick="RunGuardAsync" Disabled="@(_guardBusy || !_savedGuard.Enabled)">@T["Idle_RunNow"]</MudButton>
+    </MudStack>
+
+    @if (_shown is { } shown)
+    {
+        <MudAlert Severity="@(shown.Findings.Count == 0 ? Severity.Success : shown.Applied ? Severity.Warning : Severity.Info)" Dense="true" Class="mt-3">
+            @(shown.Applied ? T["Idle_LastCheck", Prefs.Format(shown.CheckedAtUtc, "g"), shown.JobsChecked, shown.Findings.Count]
+                            : T["Idle_PreviewResult", shown.JobsChecked, shown.Findings.Count])
+        </MudAlert>
+        @if (shown.Findings.Count > 0)
+        {
+            <MudSimpleTable Dense="true" Hover="true" Elevation="0" Class="mt-2">
+                <thead>
+                    <tr>
+                        <th>@T["Job_Name"]</th>
+                        <th>@T["Idle_Case"]</th>
+                        <th>@T["Idle_Planned"]</th>
+                        <th>@T["Idle_FailuresInRow"]</th>
+                        <th>@T["Idle_LastWork"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var finding in shown.Findings)
+                    {
+                        var reference = JobRef.Parse(finding.JobKey);
+                        <tr>
+                            <td><MudLink Href="@($"/jobs/{Uri.EscapeDataString(reference.Group)}/{Uri.EscapeDataString(reference.Name)}")">@finding.JobKey</MudLink></td>
+                            <td class="ris-nowrap">@T["Idle_Case_" + finding.Case]</td>
+                            <td class="ris-nowrap" style="text-align: right">@UiFormat.Number(finding.PlannedRuns)</td>
+                            <td class="ris-nowrap" style="text-align: right">@UiFormat.Number(finding.ConsecutiveFailures)</td>
+                            <td class="ris-nowrap">@(finding.LastWorkUtc is { } work ? Prefs.Format(work, "g") : T["Idle_Never"])</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+        @foreach (var error in shown.Errors)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error" Class="d-block">@error</MudText>
+        }
+    }
+</MudPaper>
+
 @code {
+    private IdleGuardSettings _guard = new();
+    private IdleGuardSettings _savedGuard = new();
+    private RIS.Hosting.IdleGuardResult? _shown;
+    private bool _guardBusy;
+
+    private static IdleGuardSettings Copy(IdleGuardSettings s) => new()
+    {
+        PauseFailing = s.PauseFailing, PauseIdle = s.PauseIdle, WindowDays = s.WindowDays, MinPlannedRuns = s.MinPlannedRuns, CheckAt = s.CheckAt
+    };
+
+    private async Task LoadGuardAsync()
+    {
+        _savedGuard = await Settings.GetAsync<IdleGuardSettings>(IdleGuardSettings.Key, Disposed);
+        _guard = Copy(_savedGuard);
+        _shown ??= IdleGuard.LastResult;
+    }
+
+    private async Task SaveGuardAsync()
+    {
+        _guardBusy = true;
+        try
+        {
+            await Settings.SaveAsync(IdleGuardSettings.Key, _guard, UserName, Disposed);
+            _savedGuard = Copy(_guard);
+            Snackbar.Add(T["Idle_Saved"], Severity.Success);
+        }
+        catch (RIS.Persistence.ConfigurationValidationException ex)
+        {
+            Snackbar.Add(string.Join("; ", ex.Errors), Severity.Error);
+        }
+        finally
+        {
+            _guardBusy = false;
+        }
+    }
+
+    private async Task PreviewGuardAsync()
+    {
+        _guardBusy = true;
+        try
+        {
+            _shown = await IdleGuard.RunAsync(apply: false, UserName, Disposed);
+        }
+        finally
+        {
+            _guardBusy = false;
+        }
+    }
+
+    private async Task RunGuardAsync()
+    {
+        if (!await ConfirmAsync(T["Idle_RunNowTitle"], T["Idle_RunNowText"], T["Idle_RunNow"], Color.Warning)) return;
+        _guardBusy = true;
+        try
+        {
+            _shown = await IdleGuard.RunAsync(apply: true, UserName, Disposed);
+            Snackbar.Add(T["Idle_Paused", _shown.Findings.Count], _shown.Findings.Count == 0 ? Severity.Success : Severity.Warning);
+        }
+        finally
+        {
+            _guardBusy = false;
+        }
+    }
+
     protected override bool RefreshOnRuns => false;
 
     private IReadOnlyList<DataStore> _stores = [];
@@ -87,7 +225,11 @@
 
     protected override TimeSpan? RefreshInterval => null;
 
-    protected override async Task LoadAsync() => _stores = await Maintenance.StoresAsync(Disposed);
+    protected override async Task LoadAsync()
+    {
+        _stores = await Maintenance.StoresAsync(Disposed);
+        await LoadGuardAsync();
+    }
 
     private async Task CleanupAsync()
     {

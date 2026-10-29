@@ -13,7 +13,10 @@ public static class Pausing
         [PauseReasons.IndefinitePause] = "PauseReason_IndefinitePause",
         [PauseReasons.Configuration] = "PauseReason_Configuration",
         [PauseReasons.KeptAfterChange] = "PauseReason_KeptAfterChange",
-        [PauseReasons.Error] = "PauseReason_Error"
+        [PauseReasons.Error] = "PauseReason_Error",
+        [PauseReasons.IdleFailing] = "PauseReason_IdleFailing",
+        [PauseReasons.IdleNoWork] = "PauseReason_IdleNoWork",
+        [PauseReasons.Operator] = "PauseReason_Operator"
     };
 
     public static string? Reason(string? reason, IStringLocalizer<UiText> text) =>

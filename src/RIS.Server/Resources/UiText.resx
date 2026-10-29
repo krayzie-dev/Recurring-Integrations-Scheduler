@@ -707,4 +707,37 @@
   <data name="ChartStyle_Heatmap" xml:space="preserve"><value>C · Heatmap</value></data>
   <data name="ChartStyle_Calm" xml:space="preserve"><value>D · Calm and alarm</value></data>
   <data name="Gantt_PlannedCount" xml:space="preserve"><value>Planned (intensity = number of runs)</value></data>
+  <data name="Idle_Title" xml:space="preserve"><value>Idle job guard</value></data>
+  <data name="Idle_On" xml:space="preserve"><value>on</value></data>
+  <data name="Idle_Off" xml:space="preserve"><value>off</value></data>
+  <data name="Idle_Intro" xml:space="preserve"><value>Once a day pauses jobs that ran often in the last days but only failed or did nothing. Infrequent jobs (e.g. daily or weekly), paused jobs, jobs changed or resumed in that period and jobs marked "Never pause automatically" are left alone. Useful on test servers; on production a job may wait a month for its file on purpose.</value></data>
+  <data name="Idle_PauseFailing" xml:space="preserve"><value>Pause jobs that only fail</value></data>
+  <data name="Idle_PauseFailingHelp" xml:space="preserve"><value>Every run in the whole period failed.</value></data>
+  <data name="Idle_PauseIdle" xml:space="preserve"><value>Pause jobs that do nothing</value></data>
+  <data name="Idle_PauseIdleHelp" xml:space="preserve"><value>No run in the whole period did any work (only "Skipped", e.g. no files, and failures). Counted from the installation of this version.</value></data>
+  <data name="Idle_WindowDays" xml:space="preserve"><value>Period (days)</value></data>
+  <data name="Idle_MinPlannedRuns" xml:space="preserve"><value>Min. planned runs</value></data>
+  <data name="Idle_CheckAt" xml:space="preserve"><value>Check time</value></data>
+  <data name="Idle_MinPlannedRunsHelp" xml:space="preserve"><value>Only jobs whose schedule runs them at least this many times in {0} days are checked – e.g. every 5 min is 2016 runs a week, daily is 7.</value></data>
+  <data name="Idle_Preview" xml:space="preserve"><value>Show what would be paused</value></data>
+  <data name="Idle_RunNow" xml:space="preserve"><value>Check and pause now</value></data>
+  <data name="Idle_RunNowTitle" xml:space="preserve"><value>Pause the jobs found now?</value></data>
+  <data name="Idle_RunNowText" xml:space="preserve"><value>The guard checks the jobs with the saved settings and pauses the ones that meet the conditions. Every pause is audited; resume a job with the usual Resume button.</value></data>
+  <data name="Idle_LastCheck" xml:space="preserve"><value>Last check: {0} · {1} jobs checked · {2} paused</value></data>
+  <data name="Idle_PreviewResult" xml:space="preserve"><value>Preview: {0} jobs checked · {1} to pause (nothing was paused)</value></data>
+  <data name="Idle_Case" xml:space="preserve"><value>Reason</value></data>
+  <data name="Idle_Planned" xml:space="preserve"><value>Planned runs</value></data>
+  <data name="Idle_FailuresInRow" xml:space="preserve"><value>Failures in a row</value></data>
+  <data name="Idle_LastWork" xml:space="preserve"><value>Last work</value></data>
+  <data name="Idle_Case_Failing" xml:space="preserve"><value>Only failures</value></data>
+  <data name="Idle_Case_NoWork" xml:space="preserve"><value>Does nothing</value></data>
+  <data name="Idle_Never" xml:space="preserve"><value>none in the period</value></data>
+  <data name="Idle_Saved" xml:space="preserve"><value>Idle guard settings saved</value></data>
+  <data name="Idle_Paused" xml:space="preserve"><value>Jobs paused: {0}</value></data>
+  <data name="PauseReason_IdleFailing" xml:space="preserve"><value>by the idle job guard – only failures (Maintenance)</value></data>
+  <data name="PauseReason_IdleNoWork" xml:space="preserve"><value>by the idle job guard – does nothing (Maintenance)</value></data>
+  <data name="Field_NeverAutoPause" xml:space="preserve"><value>Never pause automatically</value></data>
+  <data name="FieldHint_NeverAutoPause" xml:space="preserve"><value>The idle job guard skips this job</value></data>
+  <data name="FieldHelp_NeverAutoPause" xml:space="preserve"><value>For jobs that run often but wait long for data on purpose (e.g. a file once a month). The guard on the Maintenance page never pauses them.</value></data>
+  <data name="PauseReason_Operator" xml:space="preserve"><value>by an operator</value></data>
 </root>

@@ -112,6 +112,7 @@ public static class ServerHosting
             if (hostOptions.SchedulerStartDelay > TimeSpan.Zero) quartz.StartDelay = hostOptions.SchedulerStartDelay;
         });
         services.AddSingleton<RIS.Jobs.Quartz.IJobPauseRecorder, ConfigurationPauseRecorder>();
+        services.AddSingleton<RIS.Jobs.Quartz.IJobActivityRecorder, SettingsActivityRecorder>();
         services.AddSingleton<ScheduleSynchronizer>();
         services.AddHostedService(sp => sp.GetRequiredService<ScheduleSynchronizer>());
         services.AddHostedService<RunningJobsInterrupter>();
@@ -119,8 +120,17 @@ public static class ServerHosting
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<DataMaintenanceService>();
         services.AddHostedService(sp => sp.GetRequiredService<DataMaintenanceService>());
+        services.AddSingleton<IdleGuardService>();
+        services.AddHostedService(sp => sp.GetRequiredService<IdleGuardService>());
         return services;
     }
+}
+
+/// <summary>Runs that did real work, kept in ris.db for the idle guard.</summary>
+public sealed class SettingsActivityRecorder(SettingsRepository settings) : RIS.Jobs.Quartz.IJobActivityRecorder
+{
+    public Task RecordWorkAsync(string group, string name, DateTimeOffset finishedUtc, string? summary, CancellationToken cancellationToken) =>
+        settings.RecordWorkAsync(group, name, finishedUtc, summary, cancellationToken);
 }
 
 /// <summary>PauseOnError: the pause set by RIS is saved in the job configuration (one pause state, audited).</summary>

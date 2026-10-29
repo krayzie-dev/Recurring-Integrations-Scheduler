@@ -7,7 +7,7 @@ namespace RIS.Hosting;
 /// Stable Windows Event Log ids, so monitoring can filter on them (the sink would otherwise use a hash of the message):
 /// <list type="bullet">
 /// <item>1000 service started, 1001 service stopping (written although they are Information);</item>
-/// <item>2000 job run failed / partly failed (summary of the run);</item>
+/// <item>2000 job run failed / partly failed (summary of the run); 2100 job paused by the idle guard;</item>
 /// <item>10000 + 100 × category + number for errors with a RIS code, e.g. RIS-HTTP-001 = 10301, RIS-IMP-004 = 10504
 /// (categories in the order of <see cref="Categories"/>);</item>
 /// <item>3000 other warnings, 4000 other errors, 1100 other information.</item>
@@ -18,6 +18,7 @@ public sealed class RisEventIds : IEventIdProvider
     public const ushort ServiceStarted = 1000;
     public const ushort ServiceStopping = 1001;
     public const ushort JobRunFailed = 2000;
+    public const ushort JobPausedByIdleGuard = 2100;
 
     /// <summary>Property that sends an Information event to the Event Log and chooses its id.</summary>
     public const string EventLogProperty = "EventLogId";

@@ -781,4 +781,37 @@
   <data name="ChartStyle_Heatmap" xml:space="preserve"><value>C · Mapa cieplna</value></data>
   <data name="ChartStyle_Calm" xml:space="preserve"><value>D · Spokój i alarm</value></data>
   <data name="Gantt_PlannedCount" xml:space="preserve"><value>Zaplanowane (nasycenie = liczba uruchomień)</value></data>
+  <data name="Idle_Title" xml:space="preserve"><value>Strażnik bezczynnych zadań</value></data>
+  <data name="Idle_On" xml:space="preserve"><value>włączony</value></data>
+  <data name="Idle_Off" xml:space="preserve"><value>wyłączony</value></data>
+  <data name="Idle_Intro" xml:space="preserve"><value>Raz dziennie wstrzymuje zadania, które w ostatnich dniach uruchamiały się często, ale tylko kończyły się błędem albo nic nie zrobiły. Zadania rzadkie (np. codzienne czy tygodniowe), wstrzymane, zmienione lub wznowione w tym okresie oraz oznaczone „Nie wstrzymuj automatycznie” nie są ruszane. Przydatne na serwerach testowych; na produkcji zadanie może celowo czekać miesiąc na plik.</value></data>
+  <data name="Idle_PauseFailing" xml:space="preserve"><value>Wstrzymuj zadania, które tylko kończą się błędem</value></data>
+  <data name="Idle_PauseFailingHelp" xml:space="preserve"><value>Przez cały okres każde uruchomienie zakończyło się błędem.</value></data>
+  <data name="Idle_PauseIdle" xml:space="preserve"><value>Wstrzymuj zadania, które nic nie robią</value></data>
+  <data name="Idle_PauseIdleHelp" xml:space="preserve"><value>Przez cały okres żadne uruchomienie nie wykonało pracy (tylko „Pominięte”, np. brak plików, i błędy). Liczone od instalacji tej wersji.</value></data>
+  <data name="Idle_WindowDays" xml:space="preserve"><value>Okres (dni)</value></data>
+  <data name="Idle_MinPlannedRuns" xml:space="preserve"><value>Min. planowanych uruchomień</value></data>
+  <data name="Idle_CheckAt" xml:space="preserve"><value>Godzina sprawdzania</value></data>
+  <data name="Idle_MinPlannedRunsHelp" xml:space="preserve"><value>Sprawdzane są tylko zadania, które według harmonogramu uruchamiają się w ciągu {0} dni co najmniej tyle razy – np. co 5 min to 2016 uruchomień w tydzień, codzienne to 7.</value></data>
+  <data name="Idle_Preview" xml:space="preserve"><value>Pokaż, co zostałoby wstrzymane</value></data>
+  <data name="Idle_RunNow" xml:space="preserve"><value>Sprawdź i wstrzymaj teraz</value></data>
+  <data name="Idle_RunNowTitle" xml:space="preserve"><value>Wstrzymać znalezione zadania teraz?</value></data>
+  <data name="Idle_RunNowText" xml:space="preserve"><value>Strażnik sprawdzi zadania według zapisanych ustawień i wstrzyma te, które spełniają warunki. Każde wstrzymanie trafi do audytu; zadanie wznowisz zwykłym przyciskiem Wznów.</value></data>
+  <data name="Idle_LastCheck" xml:space="preserve"><value>Ostatnie sprawdzenie: {0} · sprawdzono {1} zadań · wstrzymano {2}</value></data>
+  <data name="Idle_PreviewResult" xml:space="preserve"><value>Podgląd: sprawdzono {0} zadań · do wstrzymania {1} (nic nie zostało wstrzymane)</value></data>
+  <data name="Idle_Case" xml:space="preserve"><value>Powód</value></data>
+  <data name="Idle_Planned" xml:space="preserve"><value>Planowanych uruchomień</value></data>
+  <data name="Idle_FailuresInRow" xml:space="preserve"><value>Błędów z rzędu</value></data>
+  <data name="Idle_LastWork" xml:space="preserve"><value>Ostatnia praca</value></data>
+  <data name="Idle_Case_Failing" xml:space="preserve"><value>Tylko błędy</value></data>
+  <data name="Idle_Case_NoWork" xml:space="preserve"><value>Nic nie robi</value></data>
+  <data name="Idle_Never" xml:space="preserve"><value>brak w okresie</value></data>
+  <data name="Idle_Saved" xml:space="preserve"><value>Ustawienia strażnika zapisane</value></data>
+  <data name="Idle_Paused" xml:space="preserve"><value>Wstrzymano zadań: {0}</value></data>
+  <data name="PauseReason_IdleFailing" xml:space="preserve"><value>przez strażnika bezczynnych zadań – tylko błędy (Konserwacja)</value></data>
+  <data name="PauseReason_IdleNoWork" xml:space="preserve"><value>przez strażnika bezczynnych zadań – nic nie robi (Konserwacja)</value></data>
+  <data name="Field_NeverAutoPause" xml:space="preserve"><value>Nie wstrzymuj automatycznie</value></data>
+  <data name="FieldHint_NeverAutoPause" xml:space="preserve"><value>Strażnik bezczynnych zadań pomija to zadanie</value></data>
+  <data name="FieldHelp_NeverAutoPause" xml:space="preserve"><value>Dla zadań, które uruchamiają się często, ale celowo długo czekają na dane (np. plik raz w miesiącu). Strażnik z Konserwacji nigdy ich nie wstrzyma.</value></data>
+  <data name="PauseReason_Operator" xml:space="preserve"><value>przez operatora</value></data>
 </root>

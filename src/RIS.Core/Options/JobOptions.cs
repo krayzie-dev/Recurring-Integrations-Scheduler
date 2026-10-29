@@ -69,6 +69,13 @@ public abstract class JobOptionsBase : IValidatableObject
     public bool PauseOnError { get; set; }
 
     /// <summary>
+    /// The idle guard never pauses this job (e.g. it runs every 5 minutes but waits a month for its file). Written only when
+    /// set, so definition hashes of existing jobs do not change.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NeverAutoPause { get; set; }
+
+    /// <summary>
     /// 4.x IndefinitePause, read only from old configuration: <see cref="Configuration.JobDefinition.NormalizePause"/> turns it
     /// into a pause of the schedule (reason "IndefinitePause"), so a job has one pause state. Still written (always false), so
     /// definition hashes of existing jobs do not change.
