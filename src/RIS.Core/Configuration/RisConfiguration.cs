@@ -72,8 +72,29 @@ public sealed class ScheduleOptions : IValidatableObject
     /// <summary>What happens with a run missed while the service was not running.</summary>
     public MissedRunPolicy MissedRuns { get; set; } = MissedRunPolicy.RunOnce;
 
-    /// <summary>Job is scheduled but paused.</summary>
+    /// <summary>
+    /// Job is scheduled but paused. The one place of the pause state: pause/resume in the UI, API and CLI, PauseOnError and
+    /// the switch in the job form all change it; the scheduler follows it.
+    /// </summary>
     public bool Paused { get; set; }
+
+    /// <summary>Why the job is paused (typed by the operator, or one of the reasons set by RIS). Only when paused.</summary>
+    public string? PauseReason { get; set; }
+
+    /// <summary>Who paused the job ("RIS" for PauseOnError). Only when paused.</summary>
+    public string? PausedBy { get; set; }
+
+    /// <summary>When the job was paused. Only when paused.</summary>
+    public DateTimeOffset? PausedAtUtc { get; set; }
+
+    /// <summary>Pauses (with who, when and why) or resumes; resuming clears the details.</summary>
+    public void SetPaused(bool paused, string? reason = null, string? by = null, DateTimeOffset? at = null)
+    {
+        Paused = paused;
+        PauseReason = paused ? reason : null;
+        PausedBy = paused ? by : null;
+        PausedAtUtc = paused ? at : null;
+    }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -167,6 +188,42 @@ public sealed class JobDefinition
     /// <summary>Key used in logs and in the scheduler: "Group.Name" (same as 4.x JobKey).</summary>
     [JsonIgnore]
     public string Key => $"{Group}.{Name}";
+
+    /// <summary>
+    /// One pause state: the 4.x "IndefinitePause" option becomes a pause of the schedule, and details of a pause are kept only
+    /// while the job is paused. Returns true when something changed.
+    /// </summary>
+    public bool NormalizePause()
+    {
+        var changed = false;
+        if (Options is { IndefinitePause: true } options)
+        {
+            options.IndefinitePause = false;
+            if (!Schedule.Paused) Schedule.SetPaused(true, PauseReasons.IndefinitePause);
+            else Schedule.PauseReason ??= PauseReasons.IndefinitePause;
+            changed = true;
+        }
+
+        if (!Schedule.Paused && (Schedule.PauseReason ?? Schedule.PausedBy ?? (object?)Schedule.PausedAtUtc) is not null)
+        {
+            Schedule.SetPaused(false);
+            changed = true;
+        }
+
+        return changed;
+    }
+}
+
+/// <summary>Pause reasons set by RIS (the UI shows them translated). Operators type their own reasons.</summary>
+public static class PauseReasons
+{
+    /// <summary>4.x IndefinitePause (job disabled).</summary>
+    public const string IndefinitePause = "IndefinitePause";
+    public const string Configuration = "Paused in configuration";
+    /// <summary>Before RIS 5.0.0-local.30 an operator pause kept when the job changed; no longer set.</summary>
+    public const string KeptAfterChange = "Paused by operator (kept after configuration change)";
+    public const string Error = "Paused after a failed run (PauseOnError)";
+    public const string Operator = "Paused by operator";
 }
 
 /// <summary>

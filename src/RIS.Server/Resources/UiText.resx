@@ -256,9 +256,8 @@
   <data name="Field_StartAt" xml:space="preserve"><value>Start (reference point)</value></data>
   <data name="Field_TimeZone" xml:space="preserve"><value>Time zone</value></data>
   <data name="Field_MissedRuns" xml:space="preserve"><value>Missed runs</value></data>
-  <data name="Field_Paused" xml:space="preserve"><value>Paused in configuration</value></data>
+  <data name="Field_Paused" xml:space="preserve"><value>Paused</value></data>
   <data name="Field_PauseOnError" xml:space="preserve"><value>Pause on error</value></data>
-  <data name="Field_IndefinitePause" xml:space="preserve"><value>Disabled (never runs)</value></data>
   <data name="Field_Company" xml:space="preserve"><value>Legal entity</value></data>
   <data name="Field_DataProject" xml:space="preserve"><value>Data project</value></data>
   <data name="Field_DelayBetweenFiles" xml:space="preserve"><value>Delay between files</value></data>
@@ -397,7 +396,7 @@
   <data name="Sched_TimeZone" xml:space="preserve"><value>Time zone</value></data>
   <data name="Sched_ServerZone" xml:space="preserve"><value>Server time zone</value></data>
   <data name="Sched_MissedHelp" xml:space="preserve"><value>Run once after start: if the service was stopped at a planned time, the job runs once right after the start (recommended for exports). Skip: it waits for the next planned time.</value></data>
-  <data name="Sched_PausedHelp" xml:space="preserve"><value>The job is saved and visible but does not run until resumed.</value></data>
+  <data name="Sched_PausedHelp" xml:space="preserve"><value>The job is saved and visible but does not run until resumed. The same state as Pause/Resume in the job list and Pause on error.</value></data>
   <data name="Enum_MissedRunPolicy_RunOnce" xml:space="preserve"><value>Run once after start</value></data>
   <data name="Enum_MissedRunPolicy_Skip" xml:space="preserve"><value>Skip</value></data>
   <data name="Enum_FileOrder_Created" xml:space="preserve"><value>Creation time</value></data>
@@ -476,8 +475,6 @@
   <data name="FieldHelp_ErrorKeysFileTimeout" xml:space="preserve"><value>D365 generates the error keys file asynchronously; after this time the file is skipped with a warning.</value></data>
   <data name="FieldHint_PauseOnError" xml:space="preserve"><value>Pause the job after a failed run</value></data>
   <data name="FieldHelp_PauseOnError" xml:space="preserve"><value>The job stops running after a failure until someone resumes it. Useful when a repeated run could do harm.</value></data>
-  <data name="FieldHint_IndefinitePause" xml:space="preserve"><value>Keep the job but never run it</value></data>
-  <data name="FieldHelp_IndefinitePause" xml:space="preserve"><value>The definition is kept (e.g. for later) but the job never runs, not even by "Run now". 4.x: IndefinitePause.</value></data>
   <data name="FieldHint_ActionPaths" xml:space="preserve"><value>Only for customized D365 OData actions</value></data>
   <data name="FieldHelp_ActionPaths" xml:space="preserve"><value>Paths of the D365 Data management OData actions. Change only when your environment uses custom actions.</value></data>
   <data name="FieldHint_SearchPattern" xml:space="preserve"><value>e.g. *.csv</value></data>

@@ -103,7 +103,7 @@ RIS pobiera wszystkie komunikaty z kolejki, zapisuje pakiety i **potwierdza odbi
 
 - **Strefa czasowa** – domyślnie strefa serwera; godziny pozostają stałe także przy zmianie czasu letniego/zimowego.
 - **Przegapione terminy** – gdy usługa nie działała w zaplanowanym terminie: *Uruchom raz po starcie* (zalecane dla eksportów) albo *Pomiń*.
-- **Wstrzymane w konfiguracji** – zadanie jest zapisane, ale się nie uruchamia.
+- **Wstrzymane** – zadanie jest zapisane, ale się nie uruchamia. To ten sam stan co *Wstrzymaj*/*Wznów* na liście zadań i *Wstrzymaj po błędzie*: przełącznik pokazuje, czy zadanie jest teraz wstrzymane, a zapis formularza zachowuje powód i osobę, która wstrzymała.
 - Pod konstruktorem: opis słowny i tabela najbliższych uruchomień.
 
 ## Kopiowanie i edycja wielu zadań

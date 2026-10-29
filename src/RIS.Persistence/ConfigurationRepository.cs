@@ -178,13 +178,15 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
         {
             var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == job.Group && j.Name == job.Name, cancellationToken);
-            var before = entity is null ? null : JobJson(ToDefinition(entity));
+            var previous = entity is null ? null : ToDefinition(entity);
+            var before = previous is null ? null : JobJson(previous);
             if (entity is null)
             {
                 entity = new JobDefinitionEntity { Name = job.Name, Group = job.Group, ScheduleJson = "", OptionsJson = "", Hash = "" };
                 db.Jobs.Add(entity);
             }
 
+            CarryPause(previous, job, user);
             Apply(entity, job);
             Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
             audit("Job", job.Key, before is null ? "Created" : "Updated", before, JobJson(job));
@@ -203,7 +205,8 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             {
                 var entity = entities.GetValueOrDefault((change.OriginalGroup, change.OriginalName))
                              ?? throw NotFound("Job", $"{change.OriginalGroup}.{change.OriginalName}");
-                var before = JobJson(ToDefinition(entity));
+                var previous = ToDefinition(entity);
+                var before = JobJson(previous);
                 var originalKey = $"{change.OriginalGroup}.{change.OriginalName}";
                 if (!string.Equals(originalKey, change.Job.Key, StringComparison.OrdinalIgnoreCase))
                 {
@@ -211,6 +214,7 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
                     audit("Job", originalKey, "Moved", before, change.Job.Key);
                 }
 
+                CarryPause(previous, change.Job, user);
                 Apply(entity, change.Job);
                 Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
                 audit("Job", change.Job.Key, "Updated", before, JobJson(change.Job));
@@ -257,6 +261,33 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             configuration.Jobs.RemoveAll(j => string.Equals(j.Key, $"{group}.{name}", StringComparison.OrdinalIgnoreCase));
             audit("Job", $"{group}.{name}", "Deleted", JobJson(ToDefinition(entity)), null);
         });
+
+    /// <summary>
+    /// Pauses or resumes jobs (the one pause state, the scheduler follows it): one transaction, one audit entry per job
+    /// ("Paused" / "Resumed", with who, when and why in the job JSON). Jobs already in the requested state are left as they are,
+    /// so a pause keeps its original reason. Returns the jobs that changed.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SetPausedAsync(IReadOnlyCollection<(string Group, string Name)> jobs, bool paused, string? reason,
+        string? user, CancellationToken cancellationToken = default)
+    {
+        var changed = new List<string>();
+        await ChangeAsync(user, cancellationToken, async (db, configuration, audit) =>
+        {
+            foreach (var (group, name) in jobs)
+            {
+                var entity = await db.Jobs.FirstOrDefaultAsync(j => j.Group == group && j.Name == name, cancellationToken) ?? throw NotFound("Job", $"{group}.{name}");
+                var job = ToDefinition(entity);
+                if (job.Schedule.Paused == paused) continue;
+                var before = JobJson(job);
+                job.Schedule.SetPaused(paused, reason ?? PauseReasons.Operator, user, time.GetUtcNow());
+                Apply(entity, job);
+                Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
+                audit("Job", job.Key, paused ? "Paused" : "Resumed", before, JobJson(job));
+                changed.Add(job.Key);
+            }
+        });
+        return changed;
+    }
 
     /// <summary>
     /// Sets the secret of a connection (client secret or user password, by authentication mode)
@@ -349,12 +380,18 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
             var existingJobs = await JobsByKeyAsync(db, imported.Jobs.Select(j => j.Group), cancellationToken);
             foreach (var job in imported.Jobs)
             {
+                JobDefinition? previous = null;
                 if (!existingJobs.TryGetValue((job.Group, job.Name), out var entity))
                 {
                     entity = new JobDefinitionEntity { Name = job.Name, Group = job.Group, ScheduleJson = "", OptionsJson = "", Hash = "" };
                     db.Jobs.Add(entity);
                     existingJobs[(job.Group, job.Name)] = entity;
                 }
+                else
+                {
+                    previous = ToDefinition(entity);
+                }
+                CarryPause(previous, job, user);
                 Apply(entity, job);
                 Replace(configuration.Jobs, j => j.Key, ToDefinition(entity));
             }
@@ -467,9 +504,19 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         return await db.Audit.MaxAsync(a => (long?)a.Id, cancellationToken) ?? 0;
     }
 
-    public static string ComputeHash(JobDefinition job) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(job.Schedule, RisJson.Options) + "\n" + JsonSerializer.Serialize(job.Options, RisJson.Options))));
+    /// <summary>
+    /// Hash of what the scheduler needs to rebuild the job. The pause state is not part of it (always hashed as not paused, so
+    /// hashes of jobs that are not paused stay as before): a pause or resume is applied to the existing trigger, without
+    /// rescheduling, so missed runs keep being detected.
+    /// </summary>
+    public static string ComputeHash(JobDefinition job)
+    {
+        var schedule = JsonSerializer.SerializeToNode(job.Schedule, RisJson.Options)!.AsObject();
+        foreach (var name in new[] { "pauseReason", "pausedBy", "pausedAtUtc" }) schedule.Remove(name);
+        if (schedule.ContainsKey("paused")) schedule["paused"] = false;
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            schedule.ToJsonString(RisJson.Options) + "\n" + JsonSerializer.Serialize(job.Options, RisJson.Options))));
+    }
 
     private delegate void AuditWriter(string entityType, string key, string action, string? before, string? after);
 
@@ -619,6 +666,26 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         else if (!SecretPlaceholder.IsPlaceholderOrEmpty(options.KeyPassphrase)) entity.ProtectedKeyPassphrase = secrets.Protect(options.KeyPassphrase);
     }
 
+    /// <summary>
+    /// A saved job keeps the details of its pause (the job form and the bulk edit send only the switch); a job paused by this
+    /// save gets who and when; the 4.x IndefinitePause becomes a pause.
+    /// </summary>
+    private void CarryPause(JobDefinition? previous, JobDefinition job, string? user)
+    {
+        job.NormalizePause();
+        var schedule = job.Schedule;
+        if (!schedule.Paused) return;
+        if (previous?.Schedule.Paused == true)
+        {
+            schedule.PauseReason ??= previous.Schedule.PauseReason;
+            schedule.PausedBy ??= previous.Schedule.PausedBy;
+            schedule.PausedAtUtc ??= previous.Schedule.PausedAtUtc;
+        }
+        schedule.PauseReason ??= PauseReasons.Configuration;
+        schedule.PausedBy ??= user;
+        schedule.PausedAtUtc ??= time.GetUtcNow();
+    }
+
     private static void Apply(JobDefinitionEntity entity, JobDefinition job)
     {
         entity.Name = job.Name;
@@ -671,15 +738,20 @@ public sealed class ConfigurationRepository(IDbContextFactory<RisDbContext> cont
         KeyPassphrase = secrets.Unprotect(entity.ProtectedKeyPassphrase, $"SFTP server {entity.Name} key passphrase")
     };
 
-    private static JobDefinition ToDefinition(JobDefinitionEntity entity) => new()
+    private static JobDefinition ToDefinition(JobDefinitionEntity entity)
     {
-        Name = entity.Name,
-        Group = entity.Group,
-        Description = entity.Description,
-        Schedule = JsonSerializer.Deserialize<ScheduleOptions>(entity.ScheduleJson, RisJson.Options)!,
-        Options = JsonSerializer.Deserialize<JobOptionsBase>(entity.OptionsJson, RisJson.Options),
-        PairedJob = entity.PairedJob
-    };
+        var job = new JobDefinition
+        {
+            Name = entity.Name,
+            Group = entity.Group,
+            Description = entity.Description,
+            Schedule = JsonSerializer.Deserialize<ScheduleOptions>(entity.ScheduleJson, RisJson.Options)!,
+            Options = JsonSerializer.Deserialize<JobOptionsBase>(entity.OptionsJson, RisJson.Options),
+            PairedJob = entity.PairedJob
+        };
+        job.NormalizePause();
+        return job;
+    }
 
     public static D365ConnectionOptions WithoutSecrets(D365ConnectionOptions c) => new()
     {

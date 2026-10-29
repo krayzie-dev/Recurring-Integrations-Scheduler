@@ -330,9 +330,8 @@
   <data name="Field_StartAt" xml:space="preserve"><value>Start (punkt odniesienia)</value></data>
   <data name="Field_TimeZone" xml:space="preserve"><value>Strefa czasowa</value></data>
   <data name="Field_MissedRuns" xml:space="preserve"><value>Przegapione terminy</value></data>
-  <data name="Field_Paused" xml:space="preserve"><value>Wstrzymane w konfiguracji</value></data>
+  <data name="Field_Paused" xml:space="preserve"><value>Wstrzymane</value></data>
   <data name="Field_PauseOnError" xml:space="preserve"><value>Wstrzymaj po błędzie</value></data>
-  <data name="Field_IndefinitePause" xml:space="preserve"><value>Wyłączone (nigdy nie uruchamia)</value></data>
   <data name="Field_Company" xml:space="preserve"><value>Firma (legal entity)</value></data>
   <data name="Field_DataProject" xml:space="preserve"><value>Projekt danych</value></data>
   <data name="Field_DelayBetweenFiles" xml:space="preserve"><value>Odstęp między plikami</value></data>
@@ -471,7 +470,7 @@
   <data name="Sched_TimeZone" xml:space="preserve"><value>Strefa czasowa</value></data>
   <data name="Sched_ServerZone" xml:space="preserve"><value>Strefa serwera</value></data>
   <data name="Sched_MissedHelp" xml:space="preserve"><value>Uruchom raz po starcie: jeśli usługa nie działała w zaplanowanym terminie, zadanie wykona się raz zaraz po starcie (zalecane dla eksportów). Pomiń: czeka na następny termin.</value></data>
-  <data name="Sched_PausedHelp" xml:space="preserve"><value>Zadanie jest zapisane i widoczne, ale nie uruchamia się, dopóki go nie wznowisz.</value></data>
+  <data name="Sched_PausedHelp" xml:space="preserve"><value>Zadanie jest zapisane i widoczne, ale nie uruchamia się, dopóki go nie wznowisz. To ten sam stan co przyciski Wstrzymaj/Wznów na liście zadań i Wstrzymaj po błędzie.</value></data>
   <data name="Enum_MissedRunPolicy_RunOnce" xml:space="preserve"><value>Uruchom raz po starcie</value></data>
   <data name="Enum_MissedRunPolicy_Skip" xml:space="preserve"><value>Pomiń</value></data>
   <data name="Enum_FileOrder_Created" xml:space="preserve"><value>Czas utworzenia</value></data>
@@ -550,8 +549,6 @@
   <data name="FieldHelp_ErrorKeysFileTimeout" xml:space="preserve"><value>D365 generuje plik kluczy błędów asynchronicznie; po tym czasie plik jest pomijany z ostrzeżeniem.</value></data>
   <data name="FieldHint_PauseOnError" xml:space="preserve"><value>Wstrzymaj zadanie po nieudanym uruchomieniu</value></data>
   <data name="FieldHelp_PauseOnError" xml:space="preserve"><value>Po błędzie zadanie przestaje się uruchamiać, dopóki ktoś go nie wznowi. Przydatne, gdy ponowne uruchomienie mogłoby zaszkodzić.</value></data>
-  <data name="FieldHint_IndefinitePause" xml:space="preserve"><value>Zachowaj zadanie, ale nigdy go nie uruchamiaj</value></data>
-  <data name="FieldHelp_IndefinitePause" xml:space="preserve"><value>Definicja zostaje (np. na później), ale zadanie nigdy się nie uruchamia, nawet przez „Uruchom teraz”. 4.x: IndefinitePause.</value></data>
   <data name="FieldHint_ActionPaths" xml:space="preserve"><value>Tylko dla zmodyfikowanych akcji OData w D365</value></data>
   <data name="FieldHelp_ActionPaths" xml:space="preserve"><value>Ścieżki akcji OData zarządzania danymi w D365. Zmieniaj tylko, jeśli środowisko używa własnych akcji.</value></data>
   <data name="FieldHint_SearchPattern" xml:space="preserve"><value>np. *.csv</value></data>

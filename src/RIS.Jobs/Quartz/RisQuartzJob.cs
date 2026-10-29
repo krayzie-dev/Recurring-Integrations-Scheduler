@@ -5,15 +5,6 @@ using RIS.Core.Options;
 
 namespace RIS.Jobs.Quartz;
 
-/// <summary>Pause reasons set by RIS (stored by Quartz; the UI shows them translated). Operators type their own reasons.</summary>
-public static class PauseReasons
-{
-    public const string IndefinitePause = "IndefinitePause";
-    public const string Configuration = "Paused in configuration";
-    public const string KeptAfterChange = "Paused by operator (kept after configuration change)";
-    public const string Error = "Paused after a failed run (PauseOnError)";
-}
-
 /// <summary>
 /// Job input stored by Quartz. The envelope keeps the polymorphic "type" of options in the serialized JSON.
 /// Contains no secrets: connections and SFTP servers are referenced by name.
@@ -27,7 +18,8 @@ public sealed class RisJobInput
 /// Quartz job running any RIS job type through <see cref="JobPipeline"/>.
 /// Result is stored as <see cref="JobRunReport"/> in Quartz execution history.
 /// </summary>
-public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, ILogger<RisQuartzJob> logger) : IJob<RisJobInput>
+public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, ILogger<RisQuartzJob> logger,
+    IJobPauseRecorder? pauseRecorder = null) : IJob<RisJobInput>
 {
     public async ValueTask Execute(IJobExecutionContext context, RisJobInput input, CancellationToken cancellationToken)
     {
@@ -40,14 +32,6 @@ public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, 
         var key = context.JobDetail.Key;
         var jobKey = $"{key.Group}.{key.Name}";
         var options = input.Options ?? throw new JobExecutionException($"Job {jobKey} has no options.");
-
-        if (options.IndefinitePause)
-        {
-            await context.Scheduler.PauseJob(key, cancellationToken);
-            logger.LogInformation("Job {JobKey} is disabled (IndefinitePause) and was paused", jobKey);
-            context.Result = JobRunReport.Skipped("Job is disabled (IndefinitePause)");
-            return;
-        }
 
         var outcome = await pipeline.RunAsync(jobKey, options, context.FireInstanceId, context.ReportProgress, cancellationToken);
 
@@ -66,9 +50,27 @@ public sealed class RisQuartzJob(JobPipeline pipeline, RunningJobs runningJobs, 
         if (outcome.Status == JobOutcomeStatus.Failed && options.PauseOnError)
         {
             await context.Scheduler.PauseJobWith(key, new PauseDetails { Reason = PauseReasons.Error, RequestedBy = "RIS" }, cancellationToken);
+            // The pause belongs to the job configuration (one pause state): a later change of the job keeps it, the audit shows it.
+            if (pauseRecorder is not null)
+            {
+                try
+                {
+                    await pauseRecorder.RecordPauseAsync(key.Group, key.Name, PauseReasons.Error, "RIS", CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Pause of job {JobKey} after a failed run was not saved in the configuration: {Error}", jobKey, ex.Message);
+                }
+            }
             logger.LogWarning("Job {JobKey} was paused because it failed and PauseOnError is set", jobKey);
         }
     }
+}
+
+/// <summary>Saves a pause set by RIS itself (PauseOnError) in the job configuration.</summary>
+public interface IJobPauseRecorder
+{
+    Task RecordPauseAsync(string group, string name, string reason, string by, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -270,22 +272,17 @@ public static class RisJobScheduling
         : interval.Ticks % TimeSpan.TicksPerMinute == 0 ? ((int)interval.TotalMinutes, IntervalUnit.Minute)
         : ((int)interval.TotalSeconds, IntervalUnit.Second);
 
-    /// <summary>
-    /// Adds or replaces the job and its trigger; pauses it when configured or when <paramref name="keepPaused"/> (operational pause).
-    /// </summary>
+    /// <summary>Adds or replaces the job and its trigger, paused when the configuration says so (the one pause state).</summary>
     public static async Task ScheduleAsync(IScheduler scheduler, JobDefinition definition, CancellationToken cancellationToken,
-        string? definitionHash = null, bool keepPaused = false)
+        string? definitionHash = null)
     {
-        var configPaused = definition.Schedule.Paused || definition.Options?.IndefinitePause == true;
-        var paused = configPaused || keepPaused;
+        var paused = definition.Schedule.Paused;
         var options = new ScheduleJobOptions
         {
             Replace = true,
             Paused = paused,
-            PauseReason = !paused ? null
-                : definition.Options?.IndefinitePause == true ? PauseReasons.IndefinitePause
-                : configPaused ? PauseReasons.Configuration
-                : PauseReasons.KeptAfterChange
+            PauseReason = paused ? definition.Schedule.PauseReason ?? PauseReasons.Configuration : null,
+            PauseRequestedBy = paused ? definition.Schedule.PausedBy : null
         };
         await scheduler.ScheduleJob(BuildJob(definition, definitionHash), [BuildTrigger(definition, DateTimeOffset.UtcNow)], options, cancellationToken);
     }

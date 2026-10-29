@@ -10,11 +10,23 @@ namespace RIS.Jobs.Tests;
 [TestClass]
 public sealed class QuartzIntegrationTests
 {
-    private static JobsTestHost CreateHost() => new(services =>
+    private static JobsTestHost CreateHost(IJobPauseRecorder? pauses = null) => new(services =>
     {
         services.AddQuartz(q => q.UseExecutionLogCapture(o => o.MaxLines = 200));
         services.AddQuartzExecutionHistory(o => o.RecordInput = true);
+        if (pauses is not null) services.AddSingleton(pauses);
     });
+
+    private sealed class RecordedPauses : IJobPauseRecorder
+    {
+        public List<string> Pauses { get; } = [];
+
+        public Task RecordPauseAsync(string group, string name, string reason, string by, CancellationToken cancellationToken)
+        {
+            Pauses.Add($"{group}.{name}: {reason} ({by})");
+            return Task.CompletedTask;
+        }
+    }
 
     private static async Task<ExecutionHistoryEntry> WaitForHistoryAsync(IServiceProvider services, IScheduler scheduler, string jobName)
     {
@@ -70,7 +82,8 @@ public sealed class QuartzIntegrationTests
     [TestMethod]
     public async Task FailedRun_IsRecordedAsFailed_AndPauseOnErrorPausesJob()
     {
-        using var host = CreateHost();
+        var pauses = new RecordedPauses();
+        using var host = CreateHost(pauses);
         host.D365.ExportStatus = () => "Failed";
         var scheduler = await host.Services.GetRequiredService<ISchedulerFactory>().GetScheduler();
         await scheduler.Start();
@@ -91,6 +104,7 @@ public sealed class QuartzIntegrationTests
         Assert.AreEqual(JobRunResult.Failed, entry.EffectiveResult);
         StringAssert.StartsWith(entry.Summary, "[RIS-EXP-002]");
         Assert.AreEqual(TriggerState.Paused, triggerState);
+        CollectionAssert.AreEqual(new[] { $"Export jobs.Vendors: {PauseReasons.Error} (RIS)" }, pauses.Pauses, "The pause is saved in the job configuration.");
     }
 
     [TestMethod]

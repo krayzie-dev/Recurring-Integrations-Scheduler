@@ -111,6 +111,7 @@ public static class ServerHosting
             quartz.WaitForJobsToComplete = true;
             if (hostOptions.SchedulerStartDelay > TimeSpan.Zero) quartz.StartDelay = hostOptions.SchedulerStartDelay;
         });
+        services.AddSingleton<RIS.Jobs.Quartz.IJobPauseRecorder, ConfigurationPauseRecorder>();
         services.AddSingleton<ScheduleSynchronizer>();
         services.AddHostedService(sp => sp.GetRequiredService<ScheduleSynchronizer>());
         services.AddHostedService<RunningJobsInterrupter>();
@@ -120,4 +121,11 @@ public static class ServerHosting
         services.AddHostedService(sp => sp.GetRequiredService<DataMaintenanceService>());
         return services;
     }
+}
+
+/// <summary>PauseOnError: the pause set by RIS is saved in the job configuration (one pause state, audited).</summary>
+public sealed class ConfigurationPauseRecorder(ConfigurationRepository repository) : RIS.Jobs.Quartz.IJobPauseRecorder
+{
+    public Task RecordPauseAsync(string group, string name, string reason, string by, CancellationToken cancellationToken) =>
+        repository.SetPausedAsync([(group, name)], true, reason, by, cancellationToken);
 }

@@ -28,7 +28,7 @@ Data directory `%ProgramData%\RIS5` (`Ris:Data:DataDirectory`):
 | Path | Content |
 |---|---|
 | `ris.db` | Configuration and audit (schema migrated at start, backup first) |
-| `quartz.db` | Triggers, pauses, execution history with captured job logs (schema kept up to date by Quartz.Weasel) |
+| `quartz.db` | Triggers (their pause follows the job configuration in `ris.db`), execution history with captured job logs (schema kept up to date by Quartz.Weasel) |
 | `keys\` | Data Protection keys for secrets – back them up together with `ris.db` (see [operations.md](operations.md)) |
 | `logs\` | `ris-YYYYMMDD.clef`, `jobs\<Group.Name>\job-YYYYMMDD.clef` |
 | `backup\` | Database copies before schema changes (10 kept) |

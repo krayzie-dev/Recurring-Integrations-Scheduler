@@ -26,7 +26,7 @@ placeholders `<SET-SECRET>` are written and reported.
 | DelayBetweenFiles | `delayBetweenFiles` | Monitors: from `DelayBetweenStatusCheck` (4.x used it between checked files). |
 | RetryCount, RetryDelay | `retry.count/delay` | File operations. HTTP retry is global (`Ris:Http`), transient errors only, never for ExportToPackage/ImportFromPackage/Enqueue. |
 | PauseJobOnException | `pauseOnError` | Pauses the Quartz job after a failed run. |
-| IndefinitePause | `indefinitePause` | Job is scheduled paused with reason. |
+| IndefinitePause | `schedule.paused` | Imported as a pause of the job (reason "IndefinitePause"); one pause state with Pause/Resume. |
 | *ActionPath, *Path (OData actions) | `actionPaths` | |
 | LogVerbose | – | Replaced by log levels; every job has its own log file. |
 | JobKey | – | `group.name`. |

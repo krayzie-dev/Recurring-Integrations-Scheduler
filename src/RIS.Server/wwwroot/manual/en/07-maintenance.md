@@ -7,7 +7,7 @@
 | `%ProgramFiles%\RIS5` | Program, `cli\ris.exe` |
 | `%ProgramData%\RIS5\appsettings.json` | Machine settings (ports, HTTPS, roles, retention). Restart the service after a change. |
 | `%ProgramData%\RIS5\ris.db` | Configuration: app registrations, D365 instances, SFTP servers, jobs, encrypted secrets, audit |
-| `%ProgramData%\RIS5\quartz.db` | Schedule (triggers, pauses) and run history with logs |
+| `%ProgramData%\RIS5\quartz.db` | Schedule (triggers) and run history with logs |
 | `%ProgramData%\RIS5\keys\` | Secret encryption keys – **without them the secrets cannot be read** |
 | `%ProgramData%\RIS5\logs\` | `ris-YYYYMMDD.clef` (service log), `jobs\<Group.Job>\` (per job log) |
 | `%ProgramData%\RIS5\backup\` | Database copies taken before schema changes and upgrades |

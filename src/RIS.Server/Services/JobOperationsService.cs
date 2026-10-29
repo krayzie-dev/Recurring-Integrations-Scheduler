@@ -1,4 +1,5 @@
 using Quartz;
+using RIS.Core.Configuration;
 using RIS.Core.Errors;
 using RIS.Jobs.Quartz;
 using RIS.Persistence;
@@ -33,19 +34,26 @@ public sealed class JobOperationsService(
             logger.LogInformation("Job {JobKey} started manually by {User}", job.Key, user);
         }, ct);
 
+    /// <summary>
+    /// Pauses jobs: the pause is saved in the job configuration (one pause state, audited) and applied to the scheduler at once
+    /// (the synchronization would do the same a moment later). A job already paused keeps its original reason.
+    /// </summary>
     public Task<IReadOnlyList<BulkItemResult>> PauseAsync(IEnumerable<JobRef> jobs, string? reason, string? user, CancellationToken ct = default)
     {
-        reason = string.IsNullOrWhiteSpace(reason) ? "Paused by operator" : reason.Trim();
+        reason = string.IsNullOrWhiteSpace(reason) ? PauseReasons.Operator : reason.Trim();
         return ForEachAsync(jobs, async (scheduler, job) =>
         {
+            if ((await repository.SetPausedAsync([(job.Group, job.Name)], true, reason, user, ct)).Count == 0) return;
             await scheduler.PauseJobWith(new JobKey(job.Name, job.Group), new PauseDetails { Reason = reason, RequestedBy = user }, ct);
             logger.LogInformation("Job {JobKey} paused by {User}: {Reason}", job.Key, user, reason);
         }, ct);
     }
 
+    /// <summary>Resumes jobs: saved in the job configuration (audited) and applied to the scheduler at once.</summary>
     public Task<IReadOnlyList<BulkItemResult>> ResumeAsync(IEnumerable<JobRef> jobs, string? user, CancellationToken ct = default) =>
         ForEachAsync(jobs, async (scheduler, job) =>
         {
+            await repository.SetPausedAsync([(job.Group, job.Name)], false, null, user, ct);
             await scheduler.ResumeJob(new JobKey(job.Name, job.Group), ct);
             logger.LogInformation("Job {JobKey} resumed by {User}", job.Key, user);
         }, ct);

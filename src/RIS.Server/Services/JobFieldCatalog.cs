@@ -64,7 +64,6 @@ public static class JobFieldCatalog
         ["DelayBetweenFiles"] = (JobStep.Advanced, 2),
         ["ErrorKeysFileTimeout"] = (JobStep.Advanced, 3),
         ["PauseOnError"] = (JobStep.Advanced, 4),
-        ["IndefinitePause"] = (JobStep.Advanced, 5),
         ["ActionPaths"] = (JobStep.Advanced, 6)
     };
 

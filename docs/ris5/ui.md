@@ -55,7 +55,7 @@ Select jobs (checkboxes; "select all" takes the filtered rows) and use the bar a
 - **Run now / Pause (with reason) / Resume** – Operator. The result is reported per job; one failure does not stop the others.
 - **Delete** – Admin, with the list of jobs to confirm.
 - **Edit together** – Admin. Set only what should change:
-  - common: connection, group, time zone (or back to server time), missed runs, paused in configuration, pause on error,
+  - common: connection, group, time zone (or back to server time), missed runs, paused (same state as Pause/Resume in the list), pause on error,
     retries, status polling (initial/maximum delay, timeout – only job types that poll);
   - schedule: same cron or same interval + start for all; **shift by N minutes** (cron minute/hour or interval start;
     crons with lists/ranges or specific days across midnight are left unchanged with a warning); **stagger** starts

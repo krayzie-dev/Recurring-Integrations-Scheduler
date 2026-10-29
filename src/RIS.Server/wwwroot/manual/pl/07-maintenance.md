@@ -7,7 +7,7 @@
 | `%ProgramFiles%\RIS5` | Program, `cli\ris.exe` |
 | `%ProgramData%\RIS5\appsettings.json` | Ustawienia maszyny (porty, HTTPS, role, retencja). Po zmianie uruchom usługę ponownie. |
 | `%ProgramData%\RIS5\ris.db` | Konfiguracja: rejestracje aplikacji, instancje D365, serwery SFTP, zadania, zaszyfrowane sekrety, audyt |
-| `%ProgramData%\RIS5\quartz.db` | Harmonogram (wyzwalacze, wstrzymania) i historia uruchomień z logami |
+| `%ProgramData%\RIS5\quartz.db` | Harmonogram (wyzwalacze) i historia uruchomień z logami |
 | `%ProgramData%\RIS5\keys\` | Klucze szyfrujące sekrety – **bez nich sekrety są nie do odczytania** |
 | `%ProgramData%\RIS5\logs\` | `ris-RRRRMMDD.clef` (log usługi), `jobs\<Grupa.Zadanie>\` (log każdego zadania) |
 | `%ProgramData%\RIS5\backup\` | Kopie baz przed zmianą schematu i przed aktualizacją |

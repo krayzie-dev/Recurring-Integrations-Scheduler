@@ -63,7 +63,7 @@ public sealed class SchedulePlanService(IRisConfigurationStore store, IScheduler
         var rows = new List<TimelineRow>();
         foreach (var job in store.Current.Jobs.Where(j => filter?.Invoke(j) ?? true))
         {
-            var isPaused = paused.Contains(new JobKey(job.Name, job.Group)) || job.Schedule.Paused || job.Options?.IndefinitePause == true;
+            var isPaused = paused.Contains(new JobKey(job.Name, job.Group)) || job.Schedule.Paused;
             var fires = FireTimes(RisJobScheduling.BuildTrigger(job, now), fromUtc, toUtc);
             truncated |= fires.Count >= MaxFiresPerJob;
             durations.TryGetValue(job.Key, out var duration);

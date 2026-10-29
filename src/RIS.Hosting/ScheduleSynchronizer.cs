@@ -17,12 +17,19 @@ public sealed record SyncResult(int Added, int Updated, int Removed, int Unchang
 /// <summary>
 /// Keeps Quartz jobs in line with configured job definitions. A job is (re)created only when its definition changed,
 /// so a restart keeps triggers as they are and Quartz can detect runs missed while the service was down (MissedRuns policy).
+/// The pause state belongs to the configuration (one pause state): a paused job's trigger is paused, a resumed job's
+/// trigger resumed, without rescheduling.
 /// </summary>
 public sealed class ScheduleSynchronizer(
     ISchedulerFactory schedulerFactory,
     DbConfigurationStore store,
+    ConfigurationRepository repository,
+    PersistenceOptions persistence,
     ILogger<ScheduleSynchronizer> logger) : IHostedLifecycleService
 {
+    /// <summary>Marker of the one-time adoption of pauses kept only by the scheduler (before 5.0.0-local.30).</summary>
+    public const string PauseAdoptionMarker = "pause-state.version";
+
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly CancellationTokenSource _stopping = new();
 
@@ -30,9 +37,60 @@ public sealed class ScheduleSynchronizer(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await AdoptSchedulerPausesAsync(cancellationToken);
         store.Reloaded += OnReloaded;
         await SynchronizeAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Once, after the upgrade to one pause state: until then the list's pause/resume and PauseOnError changed only the trigger,
+    /// so the scheduler knows what really runs. Its state is written to the configuration (audited as "RIS (migration)"),
+    /// e.g. a job imported from 4.x as paused and resumed from the list stays resumed. A 4.x "never run" (IndefinitePause)
+    /// stays paused.
+    /// </summary>
+    private async Task AdoptSchedulerPausesAsync(CancellationToken cancellationToken)
+    {
+        var marker = Path.Combine(persistence.DataDirectory, PauseAdoptionMarker);
+        if (File.Exists(marker)) return;
+
+        var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+        var changes = new List<JobChange>();
+        foreach (var job in store.Current.Jobs)
+        {
+            var key = new JobKey(job.Name, job.Group);
+            if (!await scheduler.Exists(key, cancellationToken)) continue;
+
+            PauseInfo? pause = null;
+            var triggerPaused = false;
+            foreach (var trigger in await scheduler.GetTriggersOfJob(key, cancellationToken))
+            {
+                if (await scheduler.GetTriggerState(trigger.Key, cancellationToken) != TriggerState.Paused) continue;
+                triggerPaused = true;
+                pause ??= await scheduler.GetTriggerPause(trigger.Key, cancellationToken);
+            }
+
+            var configPaused = job.Schedule.Paused;
+            if (triggerPaused == configPaused || (configPaused && job.Schedule.PauseReason == PauseReasons.IndefinitePause)) continue;
+
+            var changed = Clone(job);
+            changed.Schedule.SetPaused(triggerPaused, pause?.Reason ?? PauseReasons.Operator, pause?.RequestedBy, pause?.PausedAtUtc);
+            changes.Add(new JobChange(job.Group, job.Name, changed));
+            logger.LogInformation("Job {JobKey}: pause state taken from the scheduler into the configuration ({State})",
+                job.Key, triggerPaused ? "paused" : "running");
+        }
+
+        if (changes.Count > 0)
+        {
+            await repository.SaveJobsAsync(changes, "RIS (migration)", cancellationToken);
+            await store.RefreshAsync(cancellationToken);
+        }
+
+        Directory.CreateDirectory(persistence.DataDirectory);
+        await File.WriteAllTextAsync(marker, "1", cancellationToken);
+    }
+
+    private static JobDefinition Clone(JobDefinition job) =>
+        System.Text.Json.JsonSerializer.Deserialize<JobDefinition>(System.Text.Json.JsonSerializer.Serialize(job, RisJson.Options), RisJson.Options)!;
 
     /// <summary>Before the scheduler shuts down: no new synchronizations, and one in progress is finished first.</summary>
     public async Task StoppingAsync(CancellationToken cancellationToken)
@@ -125,11 +183,11 @@ public sealed class ScheduleSynchronizer(
                 if (exists && appliedHash == hash)
                 {
                     unchanged++;
+                    await ApplyPauseAsync(scheduler, definition, key, cancellationToken);
                     continue;
                 }
 
-                var wasPaused = exists && await IsPausedAsync(scheduler, key, cancellationToken);
-                await RisJobScheduling.ScheduleAsync(scheduler, definition, cancellationToken, hash, keepPaused: wasPaused);
+                await RisJobScheduling.ScheduleAsync(scheduler, definition, cancellationToken, hash);
                 _applied[key] = hash;
                 if (!exists)
                 {
@@ -159,6 +217,27 @@ public sealed class ScheduleSynchronizer(
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>The trigger follows the pause state of the configuration (pause or resume, never a reschedule).</summary>
+    private async Task ApplyPauseAsync(IScheduler scheduler, JobDefinition definition, JobKey key, CancellationToken cancellationToken)
+    {
+        var paused = await IsPausedAsync(scheduler, key, cancellationToken);
+        if (paused == definition.Schedule.Paused) return;
+        if (definition.Schedule.Paused)
+        {
+            await scheduler.PauseJobWith(key, new PauseDetails
+            {
+                Reason = definition.Schedule.PauseReason ?? PauseReasons.Configuration,
+                RequestedBy = definition.Schedule.PausedBy
+            }, cancellationToken);
+            logger.LogInformation("Job {JobKey} paused (configuration)", definition.Key);
+        }
+        else
+        {
+            await scheduler.ResumeJob(key, cancellationToken);
+            logger.LogInformation("Job {JobKey} resumed (configuration)", definition.Key);
         }
     }
 

@@ -87,6 +87,11 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
                     Options = ConvertOptions(Value(job, "job-type") ?? string.Empty, data, key, result),
                     Schedule = ConvertTrigger(triggers.FirstOrDefault(t => Value(t, "job-name") == name && (Value(t, "job-group") ?? "DEFAULT") == group), key, result)
                 };
+                if (data.Bool("IndefinitePause"))
+                {
+                    // 4.x "never run": one pause state in RIS 5.
+                    definition.Schedule.SetPaused(true, PauseReasons.IndefinitePause, "4.x");
+                }
 
                 foreach (var dataKey in data.Keys.Where(k => !ConsumedKeys.Contains(k) && !IgnoredKeys.ContainsKey(k)))
                 {
@@ -268,7 +273,6 @@ public sealed class ScheduleXmlConverter(ConversionOptions? options = null)
             Delay = TimeSpan.FromSeconds(data.Int("RetryDelay", 10) <= 0 ? 10 : data.Int("RetryDelay", 10))
         };
         options.PauseOnError = data.Bool("PauseJobOnException");
-        options.IndefinitePause = data.Bool("IndefinitePause");
         options.ActionPaths = ActionPaths(data);
         options.Connection = Instance(data, result).Name;
         // Resolved per instance once all jobs are converted (AssignAppRegistrations): cleared when it is the instance default.

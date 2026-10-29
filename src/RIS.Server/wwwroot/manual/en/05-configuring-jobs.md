@@ -103,7 +103,7 @@ RIS downloads all messages from the queue, saves the packages and **acknowledges
 
 - **Time zone** – the server's by default; clock times stay fixed across daylight saving changes.
 - **Missed runs** – when the service was not running at a scheduled time: *Run once after start* (recommended for exports) or *Skip*.
-- **Paused in configuration** – the job is saved but does not run.
+- **Paused** – the job is saved but does not run. The same state as *Pause*/*Resume* in the job list and *Pause on error*: the switch shows whether the job is paused now, and saving the form keeps the reason and who paused it.
 - Below the builder: a plain-language description and a table of the next runs.
 
 ## Copying and editing many jobs

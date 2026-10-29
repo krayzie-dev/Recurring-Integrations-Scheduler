@@ -36,6 +36,9 @@ W edytorze zadania przy polu folderu **Sprawdź dostęp** – test tworzy i usuw
 ### Jak wstrzymać wszystkie zadania na czas prac serwisowych D365?
 Lista zadań → zaznacz wszystkie (lub filtr po instancji D365) → *Wstrzymaj* z powodem → po pracach *Wznów*. Wstrzymanie przetrwa restart usługi.
 
+### Czym różni się „Wstrzymane” w formularzu zadania od przycisku Wstrzymaj na liście?
+Niczym – to jeden stan zapisany w konfiguracji zadania. Przycisk na liście, przełącznik w formularzu, edycja zbiorcza, *Wstrzymaj po błędzie* i REST API zmieniają to samo. Każde wstrzymanie i wznowienie trafia do audytu (kto, kiedy, powód), a późniejsza zmiana zadania go nie cofa. Opcja 4.x „IndefinitePause” (nigdy nie uruchamiaj) jest importowana jako zwykłe wstrzymanie.
+
 ### Jak długo przechowywana jest historia uruchomień?
 Domyślnie 30 dni (nieudane – 90 dni), maksymalnie 1000 uruchomień na zadanie. Zmienisz to w `Ris:Retention` – patrz [Utrzymanie](07-maintenance.md).
 

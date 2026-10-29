@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Localization;
-using RIS.Jobs.Quartz;
+using RIS.Core.Configuration;
 using RIS.Server.Resources;
 using RIS.Server.Services;
 

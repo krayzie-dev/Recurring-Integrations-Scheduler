@@ -112,7 +112,8 @@ public static class Program
             foreach (var job in configuration.Jobs.OrderBy(j => j.Group).ThenBy(j => j.Name))
             {
                 var schedule = job.Schedule.Cron ?? $"every {job.Schedule.Interval}";
-                var state = job.Schedule.Paused || job.Options?.IndefinitePause == true ? " [paused]" : string.Empty;
+                job.NormalizePause();
+                var state = job.Schedule.Paused ? " [paused]" : string.Empty;
                 Console.WriteLine($"{job.Key,-70} {job.Type,-18} {schedule}{state}");
             }
             return 0;
@@ -188,7 +189,6 @@ public static class Program
         await scheduler.Start(cancellationToken);
         try
         {
-            definition.Options!.IndefinitePause = false; // explicit manual run
             await RisJobScheduling.TriggerOnceAsync(scheduler, definition, cancellationToken);
 
             var history = host.Services.GetRequiredService<IExecutionHistoryStore>();

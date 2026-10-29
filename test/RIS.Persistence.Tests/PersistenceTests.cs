@@ -146,6 +146,34 @@ public sealed class PersistenceTests
     }
 
     [TestMethod]
+    public void DefinitionHash_IgnoresPauseState_AndIsUnchangedForJobsThatAreNotPaused()
+    {
+        var job = Job();
+        // Formula before one pause state (5.0.0-local.29): hashes of running jobs must stay, or every job is rescheduled once.
+        var before = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Json.JsonSerializer.Serialize(job.Schedule, RisJson.Options) + "\n" + System.Text.Json.JsonSerializer.Serialize(job.Options, RisJson.Options))));
+        Assert.AreEqual(before, ConfigurationRepository.ComputeHash(job));
+
+        var paused = Job();
+        paused.Schedule.SetPaused(true, "maintenance", "operator", DateTimeOffset.UtcNow);
+        Assert.AreEqual(before, ConfigurationRepository.ComputeHash(paused), "Pause or resume is no reschedule.");
+    }
+
+    [TestMethod]
+    public async Task IndefinitePauseFrom4x_IsLoadedAsPause()
+    {
+        await _repository.SaveConnectionAsync(Connection(), "tester");
+        var json = System.Text.Json.JsonSerializer.Serialize(Job(), RisJson.Options).Replace("\"indefinitePause\": false", "\"indefinitePause\": true");
+        StringAssert.Contains(json, "indefinitePause\": true");
+        await _repository.ImportAsync(new RisConfiguration { Connections = [Connection()], Jobs = [System.Text.Json.JsonSerializer.Deserialize<JobDefinition>(json, RisJson.Options)!] }, "import");
+
+        var schedule = (await _repository.LoadAsync()).Jobs.Single().Schedule;
+        Assert.IsTrue(schedule.Paused);
+        Assert.AreEqual(PauseReasons.IndefinitePause, schedule.PauseReason);
+        Assert.AreEqual("import", schedule.PausedBy);
+    }
+
+    [TestMethod]
     public async Task Audit_MarksSecretChanges_WithoutValues_AndIsReadable()
     {
         await _repository.SaveAppRegistrationAsync(Registration(), "tester");                  // created with a secret

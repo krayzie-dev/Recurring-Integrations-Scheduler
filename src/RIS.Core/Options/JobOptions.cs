@@ -68,8 +68,13 @@ public abstract class JobOptionsBase : IValidatableObject
     /// <summary>Pause the job after a failed run. 4.x: PauseJobOnException.</summary>
     public bool PauseOnError { get; set; }
 
-    /// <summary>Job is configured but must never run. 4.x: IndefinitePause.</summary>
-    public bool IndefinitePause { get; set; }
+    /// <summary>
+    /// 4.x IndefinitePause, read only from old configuration: <see cref="Configuration.JobDefinition.NormalizePause"/> turns it
+    /// into a pause of the schedule (reason "IndefinitePause"), so a job has one pause state. Still written (always false), so
+    /// definition hashes of existing jobs do not change.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
+    public bool IndefinitePause { get; internal set; }
 
     /// <summary>Overrides of D365 OData action paths. 4.x: *ActionPath keys.</summary>
     public D365ActionPaths ActionPaths { get; set; } = new();

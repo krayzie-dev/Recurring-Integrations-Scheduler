@@ -36,6 +36,9 @@ In the job editor next to the folder field use **Check access** – the test cre
 ### How do I pause all jobs during D365 maintenance?
 Job list → select all (or filter by D365 instance) → *Pause* with a reason → after the maintenance *Resume*. A pause survives a service restart.
 
+### What is the difference between "Paused" in the job form and Pause in the job list?
+None – it is one state stored in the job configuration. The list button, the form switch, bulk edit, *Pause on error* and the REST API all change it. Every pause and resume is audited (who, when, reason), and a later change of the job does not undo it. The 4.x option "IndefinitePause" (never run) is imported as a normal pause.
+
 ### How long is run history kept?
 30 days by default (failed runs 90 days), at most 1000 runs per job. Change it in `Ris:Retention` – see [Maintenance](07-maintenance.md).
 

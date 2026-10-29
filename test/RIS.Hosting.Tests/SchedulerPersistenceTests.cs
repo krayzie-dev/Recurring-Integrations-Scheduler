@@ -78,23 +78,79 @@ public sealed class SchedulerPersistenceTests
     }
 
     [TestMethod]
-    public async Task OperatorPause_IsKept_AfterRestartAndAfterDefinitionChange()
+    public async Task OperatorPause_IsKept_AfterRestartAndAfterDefinitionChange_AndResumeRuns()
     {
+        DateTimeOffset? next;
         await using (var first = await StartAsync())
         {
             await first.Repository.SaveConnectionAsync(RisTestHost.Connection, "test");
             await first.Repository.SaveJobAsync(RisTestHost.Export("Daily", _downloadDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?" }), "test");
             await first.Synchronizer.SynchronizeAsync(default);
-            await (await first.SchedulerAsync()).PauseJob(new JobKey("Daily", "Tests"));
+            next = (await (await first.SchedulerAsync()).GetTrigger(DailyTrigger))!.NextFireTimeUtc;
+
+            await first.Repository.SetPausedAsync([("Tests", "Daily")], true, "D365 maintenance", "operator");
+            await first.Synchronizer.SynchronizeAsync(default);
+            var scheduler = await first.SchedulerAsync();
+            Assert.AreEqual(TriggerState.Paused, await scheduler.GetTriggerState(DailyTrigger));
+            Assert.AreEqual(new SyncResult(0, 0, 0, 1), first.Synchronizer.LastResult, "A pause is applied to the trigger, the job is not rescheduled.");
+            Assert.AreEqual("D365 maintenance", (await scheduler.GetTriggerPause(DailyTrigger))?.Reason);
         }
 
         await using var second = await StartAsync();
-        var scheduler = await second.SchedulerAsync();
-        Assert.AreEqual(TriggerState.Paused, await scheduler.GetTriggerState(DailyTrigger));
+        var restarted = await second.SchedulerAsync();
+        Assert.AreEqual(TriggerState.Paused, await restarted.GetTriggerState(DailyTrigger));
 
-        await second.Repository.SaveJobAsync(RisTestHost.Export("Daily", _downloadDirectory, new ScheduleOptions { Cron = "0 0 4 * * ?" }), "test");
+        // The job form sends only the switch: the pause and its reason stay.
+        await second.Repository.SaveJobAsync(RisTestHost.Export("Daily", _downloadDirectory, new ScheduleOptions { Cron = "0 0 4 * * ?", Paused = true }), "editor");
         await second.Synchronizer.SynchronizeAsync(default);
-        Assert.AreEqual(TriggerState.Paused, await scheduler.GetTriggerState(DailyTrigger));
+        Assert.AreEqual(TriggerState.Paused, await restarted.GetTriggerState(DailyTrigger));
+        var saved = (await second.Repository.LoadAsync()).FindJob("Daily")!.Schedule;
+        Assert.AreEqual("D365 maintenance", saved.PauseReason);
+        Assert.AreEqual("operator", saved.PausedBy);
+
+        await second.Repository.SetPausedAsync([("Tests", "Daily")], false, null, "operator");
+        await second.Synchronizer.SynchronizeAsync(default);
+        Assert.AreEqual(TriggerState.Normal, await restarted.GetTriggerState(DailyTrigger));
+        Assert.IsNull((await second.Repository.LoadAsync()).FindJob("Daily")!.Schedule.PauseReason);
+        var audit = await second.Repository.GetAuditAsync();
+        Assert.IsTrue(audit.Any(a => a.Action == "Paused" && a.User == "operator") && audit.Any(a => a.Action == "Resumed"), "Pause and resume are audited.");
+        Assert.IsNotNull(next);
+    }
+
+    [TestMethod]
+    public async Task Upgrade_TakesPauseStateFromScheduler_Once()
+    {
+        await using (var first = await StartAsync())
+        {
+            await first.Repository.SaveConnectionAsync(RisTestHost.Connection, "test");
+            // Imported from 4.x as paused, then resumed from the list (before one pause state: only the trigger changed).
+            await first.Repository.SaveJobAsync(RisTestHost.Export("Imported", _downloadDirectory, new ScheduleOptions { Cron = "0 0 2 * * ?", Paused = true }), "import");
+            // Running in the configuration, paused from the list.
+            await first.Repository.SaveJobAsync(RisTestHost.Export("Daily", _downloadDirectory, new ScheduleOptions { Cron = "0 0 3 * * ?" }), "test");
+            await first.Synchronizer.SynchronizeAsync(default);
+            var scheduler = await first.SchedulerAsync();
+            await scheduler.ResumeJob(new JobKey("Imported", "Tests"));
+            await scheduler.PauseJobWith(new JobKey("Daily", "Tests"), new PauseDetails { Reason = "waiting for D365", RequestedBy = @"MEDNET\operator" });
+        }
+
+        File.Delete(Path.Combine(_dataDirectory, ScheduleSynchronizer.PauseAdoptionMarker)); // as before the upgrade
+
+        await using var second = await StartAsync();
+        var configuration = await second.Repository.LoadAsync();
+        Assert.IsFalse(configuration.FindJob("Imported")!.Schedule.Paused, "Resumed from the list: stays resumed.");
+        var daily = configuration.FindJob("Daily")!.Schedule;
+        Assert.IsTrue(daily.Paused, "Paused from the list: stays paused.");
+        Assert.AreEqual("waiting for D365", daily.PauseReason);
+        Assert.AreEqual(@"MEDNET\operator", daily.PausedBy);
+        var restarted = await second.SchedulerAsync();
+        Assert.AreEqual(TriggerState.Normal, await restarted.GetTriggerState(new TriggerKey("Imported trigger", "Tests")));
+        Assert.AreEqual(TriggerState.Paused, await restarted.GetTriggerState(DailyTrigger));
+        Assert.IsTrue(File.Exists(Path.Combine(_dataDirectory, ScheduleSynchronizer.PauseAdoptionMarker)));
+
+        // Once: from now on the configuration decides, a pause made only in the scheduler is undone.
+        await restarted.PauseJob(new JobKey("Imported", "Tests"));
+        await second.Synchronizer.SynchronizeAsync(default);
+        Assert.AreEqual(TriggerState.Normal, await restarted.GetTriggerState(new TriggerKey("Imported trigger", "Tests")));
     }
 
     [TestMethod]
