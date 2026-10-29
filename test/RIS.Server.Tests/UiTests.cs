@@ -97,6 +97,8 @@ public sealed class UiTests
         var dashboard = await GetPageAsync("/", "Viewer", "en-US");
         StringAssert.Contains(dashboard, "Needs attention");
         StringAssert.Contains(dashboard, "Runs in the last 24 h");
+        StringAssert.Matches(dashboard, new System.Text.RegularExpressions.Regex("<svg class=\"gantt is-(light|dark)\""),
+            "The hourly chart carries the theme class that defines its bar colours (without it the bars were black).");
 
         var details = await GetPageAsync("/jobs/Tests/Daily", "Admin", "en-US");
         StringAssert.Contains(details, "Next runs");

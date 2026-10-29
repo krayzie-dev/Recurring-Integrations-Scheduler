@@ -1,7 +1,7 @@
 @using RIS.Server.Services
 @* Stacked bars of runs per hour (succeeded / failed / other). SVG coloured by the theme. *@
 
-<svg class="gantt" viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="none" role="img" aria-label="@T["Dashboard_Last24h"]">
+<svg class="gantt @(IsDark ? "is-dark" : "is-light")" viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="none" role="img" aria-label="@T["Dashboard_Last24h"]">
     @{
         var max = Math.Max(1, Buckets.Max(b => b.Succeeded + b.Failed + b.Other));
         var barWidth = (Width - 30.0) / Math.Max(1, Buckets.Count);
@@ -36,6 +36,8 @@
 
     [Parameter] public IReadOnlyList<StatisticsBucket> Buckets { get; set; } = [];
     [CascadingParameter] public UiPreferences Prefs { get; set; } = new();
+    /// <summary>The bar colours are variables set per theme by is-dark / is-light (as in the Gantt).</summary>
+    [CascadingParameter(Name = "IsDark")] public bool IsDark { get; set; }
 
     private static string F(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
 }
