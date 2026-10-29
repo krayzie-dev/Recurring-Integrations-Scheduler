@@ -18,11 +18,14 @@ public sealed class UiTests
     [TestCleanup]
     public async Task Cleanup() => await _factory.DisposeAsync();
 
-    private async Task<string> GetPageAsync(string url, string roles, string? language = null, string? cultureCookie = null)
+    private async Task<string> GetPageAsync(string url, string roles, string? language = null, string? cultureCookie = null, string? prefsCookie = null)
     {
         var client = _factory.Client(roles);
         if (language is not null) client.DefaultRequestHeaders.AcceptLanguage.ParseAdd(language);
-        if (cultureCookie is not null) client.DefaultRequestHeaders.Add("Cookie", $".AspNetCore.Culture=c={cultureCookie}|uic={cultureCookie}");
+        var cookies = new List<string>();
+        if (cultureCookie is not null) cookies.Add($".AspNetCore.Culture=c={cultureCookie}|uic={cultureCookie}");
+        if (prefsCookie is not null) cookies.Add($"{RIS.Server.Ui.UiPreferences.CookieName}={prefsCookie}");
+        if (cookies.Count > 0) client.DefaultRequestHeaders.Add("Cookie", string.Join("; ", cookies));
         var response = await client.GetAsync(url);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, url + ": " + await response.Content.ReadAsStringAsync());
         return WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
@@ -126,6 +129,14 @@ public sealed class UiTests
         StringAssert.Contains(history, "class=\"bar succeeded\"");
         StringAssert.Contains(history, "ris-history-filters", "Filter bar above the run list.");
         StringAssert.Contains(history, "Filter: job, summary, error code");
+        // Polish decimal commas would break SVG coordinates (the missed-run triangle of the legend once became a huge polygon).
+        foreach (var style in Enum.GetValues<RIS.Server.Ui.ChartStyle>())
+        {
+            var polish = await GetPageAsync("/history", "Viewer", "pl-PL", "pl-PL", $"Dark|Server|{style}");
+            Assert.IsFalse(System.Text.RegularExpressions.Regex.IsMatch(polish, "(points|x|y|width|height|r|cx|cy|x1|x2|y1|y2)=\"[^\"]*\\d,\\d+,\\d"),
+                $"{style}: SVG numbers must use a dot.");
+            Assert.IsFalse(System.Text.RegularExpressions.Regex.IsMatch(polish, " (x|y|width|height|cx|cy|r)=\"-?\\d+,\\d+\""), $"{style}: no decimal comma in SVG attributes.");
+        }
         StringAssert.Contains(await GetPageAsync("/", "Admin", "pl-PL"), "Instancje D365", "Menu: D365 instances.");
     }
 

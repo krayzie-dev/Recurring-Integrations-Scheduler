@@ -10,7 +10,7 @@
         {
             <GanttShapeView Shape="shape" />
         }
-        <g><text x="@(position + 34)" y="15">@label</text></g>
+        <g><text x="@F(position + 34)" y="15">@label</text></g>
     }
 </svg>
 <svg class="@Gantt.ChartCss(Prefs.Chart, IsDark)" height="24" width="100%">
@@ -19,8 +19,8 @@
     {
         var position = tx;
         tx += 170;
-        <rect class="@($"tf {Gantt.TypeCss(type)}")" x="@(position + 1)" y="6" width="@(Prefs.Chart == ChartStyle.TypeColor ? 26 : 6)" height="11" rx="2" />
-        <g><text x="@(position + 34)" y="15">@T["JobType_" + type]</text></g>
+        <rect class="@($"tf {Gantt.TypeCss(type)}")" x="@F(position + 1)" y="6" width="@(Prefs.Chart == ChartStyle.TypeColor ? 26 : 6)" height="11" rx="2" />
+        <g><text x="@F(position + 34)" y="15">@T["JobType_" + type]</text></g>
     }
 </svg>
 
@@ -32,13 +32,16 @@
     private const double Mid = 11.5;
 
     /// <summary>Width of a legend entry: swatch, label (about 6.3 px per character at 11 px) and a gap; at least 170 px.</summary>
-    private static double Slot(string label) => Math.Max(170, 34 + label.Length * 6.3 + 18);
+    private static double Slot(string label) => Math.Ceiling(Math.Max(170, 34 + label.Length * 6.3 + 18));
+
+    /// <summary>SVG numbers always with a dot: in Polish "6,5" would split a coordinate in two.</summary>
+    private static string F(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
 
     private static GanttShape Bar(double x, string css, double h = 12, double w = 26, string? fill = null, double opacity = 1) =>
         new(GanttShapeKind.Rect, css, x, Mid - h / 2, w, h, Fill: fill, Opacity: opacity, Rx: 2.5);
 
     private static GanttShape Triangle(double x) =>
-        new(GanttShapeKind.Polygon, "misfire", x, 0, Points: $"{x + 13},{Mid - 5} {x + 18},{Mid + 4} {x + 8},{Mid + 4}");
+        new(GanttShapeKind.Polygon, "misfire", x, 0, Points: $"{F(x + 13)},{F(Mid - 5)} {F(x + 18)},{F(Mid + 4)} {F(x + 8)},{F(Mid + 4)}");
 
     private const string Hatch = "url(#legend-hatch)";
     private const string Paused = "url(#legend-phatch)";
