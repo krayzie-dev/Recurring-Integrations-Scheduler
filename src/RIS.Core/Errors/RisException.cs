@@ -39,6 +39,7 @@ public static class ErrorCodes
     // Monitors
     public const string MonitorTimeout = "RIS-MON-001";
     public const string MonitorExecutionFailed = "RIS-MON-002";
+    public const string MonitorExecutionNotFound = "RIS-MON-003";
 
     // Files / SFTP
     public const string FileLocked = "RIS-FS-001";

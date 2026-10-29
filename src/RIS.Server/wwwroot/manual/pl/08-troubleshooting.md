@@ -40,7 +40,7 @@ Każdy błąd zaczyna się od kodu, np. `[RIS-EXP-001]`. Ten sam kod jest w pods
 | RIS-CFG-001 | Nieprawidłowa konfiguracja | Komunikat wymienia błędne ustawienia (`ris validate`). |
 | RIS-CFG-002 | Zadanie wskazuje nieistniejącą instancję D365 | Dodaj instancję albo popraw zadanie. |
 | RIS-CFG-003 | Folder nie istnieje albo brak dostępu | Sprawdź ścieżkę i uprawnienia konta usługi. |
-| RIS-CFG-004 | Nieprawidłowy szablon pakietu | Wyeksportuj nowy szablon z D365 albo użyj koperty generowanej. |
+| RIS-CFG-004 | Brak lub nieprawidłowy szablon pakietu | Sprawdź ścieżkę szablonu; wyeksportuj nowy szablon z D365 albo użyj koperty generowanej. |
 | RIS-AUTH-001 | Logowanie do Entra ID nie powiodło się | Tenant, client id, sekret/certyfikat (ważność); kod AADSTS w komunikacie. |
 | RIS-HTTP-001 | D365 odrzucił żądanie (4xx) | Powód z D365 jest w komunikacie (projekt, uprawnienia, firma). |
 | RIS-HTTP-002 | Problem chwilowy (5xx, timeout, sieć) | Zwykle mija; przy powtórzeniach sprawdź sieć/DNS. |
@@ -50,6 +50,7 @@ Każdy błąd zaczyna się od kodu, np. `[RIS-EXP-001]`. Ten sam kod jest w pods
 | RIS-UPL-001 | Wysyłka do kolejki nie powiodła się | Raport błędu leży obok pliku w folderze błędów. |
 | RIS-DWN-001/002 | Pobieranie / potwierdzenie nie powiodło się | Sprawdź zadanie cykliczne (activity ID) w D365; komunikat wróci do kolejki. |
 | RIS-MON-001/002 | Import/przetwarzanie nie zakończyło się w czasie / zakończyło się błędami | Plik w *ProcessingErrors* z kluczami błędów i linkiem `.url` do D365. |
+| RIS-MON-003 | D365 nie zna wykonania z pliku statusu (wyczyszczona historia, odświeżone środowisko, plik pozostały po 4.x lub z innego środowiska) | Plik raz trafia do *ProcessingErrors* i nie jest sprawdzany ponownie; zaimportuj go jeszcze raz, jeśli jest potrzebny. |
 | RIS-FS-001/002 | Plik zablokowany / błąd operacji na pliku | Zablokowany plik czeka na następne uruchomienie. |
 | RIS-SFTP-001 | Błąd SFTP | Serwer, dane logowania, folder zdalny. |
 | RIS-GEN-001/002 | Błąd nieoczekiwany / nieznany status D365 | Szczegóły w logu – zgłoś. |

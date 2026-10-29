@@ -40,7 +40,7 @@ Every error starts with a code, e.g. `[RIS-EXP-001]`. The same code is in the ru
 | RIS-CFG-001 | Invalid configuration | The message lists the invalid settings (`ris validate`). |
 | RIS-CFG-002 | The job refers to a missing D365 instance | Add the instance or fix the job. |
 | RIS-CFG-003 | Folder missing or not accessible | Check the path and the service account permissions. |
-| RIS-CFG-004 | Invalid package template | Export a new template from D365 or use the generated envelope. |
+| RIS-CFG-004 | Package template missing or invalid | Check the template path; export a new template from D365 or use the generated envelope. |
 | RIS-AUTH-001 | Entra ID sign-in failed | Tenant, client id, secret/certificate (expiry); AADSTS code in the message. |
 | RIS-HTTP-001 | D365 rejected the request (4xx) | The D365 reason is in the message (project, permissions, company). |
 | RIS-HTTP-002 | Transient problem (5xx, timeout, network) | Usually passes; if repeated check network/DNS. |
@@ -50,6 +50,7 @@ Every error starts with a code, e.g. `[RIS-EXP-001]`. The same code is in the ru
 | RIS-UPL-001 | Upload to the queue failed | The error report is next to the file in the error folder. |
 | RIS-DWN-001/002 | Download / acknowledge failed | Check the recurring data job (activity ID) in D365; the message returns to the queue. |
 | RIS-MON-001/002 | Import/processing did not finish in time / finished with errors | File in *ProcessingErrors* with error keys and a `.url` link to D365. |
+| RIS-MON-003 | D365 does not know the execution of a status file (history cleaned up, environment refreshed, file left over from 4.x or from another environment) | The file goes to *ProcessingErrors* once and is not checked again; import it again if it is still needed. |
 | RIS-FS-001/002 | File locked / file operation failed | A locked file waits for the next run. |
 | RIS-SFTP-001 | SFTP error | Server, credentials, remote folder. |
 | RIS-GEN-001/002 | Unexpected error / unknown D365 status | Details in the log – report it. |

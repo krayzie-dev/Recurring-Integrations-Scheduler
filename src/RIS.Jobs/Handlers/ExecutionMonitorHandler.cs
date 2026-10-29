@@ -66,6 +66,16 @@ public sealed class ExecutionMonitorHandler(ID365ClientFactory clients, JobFiles
                 ex.ErrorCode, executionId, ex.Message);
             return;
         }
+        catch (D365ApiException ex) when (IsExecutionNotFound(ex))
+        {
+            // D365 no longer knows the execution (history cleaned up, environment refreshed, status file from another
+            // environment): asking again will never help, so the file goes to errors instead of being checked forever.
+            var target = jobFiles.Rebase(message.FullPath!, options.UploadSuccessDir, options.ProcessingErrorsDir);
+            await jobFiles.StatusFiles.MoveWithStatusAsync(message.FullPath!, target, options.StatusFileExtension, deleteStatusFile: true, options.Retry, cancellationToken);
+            throw new RisException(ErrorCodes.MonitorExecutionNotFound,
+                $"Execution {executionId} of {message.Name} does not exist in D365 (execution history cleaned up, environment refreshed or file submitted to another environment). File moved to {target}.",
+                new Dictionary<string, object?> { ["ExecutionId"] = executionId }, ex);
+        }
 
         var status = DmfExecutionStatusExtensions.Parse(rawStatus);
         logger.LogDebug("Execution {ExecutionId} status {Status}", executionId, rawStatus);
@@ -116,6 +126,11 @@ public sealed class ExecutionMonitorHandler(ID365ClientFactory clients, JobFiles
             $"Import of {message.Name} ended with status {rawStatus} in D365. File moved to {errorTarget}.",
             new Dictionary<string, object?> { ["ExecutionId"] = executionId, ["Status"] = rawStatus });
     }
+
+    /// <summary>HTTP 400 "Execution details were not found for execution id: ..." of GetExecutionSummaryStatus.</summary>
+    internal static bool IsExecutionNotFound(D365ApiException ex) =>
+        ex.StatusCode == System.Net.HttpStatusCode.BadRequest
+        && (ex.D365Message ?? ex.ResponseBody ?? string.Empty).Contains("were not found", StringComparison.OrdinalIgnoreCase);
 
     private async Task<string> MoveToErrorsAsync(ID365Client client, ExecutionMonitorJobOptions options, string file, string executionId,
         ILogger logger, CancellationToken cancellationToken)

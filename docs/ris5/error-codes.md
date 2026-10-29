@@ -8,7 +8,7 @@ Logs contain `JobKey`, `RunId` (Quartz fire instance id) and, where relevant, `E
 | RIS-CFG-001 | Job configuration is invalid | Run `ris validate jobs.json`; the message lists the invalid settings. |
 | RIS-CFG-002 | Connection referenced by the job is not defined | Add the connection or fix `options.connection`. |
 | RIS-CFG-003 | Folder does not exist or is not accessible | Check the path and permissions of the service account (UNC shares need a domain account). |
-| RIS-CFG-004 | Package template is invalid (no Manifest.xml / InputFilePath) | Export a fresh template from D365 Data management. |
+| RIS-CFG-004 | Package template is missing or invalid (file does not exist, no Manifest.xml / InputFilePath) | Export a fresh template from D365 Data management. |
 | RIS-AUTH-001 | Authentication to Entra ID failed | Check tenant, client id, secret/certificate expiry and app permissions. The message contains the AADSTS code. |
 | RIS-HTTP-001 | D365 rejected the request (4xx) | Response body is in the log; typical causes: wrong data project, missing permissions, wrong legal entity. |
 | RIS-HTTP-002 | Temporary problem (timeout, throttling, 5xx, network/DNS) | Usually resolves itself (servicing window). Repeated DNS errors: check DNS/network of the server. |
@@ -26,6 +26,7 @@ Logs contain `JobKey`, `RunId` (Quartz fire instance id) and, where relevant, `E
 | RIS-DWN-002 | Acknowledgement failed | File is in download errors folder; D365 may offer the message again. |
 | RIS-MON-001 | Import/processing did not finish within the timeout | File moved to processing errors; check the execution/message in D365. |
 | RIS-MON-002 | Import/processing ended with errors in D365 | File moved to processing errors with error keys / execution errors files and a link (.url) to D365. |
+| RIS-MON-003 | D365 does not know the execution of a status file (execution history cleaned up, environment refreshed, or the file was submitted to another environment, e.g. left over from 4.x) | File moved to processing errors once; it is not checked again. Import the file again if it is still needed. |
 | RIS-FS-001 | File is locked by another process | Left for the next run; if it persists, find the process holding the file. |
 | RIS-FS-002 | File operation failed | See message (permissions, disk space). |
 | RIS-SFTP-001 | SFTP transfer failed | Check server, credentials, remote folder; message contains the SFTP error. |

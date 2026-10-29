@@ -47,6 +47,13 @@ public sealed class ImportHandler(ID365ClientFactory clients, JobFiles jobFiles,
         }
         else if (!options.InputFilesArePackages)
         {
+            if (!jobFiles.Files.Exists(options.PackageTemplate!))
+            {
+                throw new RisException(ErrorCodes.PackageTemplateInvalid,
+                    $"Package template '{options.PackageTemplate}' does not exist; input files were left in {options.InputDir}.",
+                    new Dictionary<string, object?> { ["PackageTemplate"] = options.PackageTemplate });
+            }
+
             await using var template = await jobFiles.Files.OpenReadAsync(options.PackageTemplate!, options.Retry, cancellationToken);
             templateInputFileName = PackageManifest.GetInputFileName(template, options.PackageTemplate!);
         }

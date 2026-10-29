@@ -83,6 +83,34 @@ public sealed class ExecutionMonitorTests
         Assert.AreEqual(ErrorCodes.MonitorTimeout, outcome.ErrorCode);
         Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\failed\old.csv"));
     }
+
+    [TestMethod]
+    public async Task ExecutionUnknownToD365_FileGoesToErrors_AndIsNotCheckedAgain()
+    {
+        // Real D365 answer (TEST, 28.10.2026) for a status file left over from 4.x whose execution no longer exists.
+        using var host = new JobsTestHost();
+        await AddSubmittedAsync(host, "old.xlsx", "IMPORT-GONE", host.Clock.UtcNow.AddMinutes(-5));
+        await AddSubmittedAsync(host, "forbidden.xlsx", "IMPORT-403", host.Clock.UtcNow.AddMinutes(-5));
+        host.D365.ExecutionStatus = id => id switch
+        {
+            "IMPORT-GONE" => throw FakeD365Client.HttpError(HttpStatusCode.BadRequest,
+                "{\"error\":{\"code\":\"\",\"message\":\"An error has occurred.\",\"innererror\":{\"message\":\"Exception occurred while executing action GetExecutionSummaryStatus on Entity DataManagementDefinitionGroup: Execution details were not found for execution id: IMPORT-GONE\"}}}"),
+            _ => throw FakeD365Client.HttpError(HttpStatusCode.Forbidden, "forbidden")
+        };
+
+        var outcome = await host.RunAsync(Options());
+
+        Assert.AreEqual(JobOutcomeStatus.Failed, outcome.Status);
+        Assert.AreEqual(2, outcome.Metrics["Failed"]);
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\failed\old.xlsx"));
+        Assert.IsFalse(host.FileSystem.FileExists(@"C:\ris\success\old.Status"));
+        Assert.IsTrue(host.Logs.Errors.Any(e => e.Message.Contains(ErrorCodes.MonitorExecutionNotFound) && e.Message.Contains("does not exist in D365")));
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\success\forbidden.xlsx"), "Other D365 errors (e.g. missing rights) leave the file for the next run.");
+
+        host.D365.ExecutionStatus = _ => "Executing";
+        var next = await host.RunAsync(Options());
+        Assert.AreEqual(1, next.Metrics["Pending"], "Only the file that is still waiting is checked again.");
+    }
 }
 
 [TestClass]

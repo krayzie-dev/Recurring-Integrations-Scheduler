@@ -81,6 +81,20 @@ public sealed class ImportTests
     }
 
     [TestMethod]
+    public async Task MissingPackageTemplate_IsConfigurationError_AndFilesStayInInput()
+    {
+        using var host = new JobsTestHost();
+        host.FileSystem.AddFile(@"C:\ris\in\a.csv", new MockFileData("A"));
+
+        var outcome = await host.RunAsync(Options());
+
+        Assert.AreEqual(JobOutcomeStatus.Failed, outcome.Status);
+        Assert.AreEqual(ErrorCodes.PackageTemplateInvalid, outcome.ErrorCode);
+        Assert.IsTrue(host.FileSystem.FileExists(@"C:\ris\in\a.csv"));
+        Assert.AreEqual(0, host.D365.UploadedPackages.Count);
+    }
+
+    [TestMethod]
     public async Task WrappedPackage_ContainsInputFile_AndManifestPointsToOriginalName()
     {
         using var host = new JobsTestHost();
