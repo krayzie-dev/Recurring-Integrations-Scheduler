@@ -37,7 +37,7 @@ Clicking a run (in history, on a chart, on the dashboard) opens a panel with det
 
 ![Run details](img/run-details.png)
 
-## Schedule (plan)
+## Schedule (plan) {#plan}
 
 ![Week plan](img/plan.png)
 

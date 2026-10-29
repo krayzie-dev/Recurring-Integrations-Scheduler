@@ -37,7 +37,7 @@ Kliknięcie uruchomienia (w historii, na wykresie, na pulpicie) otwiera panel ze
 
 ![Szczegóły uruchomienia](img/run-details.png)
 
-## Harmonogram (plan)
+## Harmonogram (plan) {#plan}
 
 ![Plan tygodnia](img/plan.png)
 

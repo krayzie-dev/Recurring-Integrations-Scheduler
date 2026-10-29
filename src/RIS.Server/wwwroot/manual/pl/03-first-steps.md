@@ -72,4 +72,4 @@ Na liście instancji kolumna *Rejestracja aplikacji* pokazuje domyślną rejestr
 
 ## 5. Ustawienia osobiste
 
-W górnym pasku: 🌐 język (polski/angielski), ☀/🌙 motyw (jasny, ciemny, systemowy), 🕒 strefa wyświetlania czasu (serwera albo UTC), ❔ ta instrukcja. Wybór jest zapamiętywany w przeglądarce.
+W górnym pasku: 🌐 język (polski/angielski), ☀/🌙 motyw (jasny, ciemny, systemowy), 🎨 styl wykresów harmonogramu i historii (patrz [Harmonogram](06-daily-operations.md#plan)), 🕒 strefa wyświetlania czasu (serwera albo UTC), ❔ ta instrukcja. Wybór jest zapamiętywany w przeglądarce.

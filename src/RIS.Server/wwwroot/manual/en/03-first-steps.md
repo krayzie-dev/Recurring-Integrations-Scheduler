@@ -72,4 +72,4 @@ In the instance list the *App registration* column shows the default app registr
 
 ## 5. Personal settings
 
-In the top bar: 🌐 language (English/Polish), ☀/🌙 theme (light, dark, system), 🕒 time zone for displayed times (server or UTC), ❔ this manual. Your choice is remembered in the browser.
+In the top bar: 🌐 language (English/Polish), ☀/🌙 theme (light, dark, system), 🎨 chart style of the schedule and history (see [Schedule](06-daily-operations.md#plan)), 🕒 time zone for displayed times (server or UTC), ❔ this manual. Your choice is remembered in the browser.
